@@ -1,0 +1,52 @@
+{
+    "Address_Block": {
+        "rect": [62.0, 96.5, 166.5, 159.5],
+        "font_size": 9.0,
+        "line_height": 10.2
+    },
+    "Invoice_Table": {
+        "rect": [421.5, 128.5, 528.5, 192.0],
+        "font_size": 9.0,
+        "line_height": 10.8
+    },
+    "Premises_Block": {
+        "rect": [62.0, 193.5, 282.0, 203.0],
+        "font_size": 9.0,
+        "line_height": 10.2
+    },
+    "Page_1_Shield": {
+        "rect": [473.0, 193.0, 513.5, 208.0],
+        "font_size": 0.0,
+        "line_height": 0.0
+    },
+    "Finance_Date_Zone": {
+        "rect": [84.0, 286.0, 261.0, 296.0],
+        "font_size": 9.0,
+        "line_height": 14.5
+    },
+    "Fin_Val_1_PrevBal": {
+        "rect": [339.5, 262.0, 379.0, 273.5],
+        "font_size": 9.5,
+        "line_height": 0.0
+    },
+    "Fin_Val_2_Payment": {
+        "rect": [340.5, 286.0, 377.0, 298.5],
+        "font_size": 9.5,
+        "line_height": 0.0
+    },
+    "Fin_Val_3_AccBalBefore": {
+        "rect": [343.5, 307.5, 379.0, 323.0],
+        "font_size": 9.5,
+        "line_height": 0.0
+    },
+    "Fin_Val_4_Trans": {
+        "rect": [342.5, 333.5, 378.5, 347.0],
+        "font_size": 9.5,
+        "line_height": 0.0
+    },
+    "Fin_Val_5_NewBal": {
+        "rect": [343.5, 373.0, 376.0, 383.0],
+        "font_size": 9.5,
+        "line_height": 0.0
+    }
+}
