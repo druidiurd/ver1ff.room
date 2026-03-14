@@ -43,7 +43,7 @@ import { CommonModule } from '@angular/common';
         </code>
       </footer>
     </div>
-  `,
+  `, 
   styles: [`
     .container {
       width: 100%;
