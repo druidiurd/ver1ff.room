@@ -10,155 +10,130 @@ import { EngineService } from './services/engine';
   template: `
     <canvas #matrixCanvas id="matrix"></canvas>
 
-    <div class="titanium-wrapper">
-      <div class="dynamic-island">
-        <div class="island-node">
-          <span class="pulse-led"></span>
-          <span class="node-status">VER1FF_UPLINK_ENCRYPTED // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+    <div class="matrix-os" [class.app-mode]="selectedApp()">
+      <div class="dynamic-island glass">
+        <span class="pulse-dot"></span>
+        <span class="status-code">SYS_UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+      </div>
+
+      <div class="springboard" *ngIf="!selectedApp()">
+        <div class="icon-section">
+          <div class="section-tag">/root/scripts</div>
+          <div class="icon-grid">
+            <div class="app-widget glass" (click)="openApp('energia')">
+              <div class="icon-glow">⚡</div>
+              <span class="label">ENERGIA</span>
+            </div>
+            <div class="app-widget glass" (click)="openApp('ndls_mrz')">
+              <div class="icon-glow">🆔</div>
+              <span class="label">NDLS_MRZ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="icon-section">
+          <div class="section-tag">/system/soft</div>
+          <div class="icon-grid">
+            <div class="app-widget glass locked">
+              <div class="icon-glow">🛡️</div>
+              <span class="label">SNIFFER</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="hud-container">
-        <aside class="hud-card sidebar glass-panel">
-          <div class="brand-v">VER1FF<span>.ROOM</span></div>
-          
-          <nav class="nav-stack">
-            <button (click)="module.set('energia')" [class.active]="module() === 'energia'" class="stealth-btn">
-              <span class="icon">01</span> IE_ENERGIA_V57
-            </button>
-            <button (click)="module.set('ndls_mrz')" [class.active]="module() === 'ndls_mrz'" class="stealth-btn">
-              <span class="icon">02</span> IE_NDLS_MRZ_CORE
-            </button>
-          </nav>
-
-          <div class="sidebar-footer" *ngIf="module() === 'energia'">
-            <div class="security-module glass-inset">
-              <span class="sec-label">ANTI_FORENSICS_CORE</span>
-              <label class="matrix-switch">
-                <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-                <span class="slider"></span>
-              </label>
-            </div>
+      <main class="app-sheet glass" *ngIf="selectedApp()">
+        <header class="sheet-header">
+          <button (click)="closeApp()" class="close-btn">ESC_EXIT</button>
+          <span class="app-id">MODULE_ID: {{ selectedApp()?.toUpperCase() }}</span>
+          <div class="header-tools">
+            <label class="scan-mode" *ngIf="selectedApp() === 'energia'">
+              <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
+              <span class="led" [class.on]="scanMode()"></span>
+              <span class="t-txt">ARTIFACTS</span>
+            </label>
           </div>
-        </aside>
+        </header>
 
-        <main class="hud-card main-terminal glass-panel">
-          <header class="terminal-header">
-            <span class="terminal-path">/DEV/NODES/{{ module().toUpperCase() }}</span>
-            <div class="header-dots"><span class="d"></span><span class="d"></span><span class="d"></span></div>
-          </header>
-
-          <div class="input-bento">
-            @for (field of schema(); track field.id) {
-              <div class="bento-field">
-                <label>{{ field.label }}</label>
-                <div class="bento-input-wrap glass-inset">
-                  <input 
-                    [(ngModel)]="lines()[$index]" 
-                    (ngModelChange)="onInputChange()"
-                    [placeholder]="field.p" 
-                    spellcheck="false"
-                    autocomplete="off"
-                  >
-                </div>
-              </div>
-            }
-          </div>
-
-          <div class="interactive-console glass-dark" *ngIf="mrzData()">
-            <div class="console-label">>> MRZ_OUTPUT_STREAM</div>
-            <div class="stream-data">
-              <div class="data-row">
-                <span class="m-tag">G2</span>
-                <code class="m-code">{{ mrzData().GEN_2_ISO }}</code>
-                <button (click)="copy(mrzData().GEN_2_ISO)" class="copy-action">COPY</button>
-              </div>
-              <div class="data-row">
-                <span class="m-tag">G1</span>
-                <code class="m-code">{{ mrzData().GEN_1_LEGACY }}</code>
+        <div class="form-compact">
+          @for (field of schema(); track field.id) {
+            <div class="field-item">
+              <label>{{ field.label }}</label>
+              <div class="field-input-box glass-inset">
+                <input 
+                  [(ngModel)]="lines()[$index]" 
+                  (ngModelChange)="onInputChange()"
+                  [placeholder]="field.p" 
+                  spellcheck="false"
+                  autocomplete="off"
+                >
               </div>
             </div>
-          </div>
+          }
+        </div>
 
-          <footer class="action-zone">
-            <button [disabled]="engine.loading()" (click)="fire()" class="titanium-btn">
-              <span class="btn-label">> {{ engine.loading() ? 'ENCRYPTING_DATA_STREAM...' : 'EXECUTE_CORE_GENERATION' }}</span>
-              <div class="btn-loader" [style.width.%]="engine.loading() ? 100 : 0"></div>
-            </button>
-          </footer>
-        </main>
-      </div>
+        <div class="realtime-console glass-dark" *ngIf="mrzData()">
+          <div class="c-line"><span class="c-tag">[G2]</span> {{ mrzData().GEN_2_ISO }} <button (click)="copy(mrzData().GEN_2_ISO)">COPY</button></div>
+          <div class="c-line"><span class="c-tag">[G1]</span> {{ mrzData().GEN_1_LEGACY }}</div>
+        </div>
+
+        <footer class="sheet-footer">
+          <button [disabled]="engine.loading()" (click)="fire()" class="matrix-btn">
+            <span class="btn-txt">> {{ engine.loading() ? 'PROCCESSING_ENCRYPTION...' : 'EXECUTE_SYNC' }}</span>
+            <div class="load-bar" [style.width.%]="engine.loading() ? 100 : 0"></div>
+          </button>
+        </footer>
+      </main>
     </div>
   `,
   styles: [`
-    .titanium-wrapper { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: var(--spacing-xl); gap: 40px; position: relative; }
-    
-    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.04; pointer-events: none; }
+    .matrix-os { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px; z-index: 10; position: relative; }
+    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.2; }
 
-    /* DYNAMIC ISLAND [cite: 2026-02-05] */
-    .dynamic-island { background: #000; padding: 12px 35px; border-radius: 50px; border: 1px solid var(--glass-border); z-index: 20; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-    .island-inner { display: flex; align-items: center; gap: 15px; }
-    .node-status { font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
-    .pulse-led { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-neon); box-shadow: 0 0 15px var(--accent-neon); animation: pulse 2s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+    .dynamic-island { padding: 6px 20px; border-radius: 40px; display: flex; align-items: center; gap: 12px; margin-bottom: 30px; font-size: 0.6rem; font-weight: 800; border: 1px solid var(--border); }
+    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); animation: pulse 2s infinite; }
+    @keyframes pulse { 50% { opacity: 0.2; } }
 
-    /* HUD BENTO GRID [cite: 2026-02-21] */
-    .hud-container { display: grid; grid-template-columns: 320px 1fr; gap: 40px; width: 100%; max-width: 1400px; height: 100%; z-index: 10; }
-    .glass-panel { background: var(--surface-titanium); backdrop-filter: blur(80px); border: 1px solid var(--glass-border); border-radius: 40px; }
-    .glass-inset { background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
-    .glass-dark { background: #000; border: 1px solid var(--glass-border); border-radius: 25px; }
-    
-    .hud-card { padding: 50px; display: flex; flex-direction: column; }
+    .springboard { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 40px; }
+    .section-tag { font-size: 0.65rem; color: #333; font-weight: 800; margin-bottom: 15px; letter-spacing: 2px; }
+    .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .app-widget { width: 100%; aspect-ratio: 1; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border); }
+    .app-widget:hover { transform: scale(1.1); box-shadow: 0 0 20px var(--matrix-glow); border-color: var(--matrix-green); }
+    .icon-glow { font-size: 1.8rem; filter: drop-shadow(0 0 5px var(--matrix-green)); }
+    .label { font-size: 0.55rem; font-weight: 800; color: #444; }
+    .app-widget.locked { opacity: 0.15; cursor: not-allowed; }
 
-    /* SIDEBAR */
-    .brand-v { font-size: 1.6rem; font-weight: 900; letter-spacing: -1px; margin-bottom: 60px; }
-    .brand-v span { color: var(--accent-neon); }
-    .nav-stack { display: flex; flex-direction: column; gap: 15px; flex: 1; }
-    .stealth-btn { width: 100%; padding: 20px 25px; background: rgba(255,255,255,0.02); border: 1px solid transparent; border-radius: 20px; color: #555; font-family: inherit; font-size: 0.8rem; font-weight: 800; text-align: left; cursor: pointer; transition: 0.4s; display: flex; align-items: center; gap: 15px; }
-    .stealth-btn.active { background: #fff; color: #000; transform: scale(1.05); }
-    .icon { font-size: 0.6rem; opacity: 0.5; border: 1px solid currentColor; padding: 2px 5px; border-radius: 4px; }
+    .app-sheet { position: absolute; inset: 20px; border-radius: 24px; padding: 30px; display: flex; flex-direction: column; border: 1px solid var(--border); }
+    .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .close-btn { background: transparent; border: none; color: #333; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
+    .app-id { font-weight: 900; color: var(--matrix-green); letter-spacing: 1px; }
 
-    /* MAIN TERMINAL */
-    .terminal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 50px; }
-    .terminal-path { font-size: 0.65rem; color: #444; font-weight: 800; letter-spacing: 2px; }
-    .header-dots { display: flex; gap: 8px; }
-    .header-dots .d { width: 6px; height: 6px; background: #222; border-radius: 50%; }
+    .form-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; }
+    .field-item label { font-size: 0.55rem; font-weight: 800; color: #333; margin-bottom: 6px; display: block; }
+    .field-input-box { padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: var(--font-mono); font-size: 0.85rem; }
+    input::placeholder { color: #111; }
 
-    .input-bento { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-    .bento-field label { font-size: 0.65rem; font-weight: 800; color: #555; margin-bottom: 12px; display: block; padding-left: 5px; }
-    .bento-input-wrap { padding: 18px 25px; border-radius: 20px; }
-    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: var(--font-mono); font-size: 0.95rem; }
-    input::placeholder { color: #222; }
+    .realtime-console { background: #000; padding: 15px; font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 20px; border: 1px solid var(--border); }
+    .c-line { margin-bottom: 5px; display: flex; gap: 10px; align-items: center; color: #fff; }
+    .c-tag { color: var(--matrix-green); font-weight: 800; }
+    .realtime-console button { background: var(--matrix-green); border: none; font-size: 0.5rem; font-weight: 900; padding: 2px 6px; cursor: pointer; }
 
-    /* CONSOLE */
-    .interactive-console { margin-top: 50px; padding: 30px; }
-    .console-label { font-size: 0.6rem; color: #444; margin-bottom: 20px; font-weight: 800; }
-    .data-row { display: flex; align-items: center; gap: 25px; margin-bottom: 20px; }
-    .m-tag { color: var(--accent-neon); font-size: 0.65rem; font-weight: 900; }
-    .m-code { flex: 1; font-family: var(--font-mono); font-size: 0.9rem; color: #fff; letter-spacing: 2px; }
-    .copy-action { background: var(--accent-neon); color: #000; border: none; padding: 5px 15px; border-radius: 30px; font-size: 0.65rem; font-weight: 900; cursor: pointer; }
+    .matrix-btn { width: 100%; padding: 22px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: 900; cursor: pointer; position: relative; overflow: hidden; font-size: 0.9rem; letter-spacing: 2px; }
+    .load-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: #fff; transition: 2s linear; }
 
-    /* EXECUTE */
-    .action-zone { margin-top: auto; padding-top: 40px; }
-    .titanium-btn { width: 100%; padding: 28px; background: #fff; color: #000; border-radius: 25px; border: none; font-weight: 900; font-size: 1.1rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; transition: 0.4s; }
-    .titanium-btn:hover:not(:disabled) { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(255,255,255,0.1); }
-    .btn-loader { position: absolute; bottom: 0; left: 0; height: 5px; background: var(--accent-neon); transition: 2.5s linear; }
-
-    /* SWITCH */
-    .sidebar-footer { padding-top: 40px; }
-    .security-module { padding: 20px 25px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; }
-    .sec-label { font-size: 0.6rem; color: #888; font-weight: 800; }
-    .matrix-switch { position: relative; width: 44px; height: 24px; }
-    .matrix-switch input { display: none; }
-    .slider { position: absolute; inset: 0; background: #1a1a1a; border-radius: 30px; transition: 0.4s; }
-    .slider::after { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.4s; }
-    input:checked + .slider { background: var(--accent-neon); box-shadow: 0 0 15px var(--accent-neon); }
-    input:checked + .slider::after { transform: translateX(20px); }
+    .glass { background: var(--glass); backdrop-filter: blur(100px); }
+    .glass-inset { background: rgba(0, 255, 65, 0.02); }
+    .scan-mode { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .scan-mode input { display: none; }
+    .led { width: 8px; height: 8px; border: 1px solid var(--matrix-green); }
+    .led.on { background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); }
+    .t-txt { font-size: 0.5rem; font-weight: 800; }
   `]
 })
 export class App implements AfterViewInit {
   engine = inject(EngineService);
-  module = signal('energia');
+  selectedApp = signal<string | null>(null);
   schema = signal<any[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal(false);
@@ -170,28 +145,32 @@ export class App implements AfterViewInit {
 
   constructor() {
     effect(() => {
-      this.engine.getSchema(this.module()).subscribe(s => {
-        this.schema.set(s);
-        this.lines.set(new Array(s.length).fill(''));
-        this.mrzData.set(null);
-      });
+      if (this.selectedApp()) {
+        this.engine.getSchema(this.selectedApp()!).subscribe(s => {
+          this.schema.set(s);
+          this.lines.set(new Array(s.length).fill(''));
+          this.mrzData.set(null);
+        });
+      }
     }, { allowSignalWrites: true });
   }
 
+  openApp(n: string) { this.selectedApp.set(n); }
+  closeApp() { this.selectedApp.set(null); }
+
   onInputChange() {
-    if (this.module() === 'ndls_mrz') {
-      this.engine.execute(this.module(), this.lines(), false).subscribe(res => this.mrzData.set(res));
+    if (this.selectedApp() === 'ndls_mrz') {
+      this.engine.execute(this.selectedApp()!, this.lines(), false).subscribe(res => this.mrzData.set(res));
     }
   }
 
   fire() {
-    this.engine.execute(this.module(), this.lines(), this.scanMode()).subscribe(res => {
-      if (this.module() === 'ndls_mrz') this.mrzData.set(res);
+    this.engine.execute(this.selectedApp()!, this.lines(), this.scanMode()).subscribe(res => {
+      if (this.selectedApp() === 'ndls_mrz') this.mrzData.set(res);
       else {
         const url = URL.createObjectURL(res);
         const a = document.createElement('a');
-        a.href = url; a.download = `V_ROOM_IE_${Date.now()}.pdf`; a.click();
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `V_SYNC_${Date.now()}.pdf`; a.click();
       }
     });
   }
@@ -199,24 +178,18 @@ export class App implements AfterViewInit {
   copy(t: string) { navigator.clipboard.writeText(t); }
 
   ngAfterViewInit() {
-    this.initMatrix();
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (240 - 190) + 190)), 2000);
-  }
-
-  private initMatrix() {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d')!;
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const drops = new Array(Math.floor(canvas.width / 16)).fill(1);
-    const draw = () => {
+    setInterval(() => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#39ff14"; ctx.font = "16px monospace";
+      ctx.fillStyle = "#00ff41"; ctx.font = "16px monospace";
       drops.forEach((y, i) => {
         ctx.fillText(Math.floor(Math.random()*2).toString(), i * 16, y * 16);
-        if (y * 16 > canvas.height && Math.random() > 0.985) drops[i] = 0;
+        if (y * 16 > canvas.height && Math.random() > 0.98) drops[i] = 0;
         drops[i]++;
       });
-    };
-    setInterval(draw, 50);
+    }, 50);
   }
 }

@@ -1,42 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Inter:wght@400;900&display=swap');
 
 :root {
-  --bg-void: #000000;
-  --surface-titanium: #080808;
-  --accent-neon: #39ff14; /* Matrix Green */
-  --accent-glow: rgba(57, 255, 20, 0.15);
-  --glass-border: rgba(255, 255, 255, 0.04);
-  --font-main: 'Inter', sans-serif;
+  --matrix-green: #00ff41;
+  --bg-pure: #000000;
+  --glass: rgba(10, 10, 10, 0.8);
+  --border: rgba(0, 255, 65, 0.12);
   --font-mono: 'JetBrains Mono', monospace;
-  --spacing-xl: 60px;
+  --font-sans: 'Inter', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
 
 body {
-  background-color: var(--bg-void);
-  color: #ffffff;
-  font-family: var(--font-main);
-  height: 100vh;
-  width: 100vw;
+  background: var(--bg-pure);
+  color: var(--matrix-green);
+  font-family: var(--font-sans);
+  height: 100vh; width: 100vw;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: flex; justify-content: center; align-items: center;
 }
 
-/* Ефект зернистості високої роздільної здатності */
+/* CRT Scanline Effect  */
 body::after {
   content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.02;
-  pointer-events: none;
-  z-index: 1000;
+  position: fixed; inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+              linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+  background-size: 100% 2px, 3px 100%;
+  z-index: 1000; pointer-events: none;
 }
