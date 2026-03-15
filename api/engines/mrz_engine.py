@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Dict, Final
 
 class MrzEngine:
+    """Reactive NDLS Dual Core MRZ Engine [cite: 2026-02-05, 2026-02-21]."""
     __slots__ = ('_weights', '_legacy_offsets')
 
     def __init__(self, base_path: str):
@@ -10,24 +11,26 @@ class MrzEngine:
 
     def get_schema(self):
         return [
-            {"id": "sn", "label": "ПРІЗВИЩЕ", "p": "BROWNE"},
-            {"id": "nt", "label": "КРАЇНА_(ISO_3)", "p": "IRL"},
-            {"id": "lc", "label": "НОМЕР_ПРАВ_(9_ЦИФР)", "p": "123456789"},
-            {"id": "is", "label": "СЕРІЯ_ВИДАЧІ", "p": "01"},
-            {"id": "dr", "label": "DRIVER_ID_(PREFIX)", "p": "55123456"}
+            {"id": "sn", "label": "ПРИЗВИЩЕ", "p": "BROWNE"},
+            {"id": "nt", "label": "КРАЇНА (ISO_3)", "p": "IRL"},
+            {"id": "lc", "label": "НОМЕР ПРАВ (9 ЦИФР)", "p": "123456789"},
+            {"id": "is", "label": "СЕРІЯ ВИДАЧІ", "p": "01"},
+            {"id": "dr", "label": "DRIVER_ID (PREFIX)", "p": "55123456"}
         ]
 
     def _fast_checksum(self, payload: str) -> int:
         arr = np.frombuffer(payload.encode('ascii'), dtype=np.uint8)
         vals = np.zeros_like(arr, dtype=np.int32)
-        is_num = (arr >= 48) & (arr <= 57)
-        is_alpha = (arr >= 65) & (arr <= 90)
-        vals[is_num], vals[is_alpha] = arr[is_num] - 48, arr[is_alpha] - 55
-        weights = np.tile(self._weights, (len(arr) + 2) // 3)[:len(arr)]
-        return int(np.dot(vals, weights) % 10)
+        vals[(arr >= 48) & (arr <= 57)] = arr[(arr >= 48) & (arr <= 57)] - 48
+        vals[(arr >= 65) & (arr <= 90)] = arr[(arr >= 65) & (arr <= 90)] - 55
+        w = np.tile(self._weights, (len(arr) + 2) // 3)[:len(arr)]
+        return int(np.dot(vals, w) % 10)
 
-    def render(self, data: List[str], scan: bool = False) -> Dict[str, str]:
-        sn, nt, lc, iss, drv = (data + [""] * 5)[:5]
+    def render(self, data: List[str], scan: bool = False, image_bytes: bytes = None) -> Dict[str, str]:
+        # Fix: додано image_bytes у сигнатуру [cite: 2026-03-16]
+        raw = (data + [""] * 5)[:5]
+        sn, nt, lc, iss, drv = raw[0], raw[1], raw[2], raw[3], raw[4]
+        
         n_blk = nt.upper().replace(" ", "<")[:3].ljust(3, "<")
         i_blk = iss.zfill(2)[:2]
         l_blk = lc.upper()[:9]
@@ -37,9 +40,10 @@ class MrzEngine:
         
         s_31 = sn.upper().replace(" ", "<")[:13].ljust(13, "<")
         m_31 = f"D<{s_31}{n_blk}<{l_blk}{i_blk}"
-        offset = self._legacy_offsets.get(drv[:2], 0)
+        off = self._legacy_offsets.get(drv[:2], 0)
 
         return {
             "GEN_2_ISO": f"{m_30}{self._fast_checksum(m_30)}",
-            "GEN_1_LEGACY": f"{m_31}{(self._fast_checksum(m_31) + offset) % 10}"
+            "GEN_1_LEGACY": f"{m_31}{(self._fast_checksum(m_31) + off) % 10}",
+            "STATUS": "SYNC_OK"
         }

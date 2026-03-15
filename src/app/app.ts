@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EngineService } from './services/engine';
 
-declare var L: any; // Leaflet Global [cite: 2026-02-05]
+declare var L: any;
 
 @Component({
   selector: 'app-root',
@@ -12,135 +12,155 @@ declare var L: any; // Leaflet Global [cite: 2026-02-05]
   template: `
     <canvas #matrixCanvas id="matrix"></canvas>
 
-    <div class="os-container" [class.app-mode]="selectedApp()">
-      <header class="island glass">
+    <div class="v-os-container" [class.app-active]="selectedApp()">
+      <div class="island-node glass">
         <div class="inner">
           <span class="led pulse"></span>
-          <span class="id">V_OS // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+          <span class="status-msg">UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
         </div>
-      </header>
+      </div>
 
-      <section class="springboard" *ngIf="!selectedApp()">
-        <div class="folder glass">
-          <div class="folder-header">IRELAND</div>
-          <div class="app-grid">
-            <div class="app-card" (click)="openApp('energia')">
+      <section class="home-screen" *ngIf="!selectedApp()">
+        <div class="category-block">
+          <div class="cat-label">IRELAND_NODES</div>
+          <div class="grid">
+            <div class="app-card glass" (click)="openApp('energia')">
               <div class="app-icon n-green">⚡</div>
-              <span class="app-label">IE-bill-gen</span>
+              <span class="app-name">IE-bill-gen</span>
             </div>
-            <div class="app-card" (click)="openApp('ndls_mrz')">
+            <div class="app-card glass" (click)="openApp('ndls_mrz')">
               <div class="app-icon n-blue">🆔</div>
-              <span class="app-label">IE-NDLS-MRZ</span>
+              <span class="app-name">IE-NDLS-MRZ</span>
             </div>
           </div>
         </div>
 
-        <div class="folder glass">
-          <div class="folder-header">GLOBAL_TOOLS</div>
-          <div class="app-grid">
-            <div class="app-card" (click)="openApp('exif_cleaner')">
+        <div class="category-block">
+          <div class="cat-label">GLOBAL_TOOLS</div>
+          <div class="grid">
+            <div class="app-card glass" (click)="openApp('exif_cleaner')">
               <div class="app-icon n-amber">📸</div>
-              <span class="app-label">EXIF-Sniper</span>
+              <span class="app-name">EXIF-Sniper</span>
             </div>
-            <div class="app-card" (click)="openApp('face_cut')">
+            <div class="app-card glass" (click)="openApp('face_cut')">
               <div class="app-icon n-red">👤</div>
-              <span class="app-label">Face-Cut</span>
+              <span class="app-name">Face-Cut</span>
             </div>
           </div>
         </div>
       </section>
 
-      <main class="app-view glass" *ngIf="selectedApp()">
-        <header class="v-header">
-          <button (click)="closeApp()" class="esc-btn">‹ DASHBOARD</button>
-          <div class="v-title">{{ selectedApp()?.toUpperCase() }}</div>
-          <div class="v-tools">
-            <span class="f-info" *ngIf="selectedFile()">[LOCKED: {{ selectedFile()?.name }}]</span>
-            <label class="scan-mode" *ngIf="selectedApp() === 'energia'">
+      <main class="terminal-overlay glass" *ngIf="selectedApp()">
+        <header class="t-header">
+          <button (click)="closeApp()" class="back-link">‹ DASHBOARD</button>
+          <div class="t-title">{{ selectedApp() === 'energia' ? 'IE-BILL-GEN' : selectedApp()?.toUpperCase() }}</div>
+          <div class="t-tools">
+            <span class="file-status" *ngIf="selectedFile()">[SYNC: {{ selectedFile()?.name }}]</span>
+            <label class="scan-opt" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-              <span class="toggle" [class.on]="scanMode()"></span>
-              <span class="txt">SCAN</span>
+              <span class="ios-slider" [class.on]="scanMode()"></span>
+              <span class="lbl">ARTIFACTS</span>
             </label>
           </div>
         </header>
 
-        <div class="terminal-layout">
-          <div class="col-form">
-            <div class="grid-inputs">
-              @for (field of schema(); track field.id) {
-                <div class="field">
-                  <label>{{ field.label }}</label>
-                  <div class="i-box glass-inset">
-                    <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="field.p" spellcheck="false" autocomplete="off">
+        <div class="t-layout">
+          <div class="t-inputs">
+            <div class="input-grid">
+              @for (f of schema(); track f.id) {
+                <div class="input-node">
+                  <label>{{ f.label }}</label>
+                  <div class="input-wrap glass-inset">
+                    <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="f.p" spellcheck="false" autocomplete="off">
                   </div>
                 </div>
               }
             </div>
 
-            <div class="drop-zone glass-inset" *ngIf="isMediaApp()" (click)="fIn.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
-              <input type="file" #fIn (change)="onFile($event)" hidden>
-              <span>{{ selectedFile() ? 'IMAGE_SYNCED' : 'DROP_IMAGE_OR_CLICK' }}</span>
+            <div class="drop-zone glass-inset" *ngIf="isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
+              <input type="file" #fi (change)="onFile($event)" hidden>
+              <div class="drop-info">
+                <span class="icon">{{ selectedFile() ? '✅' : '📤' }}</span>
+                <span class="txt">{{ selectedFile() ? 'LOCKED' : 'DROP_IMAGE' }}</span>
+              </div>
             </div>
           </div>
 
-          <div class="col-visuals">
+          <div class="t-visuals">
             <div id="map" class="glass-inset" *ngIf="selectedApp() === 'exif_cleaner'"></div>
-            <div class="console glass-dark" *ngIf="mrzData()">
-              <div class="row"><span class="tag">G2</span><code>{{ mrzData().GEN_2_ISO }}</code><button (click)="copy(mrzData().GEN_2_ISO)">CPY</button></div>
-              <div class="row"><span class="tag">G1</span><code>{{ mrzData().GEN_1_LEGACY }}</code></div>
+            
+            <div class="mrz-output glass-dark" *ngIf="mrzData()">
+              <div class="console-line">
+                <span class="c-tag">[G2]</span> <code>{{ mrzData().GEN_2_ISO }}</code>
+                <button class="c-pill" (click)="copy(mrzData().GEN_2_ISO)">COPY</button>
+              </div>
+              <div class="console-line">
+                <span class="c-tag">[G1]</span> <code>{{ mrzData().GEN_1_LEGACY }}</code>
+              </div>
             </div>
           </div>
         </div>
 
-        <footer>
-          <button [disabled]="engine.loading() || (isMediaApp() && !selectedFile())" (click)="fire()" class="exec-btn">
-            <span class="txt">> {{ engine.loading() ? 'PROCCESSING...' : 'EXECUTE_CORE_GEN' }}</span>
-            <div class="load-bar" [style.width.%]="engine.loading() ? 100 : 0"></div>
+        <footer class="t-footer">
+          <button [disabled]="engine.loading() || (isMediaApp() && !selectedFile())" (click)="fire()" class="exec-btn-full">
+            <span class="btn-txt">{{ engine.loading() ? 'PROCCESSING...' : 'EXECUTE_CORE_GEN' }}</span>
+            <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
         </footer>
       </main>
     </div>
   `,
   styles: [`
-    .os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
-    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.18; pointer-events: none; }
-    .glass { background: rgba(10,10,10,0.9); backdrop-filter: blur(100px) saturate(180%); border: 1px solid rgba(255,255,255,0.08); border-radius: 35px; }
-    .glass-inset { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; box-shadow: inset 0 2px 10px #000; }
-    .glass-dark { background: #000; border: 1px solid #00ff41; border-radius: 20px; padding: 25px; }
-
-    .island { padding: 8px 25px; border-radius: 50px; display: flex; align-items: center; gap: 15px; margin-bottom: 40px; box-shadow: 0 15px 45px #000; }
-    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
-    .pulse { animation: p 2s infinite; } @keyframes p { 50% { opacity: 0.3; } }
-    .status { font-size: 0.65rem; font-weight: 800; color: #444; }
-
-    .springboard { width: 100%; max-width: 800px; display: flex; gap: 30px; }
-    .folder { flex: 1; padding: 30px; border-radius: 35px; }
-    .folder-header { font-size: 0.8rem; font-weight: 900; color: #555; margin-bottom: 25px; letter-spacing: 2px; text-align: center; }
-    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
-    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; }
-    .app-card:hover { transform: scale(1.1); }
-    .app-icon { width: 75px; height: 75px; border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01); }
-    .app-label { font-size: 0.7rem; font-weight: 800; color: #444; margin-top: 10px; }
-
-    .app-view { position: absolute; inset: 25px; padding: 40px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; }
-    .v-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-    .esc-btn { background: transparent; border: none; color: #444; font-weight: 800; cursor: pointer; }
-    .v-title { color: #00ff41; font-weight: 900; font-size: 1.3rem; letter-spacing: 3px; }
-
-    .terminal-layout { display: flex; gap: 40px; flex: 1; min-height: 0; }
-    .col-form { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-    .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-    .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .field label { font-size: 0.55rem; font-weight: 900; color: #444; margin-bottom: 6px; display: block; }
-    .i-box { padding: 12px 18px; }
-    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: 'JetBrains Mono'; font-size: 0.85rem; }
-
-    #map { flex: 1; border-radius: 20px; min-height: 250px; }
-    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.05); cursor: pointer; font-weight: 900; font-size: 0.7rem; color: #333; }
+    .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
+    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.15; pointer-events: none; }
     
-    .exec-btn { width: 100%; padding: 22px; background: #fff; color: #000; border-radius: 18px; border: none; font-weight: 900; font-size: 1rem; letter-spacing: 2px; cursor: pointer; position: relative; overflow: hidden; }
-    .load-bar { position: absolute; bottom: 0; left: 0; height: 5px; background: #00ff41; transition: 2s; }
-    .tag { color: #00ff41; font-weight: 900; margin-right: 15px; font-size: 0.7rem; }
+    .glass { background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; }
+    .glass-inset { background: rgba(25, 25, 25, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+    .glass-dark { background: #000; border: 1px solid var(--matrix-green); border-radius: 25px; }
+
+    /* DYNAMIC ISLAND [cite: 2026-02-05] */
+    .island-node { padding: 8px 30px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 15px 50px #000; }
+    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 12px #00ff41; }
+    .pulse { animation: p 2s infinite; } @keyframes p { 50% { opacity: 0.2; } }
+    .status-msg { font-size: 0.65rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-left: 15px; }
+
+    /* SPRINGBOARD [cite: 2026-02-21] */
+    .home-screen { width: 100%; max-width: 900px; display: flex; gap: 40px; }
+    .category-block { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .cat-label { font-size: 0.8rem; font-weight: 900; color: #555; text-align: center; letter-spacing: 3px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .app-card { display: flex; flex-direction: column; align-items: center; padding: 25px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .app-card:hover { transform: scale(1.08); border-color: #00ff41; box-shadow: 0 0 30px rgba(0,255,65,0.2); }
+    .app-icon { font-size: 2.2rem; margin-bottom: 15px; }
+    .app-name { font-size: 0.75rem; font-weight: 900; color: #fff; }
+
+    /* TERMINAL [cite: 2026-02-05] */
+    .terminal-overlay { position: absolute; inset: 20px; padding: 45px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; z-index: 100; }
+    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .back-link { background: transparent; border: none; color: #fff; font-weight: 900; font-size: 0.85rem; cursor: pointer; opacity: 0.6; }
+    .back-link:hover { opacity: 1; }
+    .t-title { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; text-shadow: 0 0 15px rgba(0,255,65,0.3); }
+
+    .t-layout { display: flex; gap: 40px; flex: 1; min-height: 0; }
+    .t-inputs, .t-visuals { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    /* TRUE CONTRAST FIX [cite: 2026-03-16] */
+    .input-node label { font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; letter-spacing: 1px; }
+    .input-wrap { padding: 16px 22px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1rem; font-weight: 700; }
+    input::placeholder { color: #333; }
+
+    #map { flex: 1; border-radius: 25px; min-height: 300px; }
+    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; }
+    .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
+    .drop-info { text-align: center; }
+    .drop-info .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+    .drop-info .txt { font-size: 0.75rem; font-weight: 900; color: #fff; }
+
+    .exec-btn-full { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 25px; font-weight: 900; font-size: 1.2rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; margin-top: 30px; }
+    .exec-btn-full:active { transform: scale(0.98); }
+    .load-fill { position: absolute; bottom: 0; left: 0; height: 6px; background: #00ff41; transition: 2s; }
   `]
 })
 export class App implements AfterViewInit {
@@ -168,7 +188,7 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
-  isMediaApp() { return this.selectedApp() === 'exif_cleaner' || this.selectedApp() === 'face_cut'; }
+  isMediaApp() { return ['exif_cleaner', 'face_cut'].includes(this.selectedApp() || ''); }
   openApp(n: string) { this.selectedApp.set(n); }
   closeApp() { this.selectedApp.set(null); this.selectedFile.set(null); this.mrzData.set(null); this.map = null; }
 
@@ -191,9 +211,9 @@ export class App implements AfterViewInit {
   onInputChange() {
     if (this.selectedApp() === 'ndls_mrz') {
       const fd = new FormData();
-      fd.append('type', this.selectedApp()!);
+      fd.append('type', 'ndls_mrz');
       fd.append('lines', JSON.stringify(this.lines()));
-      this.engine.execute(fd, true).subscribe((res: any) => this.mrzData.set(res));
+      this.engine.execute(fd, true).subscribe(res => this.mrzData.set(res));
     }
   }
 
@@ -235,6 +255,6 @@ export class App implements AfterViewInit {
       });
     };
     setInterval(draw, 50);
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 3000);
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (240 - 180) + 180)), 3000);
   }
 }
