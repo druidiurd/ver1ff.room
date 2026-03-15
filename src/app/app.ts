@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EngineService } from './services/engine';
 
+declare var L: any; // Leaflet Global [cite: 2026-02-05]
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -10,108 +12,126 @@ import { EngineService } from './services/engine';
   template: `
     <canvas #matrixCanvas id="matrix"></canvas>
 
-    <div class="os-wrapper" [class.app-active]="selectedApp()">
+    <div class="v-os-container" [class.app-active]="selectedApp()">
+      
       <div class="dynamic-island glass">
         <div class="island-inner">
           <span class="status-led pulse"></span>
-          <span class="status-id">V1_ROOM // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+          <span class="status-id">UPLINK_STABLE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
         </div>
       </div>
 
-      <section class="home-screen" *ngIf="!selectedApp()">
-        <div class="folder-block">
-          <div class="folder-header"><span class="folder-tag">DIR</span><h2 class="folder-name">IRELAND</h2></div>
+      <section class="springboard" *ngIf="!selectedApp()">
+        
+        <div class="folder-group">
+          <div class="folder-header">
+            <span class="tag">DIR</span>
+            <h2 class="folder-name">IRELAND</h2>
+          </div>
           <div class="app-grid">
             <div class="app-card glass" (click)="openApp('energia')">
-              <div class="app-icon neon-green">⚡</div><span class="app-label">IE-bill-gen</span>
+              <div class="app-icon neon-green">⚡</div>
+              <span class="app-label">IE-bill-gen</span>
             </div>
             <div class="app-card glass" (click)="openApp('ndls_mrz')">
-              <div class="app-icon neon-blue">🆔</div><span class="app-label">IE-NDLS-MRZ</span>
+              <div class="app-icon neon-blue">🆔</div>
+              <span class="app-label">IE-NDLS-MRZ</span>
             </div>
           </div>
         </div>
 
-        <div class="folder-block">
-          <div class="folder-header"><span class="folder-tag">SYS</span><h2 class="folder-name">GLOBAL_TOOLS</h2></div>
+        <div class="folder-group">
+          <div class="folder-header">
+            <span class="tag">SYS</span>
+            <h2 class="folder-name">GLOBAL_TOOLS</h2>
+          </div>
           <div class="app-grid">
-            <div class="app-card glass" (click)="openApp('face_crop')">
-              <div class="app-icon neon-cyan">✂️</div><span class="app-label">FACE_EXTRACT</span>
+            <div class="app-card glass" (click)="openApp('exif_cleaner')">
+              <div class="app-icon neon-amber">📸</div>
+              <span class="app-label">EXIF-Sniper</span>
+            </div>
+            <div class="app-card glass locked">
+              <div class="app-icon">🛡️</div>
+              <span class="app-label">PROXY_V3</span>
             </div>
           </div>
         </div>
       </section>
 
-      <main class="app-view glass" *ngIf="selectedApp()">
+      <main class="app-terminal glass" *ngIf="selectedApp()">
         <header class="view-header">
-          <button (click)="closeApp()" class="back-btn">ESC_EXIT</button>
-          <div class="app-identity">
-            <span class="module-name">{{ selectedApp()?.toUpperCase() }}</span>
+          <button (click)="closeApp()" class="back-link">/root/dashboard</button>
+          <div class="module-title">
+            {{ selectedApp() === 'energia' ? 'IE-BILL-GEN' : 
+               selectedApp() === 'ndls_mrz' ? 'IE-NDLS-MRZ' : 'EXIF-SNIPER' }}
           </div>
-          <div class="view-tools">
-            <label class="scan-switch" *ngIf="selectedApp() === 'energia'">
+          <div class="header-tools">
+            <div class="file-info" *ngIf="selectedFile()">[FILE: {{ selectedFile()?.name }}]</div>
+            <label class="scan-toggle" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-              <span class="slider"></span><span class="label">ARTIFACTS</span>
+              <span class="slider" [class.active]="scanMode()"></span>
+              <span class="txt">ARTIFACTS</span>
             </label>
           </div>
         </header>
 
-        <div class="split-workspace" *ngIf="selectedApp() !== 'face_crop'">
+        <div class="terminal-layout">
           <div class="form-column">
-            @for (field of schema(); track field.id) {
-              <div class="input-node-compact">
-                <label>{{ field.label }}</label>
-                <div class="field-wrap-compact">
-                  <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="field.p" spellcheck="false" autocomplete="off">
+            <div class="form-grid">
+              @for (field of schema(); track field.id) {
+                <div class="field-node">
+                  <label>{{ field.label }}</label>
+                  <div class="field-wrap glass-inset">
+                    <input 
+                      [(ngModel)]="lines()[$index]" 
+                      (ngModelChange)="onInputChange()"
+                      [placeholder]="field.p" 
+                      spellcheck="false"
+                      autocomplete="off"
+                    >
+                  </div>
                 </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
 
-          <div class="manual-column glass-dark">
-            <div class="manual-header">>> OPERATIONAL_MANUAL</div>
-            <div class="manual-content" *ngIf="selectedApp() === 'energia'">
-              <p><span class="hlt">[+]</span> <strong>PREMISES_BLOCK:</strong> Автоматично збирається з рядків 2, 3 та 6.</p>
-              <p><span class="hlt">[+]</span> <strong>RIGHT_ALIGN:</strong> Фінанси автоматично калібруються по правому краю ROI.</p>
-              <p><span class="hlt">[!]</span> <strong>EIRCODE:</strong> Використовуй валідні індекси D12/D15 для антифроду.</p>
-              <div class="sys-ready">AES_256_READY</div>
-            </div>
-            <div class="manual-content" *ngIf="selectedApp() === 'ndls_mrz'">
-              <p><span class="hlt">[+]</span> <strong>GEN_2_ISO:</strong> 30 байт, стандарт ISO-18013.</p>
-              <p><span class="hlt">[+]</span> <strong>GEN_1_LEGACY:</strong> 31 байт, старий формат.</p>
-              <p><span class="hlt">[!]</span> <strong>CHECKSUM:</strong> Векторний розрахунок (7-3-1) без циклів (Numpy Array).</p>
-              <div class="sys-ready">NATIVE_ENGINE_ACTIVE</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="face-crop-container" *ngIf="selectedApp() === 'face_crop'">
-          <div class="crop-workspace">
-            <div class="dnd-zone glass-dark" [class.drag-over]="isDragging()" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
-              <span class="dnd-text" *ngIf="!faceSource()">DRAG_DROP_IMAGE_HERE</span>
-              <img *ngIf="faceSource()" [src]="faceSource()" class="img-preview">
-            </div>
-            <div class="result-zone glass-dark">
-              <div class="zone-label">>> EXTRACTED_FACE (3:4)</div>
-              <div class="result-box">
-                <img *ngIf="faceResult()" [src]="faceResult()" class="img-result">
-                <span class="err-txt" *ngIf="faceError()">{{ faceError() }}</span>
-                <span class="wait-txt" *ngIf="!faceResult() && !faceError()">AWAITING_BUFFER...</span>
+            <div class="drop-zone glass-inset" 
+                 *ngIf="selectedApp() === 'exif_cleaner'"
+                 (click)="fileInput.click()" 
+                 (drop)="onDrop($event)" 
+                 (dragover)="$event.preventDefault()">
+              <input type="file" #fileInput (change)="onFile($event)" hidden>
+              <div class="drop-content">
+                <span class="drop-icon">{{ selectedFile() ? '✅' : '📤' }}</span>
+                <span class="drop-text">{{ selectedFile() ? 'IMAGE_LOCKED' : 'DROP_IMAGE_OR_CLICK' }}</span>
               </div>
             </div>
           </div>
-          <div class="slider-control glass-dark" *ngIf="faceSource()">
-            <label>CROP_PADDING_REDUCE_PX: {{ facePadding() }}</label>
-            <input type="range" min="-50" max="100" step="5" [ngModel]="facePadding()" (ngModelChange)="onPaddingChange($event)" class="cyber-slider">
+
+          <div class="output-column">
+            <div class="map-container glass-inset" *ngIf="selectedApp() === 'exif_cleaner'">
+              <div id="map"></div>
+              <div class="map-overlay">GEO_SYNC_ACTIVE</div>
+            </div>
+
+            <div class="mrz-dump glass-dark" *ngIf="mrzData()">
+              <div class="console-label">>> MRZ_CORE_OUT</div>
+              <div class="mrz-row">
+                <span class="tag">[G2]</span>
+                <code>{{ mrzData().GEN_2_ISO }}</code>
+                <button (click)="copy(mrzData().GEN_2_ISO)" class="pill-btn">COPY</button>
+              </div>
+              <div class="mrz-row">
+                <span class="tag">[G1]</span>
+                <code>{{ mrzData().GEN_1_LEGACY }}</code>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="console-output glass-dark" *ngIf="mrzData() && selectedApp() === 'ndls_mrz'">
-          <div class="row"><span class="tag">G2</span> <code>{{ mrzData().GEN_2_ISO }}</code> <button (click)="copy(mrzData().GEN_2_ISO)" class="copy-btn">CPY</button></div>
-          <div class="row"><span class="tag">G1</span> <code>{{ mrzData().GEN_1_LEGACY }}</code></div>
-        </div>
-
-        <footer class="view-footer" *ngIf="selectedApp() === 'energia'">
-          <button [disabled]="engine.loading()" (click)="fire()" class="primary-btn">
+        <footer class="view-footer">
+          <button [disabled]="engine.loading() || (selectedApp()==='exif_cleaner' && !selectedFile())" 
+                  (click)="fire()" 
+                  class="exec-btn-primary">
             <span class="btn-txt">> {{ engine.loading() ? 'PROCCESSING_ENCRYPTION...' : 'EXECUTE_SYNC_COMMAND' }}</span>
             <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
@@ -120,128 +140,133 @@ import { EngineService } from './services/engine';
     </div>
   `,
   styles: [`
-    .os-wrapper { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; z-index: 10; position: relative; }
-    .glass { background: rgba(10,10,10,0.85); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
-    .glass-dark { background: #000; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; }
+    /* UI CORE [cite: 2026-02-05] */
+    .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; }
+    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.15; pointer-events: none; }
+    .glass { background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 35px; }
+    .glass-inset { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; box-shadow: inset 0 2px 10px #000; }
+    .glass-dark { background: #000; border: 1px solid var(--matrix-green); border-radius: 25px; }
 
-    .dynamic-island { padding: 8px 25px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-    .island-inner { display: flex; align-items: center; gap: 15px; font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
-    .status-led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
-    .pulse { animation: pulse 2s infinite; }
-    @keyframes pulse { 50% { opacity: 0.2; } }
+    /* DYNAMIC ISLAND [cite: 2026-02-05] */
+    .status-island { padding: 8px 25px; border-radius: 50px; margin-bottom: 40px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 15px 45px #000; }
+    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 12px #00ff41; animation: pulse 2s infinite; }
+    @keyframes pulse { 50% { opacity: 0.3; } }
+    .id-code { font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
 
-    .home-screen { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 60px; }
-    .folder-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-left: 10px; }
-    .folder-tag { background: #00ff41; color: #000; font-size: 0.5rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; }
-    .folder-name { font-size: 1.1rem; font-weight: 900; letter-spacing: 2px; }
-    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 35px; }
-    .app-card { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .app-card:hover { transform: scale(1.1) translateY(-5px); border-color: #00ff41; box-shadow: 0 0 30px rgba(0,255,65,0.4); }
-    .app-icon { font-size: 2rem; }
-    .neon-cyan { text-shadow: 0 0 15px cyan; }
-    .app-label { font-size: 0.7rem; font-weight: 700; color: #666; text-align: center; }
+    /* SPRINGBOARD [cite: 2026-02-21] */
+    .springboard { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 60px; }
+    .folder-header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-left: 10px; }
+    .tag { background: #00ff41; color: #000; font-size: 0.5rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; }
+    .folder-name { font-size: 1.1rem; font-weight: 900; letter-spacing: 2px; color: #fff; }
+    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 40px; }
+    .app-card { display: flex; flex-direction: column; align-items: center; gap: 15px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .app-card:hover { transform: scale(1.1) translateY(-5px); }
+    .app-icon { width: 80px; height: 80px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .app-label { font-size: 0.7rem; font-weight: 700; color: #555; }
+    .locked { opacity: 0.15; cursor: not-allowed; }
 
-    /* APP VIEW - Виправлена висота і overflow */
-    .app-view { position: absolute; inset: 20px; padding: 40px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; z-index: 100; border-radius: 40px; overflow: hidden; }
-    .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-shrink: 0; }
-    .back-btn { background: transparent; border: none; color: #666; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
-    .module-name { color: #00ff41; font-weight: 900; font-size: 1.4rem; letter-spacing: 3px; text-shadow: 0 0 15px rgba(0,255,65,0.4); }
+    /* TERMINAL VIEW [cite: 2026-02-05] */
+    .app-terminal { position: absolute; inset: 25px; padding: 45px; display: flex; flex-direction: column; z-index: 100; box-shadow: 0 0 100px #000; }
+    .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 45px; }
+    .back-link { background: transparent; border: none; color: #444; font-weight: 900; font-size: 0.8rem; cursor: pointer; }
+    .module-title { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; text-shadow: 0 0 20px rgba(0, 255, 65, 0.3); }
 
-    /* SPLIT WORKSPACE */
-    .split-workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; flex: 1; overflow-y: auto; padding-right: 15px; min-height: 0; }
-    .form-column { display: flex; flex-direction: column; gap: 15px; }
-    .input-node-compact label { font-size: 0.6rem; font-weight: 900; color: #666; margin-bottom: 6px; display: block; letter-spacing: 1px; }
-    
-    /* КОНТРАСТ ІНПУТІВ [cite: 2026-02-05] */
-    .field-wrap-compact { padding: 12px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); transition: 0.3s; }
-    .field-wrap-compact:focus-within { border-color: #00ff41; background: rgba(0, 255, 65, 0.08); box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); }
-    .field-wrap-compact input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; }
-    .field-wrap-compact input::placeholder { color: #888; }
+    .terminal-layout { display: flex; gap: 40px; flex: 1; min-height: 0; }
+    .form-column { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+    .output-column { flex: 1; display: flex; flex-direction: column; gap: 25px; }
 
-    .manual-column { padding: 25px; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); }
-    .manual-header { font-size: 0.7rem; color: #00ff41; font-weight: 900; margin-bottom: 20px; letter-spacing: 2px; }
-    .manual-content p { font-size: 0.7rem; color: #aaa; margin-bottom: 15px; line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
-    .hlt { color: #00ff41; font-weight: 900; }
-    .sys-ready { margin-top: auto; font-size: 0.6rem; color: #444; font-weight: 900; letter-spacing: 2px; text-align: right; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .field-node label { font-size: 0.6rem; font-weight: 900; color: #444; margin-bottom: 8px; display: block; }
+    .field-wrap { padding: 15px 20px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: 'JetBrains Mono'; font-size: 1rem; }
 
-    /* FACE CROP STYLES - Фікс висоти [cite: 2026-02-05] */
-    .face-crop-container { flex: 1; display: flex; flex-direction: column; gap: 15px; min-height: 0; }
-    .crop-workspace { display: flex; gap: 20px; flex: 1; min-height: 0; }
-    .dnd-zone { flex: 1; border-radius: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,255,255,0.2); transition: 0.3s; position: relative; }
-    .dnd-zone.drag-over { border-color: #00ff41; background: rgba(0, 255, 65, 0.05); }
-    .dnd-text { font-weight: 900; color: #666; letter-spacing: 2px; }
-    .img-preview { width: 100%; height: 100%; object-fit: contain; }
-    .result-zone { width: 300px; padding: 15px; display: flex; flex-direction: column; }
-    .zone-label { font-size: 0.6rem; color: #00ff41; font-weight: 900; margin-bottom: 15px; }
-    .result-box { flex: 1; display: flex; align-items: center; justify-content: center; background: #050505; border-radius: 10px; overflow: hidden; border: 1px solid #222; }
-    .img-result { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .wait-txt { font-size: 0.7rem; color: #333; font-weight: 800; }
-    .err-txt { font-size: 0.7rem; color: #ff003c; font-weight: 900; text-align: center; padding: 10px; }
-    
-    .slider-control { padding: 15px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
-    .slider-control label { font-size: 0.7rem; font-weight: 900; color: #00ff41; }
-    .cyber-slider { -webkit-appearance: none; width: 100%; background: transparent; }
-    .cyber-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #00ff41; cursor: pointer; box-shadow: 0 0 10px #00ff41; margin-top: -8px; }
-    .cyber-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #222; border-radius: 2px; }
+    /* MAP & CONSOLE [cite: 2026-02-05] */
+    #map { flex: 1; border-radius: 25px; min-height: 300px; }
+    .mrz-dump { padding: 30px; }
+    .tag { color: #00ff41; font-weight: 900; margin-right: 20px; }
+    code { font-family: 'JetBrains Mono'; color: #fff; flex: 1; letter-spacing: 2px; }
+    .pill-btn { background: #00ff41; color: #000; border: none; padding: 5px 15px; border-radius: 20px; font-size: 0.6rem; font-weight: 900; cursor: pointer; }
 
-    .console-output { background: #000; padding: 20px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.15); border-radius: 15px; flex-shrink: 0; }
-    .row { display: flex; align-items: center; margin-bottom: 10px; }
-    .tag { color: #00ff41; font-weight: 900; margin-right: 20px; font-size: 0.8rem;}
-    code { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; flex: 1; letter-spacing: 2px; }
-    .copy-btn { background: #00ff41; color: #000; border: none; padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; font-weight: 900; cursor: pointer; }
+    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
+    .drop-zone:hover { border-color: #00ff41; }
+    .drop-content { text-align: center; }
+    .drop-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+    .drop-text { font-size: 0.7rem; font-weight: 900; color: #333; }
 
-    .view-footer { padding-top: 20px; flex-shrink: 0; }
-    .primary-btn { width: 100%; padding: 25px; background: transparent; color: #00ff41; border: 1px solid #00ff41; border-radius: 20px; font-weight: 900; font-size: 1.1rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; transition: 0.3s; }
-    .primary-btn:hover:not(:disabled) { background: #00ff41; color: #000; box-shadow: 0 0 30px rgba(0,255,65,0.4); }
-    .load-fill { position: absolute; bottom: 0; left: 0; height: 5px; background: #fff; transition: 2s linear; }
+    .exec-btn-primary { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 20px; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; cursor: pointer; position: relative; overflow: hidden; }
+    .load-fill { position: absolute; bottom: 0; left: 0; height: 5px; background: #00ff41; transition: 2.5s linear; }
 
-    .scan-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
-    .scan-switch input { display: none; }
-    .slider { width: 38px; height: 20px; background: #222; border-radius: 30px; position: relative; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
-    .slider::after { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.3s; }
-    input:checked + .slider { background: #00ff41; border-color: #00ff41; }
-    input:checked + .slider::after { transform: translateX(18px); }
+    .scan-toggle { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .slider { width: 34px; height: 18px; background: #1a1a1a; border-radius: 20px; position: relative; transition: 0.3s; }
+    .slider::after { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #333; border-radius: 50%; transition: 0.3s; }
+    .slider.active { background: #00ff41; }
+    .slider.active::after { transform: translateX(16px); background: #fff; }
   `]
 })
 export class App implements AfterViewInit {
   engine = inject(EngineService);
+  
   selectedApp = signal<string | null>(null);
   schema = signal<any[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal(false);
+  selectedFile = signal<File | null>(null);
   mrzData = signal<any>(null);
+  
   memoryUsage = signal(128);
   nodeId = Math.random().toString(16).substring(2, 8).toUpperCase();
+  
+  private map: any;
+  private marker: any;
 
   @ViewChild('matrixCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  isDragging = signal(false);
-  faceSource = signal<string | null>(null);
-  faceResult = signal<string | null>(null);
-  faceError = signal<string | null>(null);
-  facePadding = signal(20);
-
   constructor() {
     effect(() => {
-      if (this.selectedApp() && this.selectedApp() !== 'face_crop') {
-        this.engine.getSchema(this.selectedApp()!).subscribe(s => {
+      const app = this.selectedApp();
+      if (app) {
+        this.engine.getSchema(app).subscribe(s => {
           this.schema.set(s);
           this.lines.set(new Array(s.length).fill(''));
-          this.mrzData.set(null);
+          if (app === 'exif_cleaner') setTimeout(() => this.initMap(), 500);
         });
       }
     }, { allowSignalWrites: true });
   }
 
-  openApp(name: string) { 
-    this.selectedApp.set(name); 
-    if (name === 'face_crop') {
-      this.faceSource.set(null);
-      this.faceResult.set(null);
-      this.faceError.set(null);
-    }
+  openApp(name: string) { this.selectedApp.set(name); }
+  
+  closeApp() { 
+    this.selectedApp.set(null); 
+    this.selectedFile.set(null);
+    this.mrzData.set(null);
+    this.map = null;
   }
-  closeApp() { this.selectedApp.set(null); }
+
+  initMap() {
+    if (this.map) return;
+    // Dark Map Profile для Obsidian [cite: 2026-02-05]
+    this.map = L.map('map', { zoomControl: false }).setView([53.3498, -6.2603], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(this.map);
+    
+    this.map.on('click', (e: any) => {
+      const { lat, lng } = e.latlng;
+      if (this.marker) this.marker.setLatLng(e.latlng);
+      else this.marker = L.marker(e.latlng).addTo(this.map);
+      
+      const currentLines = this.lines();
+      currentLines[0] = lat.toFixed(6);
+      currentLines[1] = lng.toFixed(6);
+      this.lines.set([...currentLines]);
+    });
+  }
+
+  onFile(e: any) { this.selectedFile.set(e.target.files[0]); }
+  
+  onDrop(e: DragEvent) { 
+    e.preventDefault(); 
+    if (e.dataTransfer?.files.length) this.selectedFile.set(e.dataTransfer.files[0]); 
+  }
 
   onInputChange() {
     if (this.selectedApp() === 'ndls_mrz') {
@@ -250,72 +275,53 @@ export class App implements AfterViewInit {
   }
 
   fire() {
-    this.engine.execute(this.selectedApp()!, this.lines(), this.scanMode()).subscribe(res => {
-      if (this.selectedApp() === 'ndls_mrz') this.mrzData.set(res);
-      else {
-        const blob = new Blob([res], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `V_SYNC_EXTRACT_${Date.now()}.pdf`; a.click();
-      }
+    const fd = new FormData();
+    fd.append('type', this.selectedApp()!);
+    fd.append('lines', JSON.stringify(this.lines()));
+    fd.append('scan_mode', this.scanMode().toString());
+    
+    const file = this.selectedFile();
+    if (file) fd.append('file', file);
+
+    // Fix для рядка 286 в app.ts [cite: 2026-02-21]
+    this.engine.uploadExecute(fd).subscribe((res: Blob) => {
+      const url = URL.createObjectURL(res);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = this.selectedApp() === 'exif_cleaner' ? 'jpg' : 'pdf';
+      a.download = `V_OS_RESULT_${Date.now()}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
-  copy(t: string) { navigator.clipboard.writeText(t); }
-
-  onDragOver(e: DragEvent) { e.preventDefault(); this.isDragging.set(true); }
-  onDragLeave(e: DragEvent) { e.preventDefault(); this.isDragging.set(false); }
-  
-  onDrop(e: DragEvent) {
-    e.preventDefault();
-    this.isDragging.set(false);
-    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const b64 = ev.target?.result as string;
-          this.faceSource.set(b64);
-          this.triggerFaceCrop();
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  }
-
-  onPaddingChange(newVal: number) {
-    this.facePadding.set(newVal);
-    this.triggerFaceCrop();
-  }
-
-  triggerFaceCrop() {
-    if (!this.faceSource()) return;
-    this.faceError.set(null);
-    this.engine.processFace(this.faceSource()!, this.facePadding()).subscribe(res => {
-      if (res.error) {
-        this.faceError.set(res.error);
-        this.faceResult.set(null);
-      } else {
-        this.faceResult.set(res.cropped);
-      }
-    });
-  }
+  copy(text: string) { navigator.clipboard.writeText(text); }
 
   ngAfterViewInit() {
+    this.initMatrix();
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 2500);
+  }
+
+  private initMatrix() {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d')!;
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const chars = "01".split("");
     const drops = new Array(Math.floor(canvas.width / 18)).fill(1);
+    
     const draw = () => {
-      ctx.fillStyle = "rgba(0, 0, 0, 0.15)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#00ff41"; ctx.font = "16px monospace";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#00ff41";
+      ctx.font = "16px monospace";
       drops.forEach((y, i) => {
-        ctx.fillText(Math.floor(Math.random()*2).toString(), i * 18, y * 18);
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * 18, y * 18);
         if (y * 18 > canvas.height && Math.random() > 0.985) drops[i] = 0;
         drops[i]++;
       });
     };
     setInterval(draw, 50);
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 3000);
   }
 }

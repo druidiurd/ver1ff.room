@@ -1,22 +1,22 @@
 import os
 import sys
-from fastapi import FastAPI, HTTPException, Body
+import json
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, JSONResponse
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from engines.energia_engine import EnergiaEngine
 from engines.mrz_engine import MrzEngine
-from engines.face_engine import FaceEngine
+from engines.exif_engine import ExifEngine
 
 app = FastAPI()
-base_dir = os.path.dirname(os.path.abspath(__file__))
+bd = os.path.dirname(os.path.abspath(__file__))
 
 registry = {
-    "energia": EnergiaEngine(base_dir),
-    "ndls_mrz": MrzEngine(base_dir),
-    "face_crop": FaceEngine(base_dir)
+    "energia": EnergiaEngine(bd),
+    "ndls_mrz": MrzEngine(bd),
+    "exif_cleaner": ExifEngine(bd)
 }
 
 @app.get("/api/schema/{module}")
@@ -25,16 +25,22 @@ async def get_schema(module: str):
     return JSONResponse(registry[module].get_schema())
 
 @app.post("/api/execute")
-async def execute(payload: Dict[str, Any] = Body(...)):
-    mod_id = payload.get("type", "energia")
-    if mod_id not in registry: raise HTTPException(404)
+async def execute(
+    type: str = Form(...),
+    lines: str = Form("[]"),
+    scan_mode: bool = Form(False),
+    file: Optional[UploadFile] = File(None)
+):
+    if type not in registry: raise HTTPException(404)
     
-    # Специфічна маршрутизація для Face Crop [cite: 2026-02-21]
-    if mod_id == "face_crop":
-        res = registry[mod_id].render(payload.get("image", ""), payload.get("padding", 20))
-        return JSONResponse(res)
-
-    result = registry[mod_id].render(payload.get("lines", []), payload.get("scan_mode", False))
-    if isinstance(result, dict):
-        return JSONResponse(result)
-    return StreamingResponse(result, media_type="application/pdf")
+    p_lines = json.loads(lines)
+    img_bytes = await file.read() if file else None
+    
+    try:
+        res = registry[type].render(p_lines, scan_mode, img_bytes)
+        if isinstance(res, dict): return JSONResponse(res)
+        
+        m_type = "image/jpeg" if type == "exif_cleaner" else "application/pdf"
+        return StreamingResponse(res, media_type=m_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
