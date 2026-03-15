@@ -10,36 +10,25 @@ export class EngineService {
   loading = signal<boolean>(false);
 
   /** * Отримання динамічної схеми полів модуля 
-   * [cite: 2026-02-21]
+   * [cite: 2026-02-21] 
    */
   getSchema(module: string): Observable<any[]> {
     return this.http.get<any[]>(`/api/schema/${module}`);
   }
 
-  /** * Стандартний запуск (JSON Payload) 
-   * [cite: 2026-02-21]
+  /** * Уніфікований метод для FormData з фіксом оверлоадів TS [cite: 2026-03-16]
+   * Вирішує помилку TS2769 через примусове кастування типу
    */
-  execute(type: string, lines: string[], scanMode: boolean): Observable<any> {
+  execute(fd: FormData, isJson: boolean): Observable<any> {
     this.loading.set(true);
-    const responseType = type === 'ndls_mrz' ? 'json' : 'blob';
     
-    return this.http.post<any>('/api/execute', 
-      { type, lines, scan_mode: scanMode }, 
-      { responseType: responseType as any }
-    ).pipe(
-      finalize(() => this.loading.set(false))
-    );
-  }
+    // Senior Fix: кастуємо динамічний responseType до any або 'json', 
+    // щоб задовольнити сигнатуру HttpClient.post [cite: 2026-03-16]
+    const options = {
+      responseType: (isJson ? 'json' : 'blob') as 'json'
+    };
 
-  /** * UPLOAD EXECUTION: Для EXIF-Sniper та великих файлів
-   * Вирішує помилку TS2339 [cite: 2026-03-15]
-   */
-  uploadExecute(fd: FormData): Observable<Blob> {
-    this.loading.set(true);
-    // Використовуємо responseType: 'blob', бо на виході завжди файл [cite: 2026-02-05]
-    return this.http.post('/api/execute', fd, { 
-      responseType: 'blob' 
-    }).pipe(
+    return this.http.post('/api/execute', fd, options).pipe(
       finalize(() => this.loading.set(false))
     );
   }
