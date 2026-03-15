@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Dict, Final
 
 class MrzEngine:
-    """Irish NDLS Dual Core MRZ Engine. [cite: 2026-02-05, 2026-02-21]"""
+    """Irish NDLS Dual Core MRZ Engine [cite: 2026-02-05, 2026-02-21]."""
     __slots__ = ('_weights', '_legacy_offsets')
 
     def __init__(self, base_path: str):
@@ -28,8 +28,10 @@ class MrzEngine:
         return int(np.dot(vals, w) % 10)
 
     def render(self, data: List[str], scan: bool = False) -> Dict[str, str]:
-        # Мапінг: 0:Surname, 1:Nat, 2:Lic9, 3:Issue2, 4:DrvID
-        sn, nt, lc, iss, drv = data[0], data[1], data[2], data[3], data[4]
+        # Вирівнювання вхідних даних (додаємо пусті рядки, якщо їх менше 5) [cite: 2026-02-21]
+        padded = data + [""] * (5 - len(data))
+        sn, nt, lc, iss, drv = padded[0], padded[1], padded[2], padded[3], padded[4]
+        
         n_blk = nt.upper().replace(" ", "<")[:3].ljust(3, "<")
         i_blk = iss.zfill(2)[:2]
         l_blk = lc.upper()[:9]

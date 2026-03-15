@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Final
 
 class EnergiaEngine:
-    """Модуль Ірландської енергії. 100% логіка збережена. [cite: 2026-02-05, 2026-02-21]"""
+    """Enterprise Engine v57.3. PDF Rendering Core [cite: 2026-02-05, 2026-02-21]."""
     __slots__ = ('base_path', 'f_reg', 'f_bold')
 
     def __init__(self, base_path: str):
@@ -19,7 +19,7 @@ class EnergiaEngine:
 
     def _get_p(self, f: str):
         p = os.path.join(self.base_path, f)
-        if not os.path.exists(p): raise FileNotFoundError(f"Missing: {f}")
+        if not os.path.exists(p): raise FileNotFoundError(f"Missing asset: {f}")
         return p
 
     def get_schema(self):
@@ -33,9 +33,12 @@ class EnergiaEngine:
         ]
 
     def render(self, lines: List[str], scan: bool) -> io.BytesIO:
-        with open(self._get_p("coords.json"), "r") as f: cfg = json.load(f)
+        with open(self._get_p("coords.json"), "r") as f: 
+            cfg = json.load(f)
+        
         now = datetime.now()
         p_bal, trans = round(random.uniform(70, 135), 2), round(random.uniform(85, 225), 2)
+        # Upper Case для специфічних рядків за твоїм шаблоном [cite: 2026-02-05]
         addr = [l.upper() if i in [1,2,3,5] else l for i, l in enumerate(lines)]
         
         with fitz.open(self._get_p("Utilydy_bill_Energia-1.pdf")) as doc:
@@ -46,16 +49,19 @@ class EnergiaEngine:
                     page.add_redact_annot(fitz.Rect(d["rect"]), fill=(1, 1, 1))
             page.apply_redactions()
             
+            # Рендеринг Адреси
             b_a = cfg["Address_Block"]
             for i, t in enumerate(addr):
                 page.insert_text((b_a["rect"][0], b_a["rect"][1] + 10 + (i * b_a["line_height"])), 
                                t, fontname="Arial", fontfile=self.f_reg, fontsize=b_a["font_size"])
             
+            # Premises Block restoration [cite: 2026-02-05]
             if "Premises_Block" in cfg:
                 page.insert_text((cfg["Premises_Block"]["rect"][0], cfg["Premises_Block"]["rect"][1] + 10), 
                                f"{addr[1]}, {addr[2]}, {addr[5]}", fontname="Arial", fontfile=self.f_reg, 
                                fontsize=cfg["Premises_Block"]["font_size"])
 
+            # Finance Right-Alignment Logic [cite: 2026-02-05]
             fin_vals = [f"\u20ac{p_bal:,.2f}", f"\u20ac{p_bal:,.2f}", "\u20ac0.00", f"\u20ac{trans:,.2f}", f"\u20ac{trans:,.2f}"]
             for i, k in enumerate(["Fin_Val_1_PrevBal", "Fin_Val_2_Payment", "Fin_Val_3_AccBalBefore", "Fin_Val_4_Trans", "Fin_Val_5_NewBal"]):
                 z, fp = cfg[k], (self.f_bold if i > 1 else self.f_reg)
