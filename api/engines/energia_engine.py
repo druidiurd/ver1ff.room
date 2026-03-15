@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Final
 
 class EnergiaEngine:
-    """Enterprise Engine v57.3. PDF Rendering Core [cite: 2026-02-05, 2026-02-21]."""
+    """Enterprise Engine v57.0 (Restored Etchalon). [cite: 2026-02-05, 2026-02-21]."""
     __slots__ = ('base_path', 'f_reg', 'f_bold')
 
     def __init__(self, base_path: str):
@@ -36,42 +36,88 @@ class EnergiaEngine:
         with open(self._get_p("coords.json"), "r") as f: 
             cfg = json.load(f)
         
+        # 1. МАТЕМАТИКА ТА ДАТИ [cite: 2026-02-05]
         now = datetime.now()
-        p_bal, trans = round(random.uniform(70, 135), 2), round(random.uniform(85, 225), 2)
-        # Upper Case для специфічних рядків за твоїм шаблоном [cite: 2026-02-05]
+        p_bal = round(random.uniform(70.0, 135.0), 2)
+        trans = round(random.uniform(85.0, 225.0), 2)
+        cutoff_dt = now - timedelta(days=20)
+        
+        # Форматування адреси (Upper Case для 1,2,3,5 за шаблоном) [cite: 2026-02-05]
         addr = [l.upper() if i in [1,2,3,5] else l for i, l in enumerate(lines)]
         
+        # МАПУВАННЯ ФІНАНСІВ [cite: 2026-02-21]
+        fin_map = {
+            "Fin_Val_1_PrevBal": {"v": f"\u20ac{p_bal:,.2f}", "file": self.f_reg, "name": "Arial"},
+            "Fin_Val_2_Payment": {"v": f"\u20ac{p_bal:,.2f}", "file": self.f_reg, "name": "Arial"},
+            "Fin_Val_3_AccBalBefore": {"v": "\u20ac0.00", "file": self.f_bold, "name": "Arial-Bold"},
+            "Fin_Val_4_Trans": {"v": f"\u20ac{trans:,.2f}", "file": self.f_bold, "name": "Arial-Bold"},
+            "Fin_Val_5_NewBal": {"v": f"\u20ac{trans:,.2f}", "file": self.f_bold, "name": "Arial-Bold"}
+        }
+
         with fitz.open(self._get_p("Utilydy_bill_Energia-1.pdf")) as doc:
             page = doc[0]
             page.clean_contents()
-            for n, d in cfg.items():
-                if n not in ["Page_1_Shield", "Finance_Values_Zone"]:
-                    page.add_redact_annot(fitz.Rect(d["rect"]), fill=(1, 1, 1))
+
+            # Крок 1: ЗАЧИСТКА
+            for name, data in cfg.items():
+                if name not in ["Page_1_Shield", "Finance_Values_Zone"]:
+                    page.add_redact_annot(fitz.Rect(data["rect"]), fill=(1, 1, 1))
             page.apply_redactions()
             
-            # Рендеринг Адреси
+            # Крок 2: РЕНДЕРИНГ
+            # Адреса
             b_a = cfg["Address_Block"]
-            for i, t in enumerate(addr):
+            for i, text in enumerate(addr):
                 page.insert_text((b_a["rect"][0], b_a["rect"][1] + 10 + (i * b_a["line_height"])), 
-                               t, fontname="Arial", fontfile=self.f_reg, fontsize=b_a["font_size"])
-            
-            # Premises Block restoration [cite: 2026-02-05]
+                               text, fontname="Arial", fontfile=self.f_reg, fontsize=b_a["font_size"])
+
+            # Таблиця інфо (Invoice, Account, etc.)
+            table_vals = [
+                str(random.randint(24500000, 24599999)),
+                str(random.randint(5365000000, 5365999999)),
+                "Electricity",
+                f"{(now-timedelta(days=33)):%d/%m/%Y} - {(now-timedelta(days=1)):%d/%m/%Y}",
+                now.strftime("%d %B %Y"),
+                (now+timedelta(days=14)).strftime("%d %B %Y")
+            ]
+            b_t = cfg["Invoice_Table"]
+            for i, val in enumerate(table_vals):
+                page.insert_text((b_t["rect"][0], b_t["rect"][1] + 8 + (i * b_t["line_height"])), 
+                               val, fontname="Arial", fontfile=self.f_reg, fontsize=b_t["font_size"])
+
+            # Дата платежу (Finance_Date_Zone) [cite: 2026-02-05]
+            if "Finance_Date_Zone" in cfg:
+                fdz = cfg["Finance_Date_Zone"]
+                page.insert_text((fdz["rect"][0], fdz["rect"][1] + 10), 
+                               f"Payment(s) received up to {cutoff_dt:%d %B %Y}", 
+                               fontname="Arial", fontfile=self.f_reg, fontsize=9)
+
+            # Фінанси: RIGHT ALIGNMENT LOGIC [cite: 2026-02-05]
+            for key, item in fin_map.items():
+                if key in cfg:
+                    z = cfg[key]
+                    f_obj = fitz.Font(fontfile=item["file"])
+                    tw = f_obj.text_length(item["v"], fontsize=z["font_size"])
+                    x_pos = z["rect"][2] - tw
+                    page.insert_text((x_pos, z["rect"][1] + 10), item["v"], 
+                                   fontname=item["name"], fontfile=item["file"], fontsize=z["font_size"])
+
+            # Блок Premises [cite: 2026-02-05]
             if "Premises_Block" in cfg:
-                page.insert_text((cfg["Premises_Block"]["rect"][0], cfg["Premises_Block"]["rect"][1] + 10), 
-                               f"{addr[1]}, {addr[2]}, {addr[5]}", fontname="Arial", fontfile=self.f_reg, 
-                               fontsize=cfg["Premises_Block"]["font_size"])
+                b_p = cfg["Premises_Block"]
+                page.insert_text((b_p["rect"][0], b_p["rect"][1] + 10), 
+                               f"{addr[1]}, {addr[2]}, {addr[5]}", 
+                               fontname="Arial", fontfile=self.f_reg, fontsize=b_p["font_size"])
 
-            # Finance Right-Alignment Logic [cite: 2026-02-05]
-            fin_vals = [f"\u20ac{p_bal:,.2f}", f"\u20ac{p_bal:,.2f}", "\u20ac0.00", f"\u20ac{trans:,.2f}", f"\u20ac{trans:,.2f}"]
-            for i, k in enumerate(["Fin_Val_1_PrevBal", "Fin_Val_2_Payment", "Fin_Val_3_AccBalBefore", "Fin_Val_4_Trans", "Fin_Val_5_NewBal"]):
-                z, fp = cfg[k], (self.f_bold if i > 1 else self.f_reg)
-                tw = fitz.Font(fontfile=fp).text_length(fin_vals[i], fontsize=z["font_size"])
-                page.insert_text((z["rect"][2] - tw, z["rect"][1] + 10), fin_vals[i], 
-                               fontname="Arial-Bold" if i > 1 else "Arial", fontfile=fp, fontsize=z["font_size"])
+            # Крок 3: АНОНІМІЗАЦІЯ macOS [cite: 2026-02-05]
+            doc.set_metadata({
+                "producer": "macOS Version 15.3.1 (Build 24D70) Quartz PDFContext",
+                "creator": "Pages",
+                "title": "Energia Utility Bill"
+            })
 
-            doc.set_metadata({"producer": "macOS 15.3.1 Quartz PDFContext", "creator": "Pages"})
             tmp = io.BytesIO()
-            doc.save(tmp, garbage=4, deflate=True)
+            doc.save(tmp, garbage=4, deflate=True, clean=True)
             tmp.seek(0)
             return self.apply_artifacts(tmp) if scan else tmp
 
@@ -81,10 +127,10 @@ class EnergiaEngine:
         img = Image.open(io.BytesIO(pix.tobytes()))
         img = img.rotate(random.uniform(-0.4, 0.4), resample=Image.BICUBIC, expand=True, fillcolor=(255, 255, 255))
         arr = np.array(img)
-        noise = np.random.normal(0, 2.8, arr.shape).astype('int16')
+        noise = np.random.normal(0, 2.5, arr.shape).astype('int16')
         arr = np.clip(arr.astype('int16') + noise, 0, 255).astype('uint8')
-        img = Image.fromarray(arr).filter(ImageFilter.GaussianBlur(radius=0.35))
+        img = Image.fromarray(arr).filter(ImageFilter.GaussianBlur(radius=0.32))
         out = io.BytesIO()
-        img.save(out, format="PDF", resolution=300.0, quality=82)
+        img.save(out, format="PDF", resolution=300.0, quality=82, optimize=True)
         out.seek(0)
         return out
