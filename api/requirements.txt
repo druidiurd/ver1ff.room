@@ -3,3 +3,4 @@ uvicorn
 pymupdf
 Pillow
 numpy
+opencv-python-headless
