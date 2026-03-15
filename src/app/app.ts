@@ -10,76 +10,88 @@ import { EngineService } from './services/engine';
   template: `
     <canvas #matrixCanvas id="matrix"></canvas>
 
-    <div class="matrix-os" [class.app-mode]="selectedApp()">
-      <div class="dynamic-island glass">
-        <span class="pulse-dot"></span>
-        <span class="status-code">SYS_UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+    <div class="v-room" [class.app-open]="selectedApp()">
+      <div class="status-island glass">
+        <span class="led"></span>
+        <span class="id">V_ROOM_UPLINK // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
       </div>
 
       <div class="springboard" *ngIf="!selectedApp()">
-        <div class="icon-section">
-          <div class="section-tag">/root/scripts</div>
+        <div class="folder">
+          <h2 class="folder-title">IRELAND</h2>
           <div class="icon-grid">
-            <div class="app-widget glass" (click)="openApp('energia')">
-              <div class="icon-glow">⚡</div>
-              <span class="label">ENERGIA</span>
+            <div class="app-item" (click)="openApp('energia')">
+              <div class="app-icon glass"><span class="neon-text">PDF</span></div>
+              <span class="app-label">IE-bill-gen</span>
             </div>
-            <div class="app-widget glass" (click)="openApp('ndls_mrz')">
-              <div class="icon-glow">🆔</div>
-              <span class="label">NDLS_MRZ</span>
+            <div class="app-item" (click)="openApp('ndls_mrz')">
+              <div class="app-icon glass"><span class="neon-text">MRZ</span></div>
+              <span class="app-label">IE-NDLS-MRZ</span>
             </div>
           </div>
         </div>
 
-        <div class="icon-section">
-          <div class="section-tag">/system/soft</div>
+        <div class="folder">
+          <h2 class="folder-title">SYSTEM_CORE</h2>
           <div class="icon-grid">
-            <div class="app-widget glass locked">
-              <div class="icon-glow">🛡️</div>
-              <span class="label">SNIFFER</span>
+            <div class="app-item locked">
+              <div class="app-icon glass">🛡️</div>
+              <span class="app-label">SNIFFER_X</span>
             </div>
           </div>
         </div>
       </div>
 
-      <main class="app-sheet glass" *ngIf="selectedApp()">
-        <header class="sheet-header">
-          <button (click)="closeApp()" class="close-btn">ESC_EXIT</button>
-          <span class="app-id">MODULE_ID: {{ selectedApp()?.toUpperCase() }}</span>
-          <div class="header-tools">
+      <main class="app-terminal glass" *ngIf="selectedApp()">
+        <header class="terminal-header">
+          <button (click)="closeApp()" class="back-link">/root/IRELAND</button>
+          <div class="header-center">
+            <span class="app-id">{{ selectedApp() === 'energia' ? 'IE-BILL-GEN' : 'IE-NDLS-MRZ' }}</span>
+          </div>
+          <div class="header-right">
             <label class="scan-mode" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-              <span class="led" [class.on]="scanMode()"></span>
-              <span class="t-txt">ARTIFACTS</span>
+              <span class="check-box" [class.on]="scanMode()"></span>
+              <span class="check-label">ARTIFACTS</span>
             </label>
           </div>
         </header>
 
-        <div class="form-compact">
-          @for (field of schema(); track field.id) {
-            <div class="field-item">
-              <label>{{ field.label }}</label>
-              <div class="field-input-box glass-inset">
-                <input 
-                  [(ngModel)]="lines()[$index]" 
-                  (ngModelChange)="onInputChange()"
-                  [placeholder]="field.p" 
-                  spellcheck="false"
-                  autocomplete="off"
-                >
+        <div class="terminal-body">
+          <div class="form-grid">
+            @for (field of schema(); track field.id) {
+              <div class="field-node">
+                <label>{{ field.label }}</label>
+                <div class="input-container glass-inset">
+                  <input 
+                    [(ngModel)]="lines()[$index]" 
+                    (ngModelChange)="onInputChange()"
+                    [placeholder]="field.p" 
+                    spellcheck="false"
+                    autocomplete="off"
+                  >
+                </div>
               </div>
+            }
+          </div>
+
+          <div class="output-console glass-dark" *ngIf="mrzData()">
+            <div class="console-label">>> MRZ_DATA_STREAM</div>
+            <div class="data-row">
+              <span class="tag">[G2]</span>
+              <code>{{ mrzData().GEN_2_ISO }}</code>
+              <button (click)="copy(mrzData().GEN_2_ISO)" class="copy-btn">COPY</button>
             </div>
-          }
+            <div class="data-row">
+              <span class="tag">[G1]</span>
+              <code>{{ mrzData().GEN_1_LEGACY }}</code>
+            </div>
+          </div>
         </div>
 
-        <div class="realtime-console glass-dark" *ngIf="mrzData()">
-          <div class="c-line"><span class="c-tag">[G2]</span> {{ mrzData().GEN_2_ISO }} <button (click)="copy(mrzData().GEN_2_ISO)">COPY</button></div>
-          <div class="c-line"><span class="c-tag">[G1]</span> {{ mrzData().GEN_1_LEGACY }}</div>
-        </div>
-
-        <footer class="sheet-footer">
-          <button [disabled]="engine.loading()" (click)="fire()" class="matrix-btn">
-            <span class="btn-txt">> {{ engine.loading() ? 'PROCCESSING_ENCRYPTION...' : 'EXECUTE_SYNC' }}</span>
+        <footer class="terminal-footer">
+          <button [disabled]="engine.loading()" (click)="fire()" class="exec-btn">
+            <span class="btn-text">=> {{ engine.loading() ? 'PROCCESSING...' : 'EXECUTE_CORE_GEN' }}</span>
             <div class="load-bar" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
         </footer>
@@ -87,48 +99,57 @@ import { EngineService } from './services/engine';
     </div>
   `,
   styles: [`
-    .matrix-os { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px; z-index: 10; position: relative; }
+    .v-room { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; z-index: 10; position: relative; }
     canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.2; }
 
-    .dynamic-island { padding: 6px 20px; border-radius: 40px; display: flex; align-items: center; gap: 12px; margin-bottom: 30px; font-size: 0.6rem; font-weight: 800; border: 1px solid var(--border); }
-    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); animation: pulse 2s infinite; }
+    .status-island { padding: 6px 20px; border-radius: 40px; display: flex; align-items: center; gap: 12px; margin-bottom: 40px; font-size: 0.65rem; font-weight: 800; border: 1px solid var(--glass-border); box-shadow: 0 10px 40px #000; }
+    .led { width: 8px; height: 8px; border-radius: 50%; background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); animation: pulse 2s infinite; }
     @keyframes pulse { 50% { opacity: 0.2; } }
+    .id { color: var(--text-dim); letter-spacing: 1px; }
 
-    .springboard { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 40px; }
-    .section-tag { font-size: 0.65rem; color: #333; font-weight: 800; margin-bottom: 15px; letter-spacing: 2px; }
-    .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    .app-widget { width: 100%; aspect-ratio: 1; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border); }
-    .app-widget:hover { transform: scale(1.1); box-shadow: 0 0 20px var(--matrix-glow); border-color: var(--matrix-green); }
-    .icon-glow { font-size: 1.8rem; filter: drop-shadow(0 0 5px var(--matrix-green)); }
-    .label { font-size: 0.55rem; font-weight: 800; color: #444; }
-    .app-widget.locked { opacity: 0.15; cursor: not-allowed; }
+    .springboard { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 50px; z-index: 10; }
+    .folder-title { font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 25px; padding-left: 10px; border-left: 4px solid var(--matrix-green); }
+    .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 30px; }
+    .app-item { display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: 0.3s; }
+    .app-item:hover { transform: scale(1.1); }
+    .app-icon { width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--glass-border); font-weight: 900; }
+    .neon-text { font-size: 0.8rem; color: var(--matrix-green); text-shadow: 0 0 10px var(--matrix-green); }
+    .app-label { font-size: 0.75rem; font-weight: 700; color: var(--text-dim); }
+    .app-item.locked { opacity: 0.15; cursor: not-allowed; }
 
-    .app-sheet { position: absolute; inset: 20px; border-radius: 24px; padding: 30px; display: flex; flex-direction: column; border: 1px solid var(--border); }
-    .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-    .close-btn { background: transparent; border: none; color: #333; font-weight: 800; font-size: 0.7rem; cursor: pointer; }
-    .app-id { font-weight: 900; color: var(--matrix-green); letter-spacing: 1px; }
+    .app-terminal { position: absolute; inset: 20px; border-radius: 30px; padding: 40px; display: flex; flex-direction: column; border: 1px solid var(--glass-border); box-shadow: 0 0 80px #000; z-index: 100; }
+    .terminal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .back-link { background: transparent; border: none; color: var(--text-dim); font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+    .back-link:hover { color: #fff; }
+    .app-id { color: var(--matrix-green); font-weight: 900; font-size: 1.2rem; letter-spacing: 2px; }
 
-    .form-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; }
-    .field-item label { font-size: 0.55rem; font-weight: 800; color: #333; margin-bottom: 6px; display: block; }
-    .field-input-box { padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); }
-    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: var(--font-mono); font-size: 0.85rem; }
+    .terminal-body { flex: 1; display: flex; flex-direction: column; gap: 30px; overflow-y: auto; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .field-node label { font-size: 0.65rem; font-weight: 800; color: var(--text-dim); margin-bottom: 8px; display: block; }
+    .input-container { padding: 15px 20px; border-radius: 12px; border: 1px solid var(--glass-border); }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: var(--font-mono); font-size: 0.95rem; }
     input::placeholder { color: #111; }
 
-    .realtime-console { background: #000; padding: 15px; font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 20px; border: 1px solid var(--border); }
-    .c-line { margin-bottom: 5px; display: flex; gap: 10px; align-items: center; color: #fff; }
-    .c-tag { color: var(--matrix-green); font-weight: 800; }
-    .realtime-console button { background: var(--matrix-green); border: none; font-size: 0.5rem; font-weight: 900; padding: 2px 6px; cursor: pointer; }
+    .output-console { background: #000; padding: 25px; border-radius: 20px; border: 1px solid var(--glass-border); }
+    .console-label { font-size: 0.6rem; color: var(--text-dim); margin-bottom: 15px; font-weight: 800; }
+    .data-row { display: flex; align-items: center; gap: 20px; margin-bottom: 10px; font-family: var(--font-mono); font-size: 0.9rem; }
+    .tag { color: var(--matrix-green); font-weight: 900; }
+    code { color: #fff; flex: 1; letter-spacing: 1px; }
+    .copy-btn { background: var(--matrix-green); color: #000; border: none; padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; font-weight: 900; cursor: pointer; }
 
-    .matrix-btn { width: 100%; padding: 22px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: 900; cursor: pointer; position: relative; overflow: hidden; font-size: 0.9rem; letter-spacing: 2px; }
-    .load-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: #fff; transition: 2s linear; }
+    .terminal-footer { padding-top: 40px; }
+    .exec-btn { width: 100%; padding: 25px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: 900; cursor: pointer; position: relative; overflow: hidden; font-size: 1rem; letter-spacing: 3px; border-radius: 15px; }
+    .exec-btn:hover:not(:disabled) { background: var(--matrix-green); color: #000; box-shadow: 0 0 30px var(--matrix-glow); }
+    .load-bar { position: absolute; bottom: 0; left: 0; height: 5px; background: #fff; transition: 2s linear; }
 
-    .glass { background: var(--glass); backdrop-filter: blur(100px); }
+    .glass { background: var(--glass-heavy); backdrop-filter: blur(120px) saturate(180%); }
     .glass-inset { background: rgba(0, 255, 65, 0.02); }
-    .scan-mode { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    
+    .scan-mode { display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .scan-mode input { display: none; }
-    .led { width: 8px; height: 8px; border: 1px solid var(--matrix-green); }
-    .led.on { background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); }
-    .t-txt { font-size: 0.5rem; font-weight: 800; }
+    .check-box { width: 16px; height: 16px; border: 1px solid var(--matrix-green); }
+    .check-box.on { background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); }
+    .check-label { font-size: 0.6rem; font-weight: 800; color: var(--text-dim); }
   `]
 })
 export class App implements AfterViewInit {
@@ -155,7 +176,7 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
-  openApp(n: string) { this.selectedApp.set(n); }
+  openApp(name: string) { this.selectedApp.set(name); }
   closeApp() { this.selectedApp.set(null); }
 
   onInputChange() {
@@ -168,28 +189,31 @@ export class App implements AfterViewInit {
     this.engine.execute(this.selectedApp()!, this.lines(), this.scanMode()).subscribe(res => {
       if (this.selectedApp() === 'ndls_mrz') this.mrzData.set(res);
       else {
-        const url = URL.createObjectURL(res);
+        const blob = new Blob([res], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = `V_SYNC_${Date.now()}.pdf`; a.click();
       }
     });
   }
 
-  copy(t: string) { navigator.clipboard.writeText(t); }
+  copy(text: string) { navigator.clipboard.writeText(text); }
 
   ngAfterViewInit() {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d')!;
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const drops = new Array(Math.floor(canvas.width / 16)).fill(1);
-    setInterval(() => {
+    const drops = new Array(Math.floor(canvas.width / 18)).fill(1);
+    const draw = () => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#00ff41"; ctx.font = "16px monospace";
       drops.forEach((y, i) => {
-        ctx.fillText(Math.floor(Math.random()*2).toString(), i * 16, y * 16);
-        if (y * 16 > canvas.height && Math.random() > 0.98) drops[i] = 0;
+        ctx.fillText(Math.floor(Math.random()*2).toString(), i * 18, y * 18);
+        if (y * 18 > canvas.height && Math.random() > 0.985) drops[i] = 0;
         drops[i]++;
       });
-    }, 50);
+    };
+    setInterval(draw, 50);
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 3000);
   }
 }

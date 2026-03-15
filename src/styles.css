@@ -1,31 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Inter:wght@400;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
 
 :root {
   --matrix-green: #00ff41;
   --bg-pure: #000000;
-  --glass: rgba(10, 10, 10, 0.8);
-  --border: rgba(0, 255, 65, 0.12);
+  --glass-dark: rgba(15, 15, 15, 0.9);
+  --glass-border: rgba(0, 255, 65, 0.25);
+  --text-primary: #ffffff;
+  --text-dim: #555555;
+  --font-ios: 'SF Pro Display', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Inter', sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
 
 body {
   background: var(--bg-pure);
-  color: var(--matrix-green);
-  font-family: var(--font-sans);
+  color: var(--text-primary);
+  font-family: var(--font-ios);
   height: 100vh; width: 100vw;
   overflow: hidden;
   display: flex; justify-content: center; align-items: center;
 }
 
-/* CRT Scanline Effect  */
+/* Ефект Matrix Grain [cite: 2026-02-05] */
 body::after {
   content: "";
   position: fixed; inset: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
-              linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-  background-size: 100% 2px, 3px 100%;
-  z-index: 1000; pointer-events: none;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03; pointer-events: none; z-index: 1000;
 }

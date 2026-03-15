@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Dict, Final
 
 class MrzEngine:
-    """Reactive NDLS Dual Core Engine. """
+    """Reactive NDLS Dual Core Engine для Ірландії."""
     __slots__ = ('_weights', '_legacy_offsets')
 
     def __init__(self, base_path: str):
@@ -16,7 +16,7 @@ class MrzEngine:
             {"id": "sn", "label": "SURNAME", "p": "BROWNE"},
             {"id": "nt", "label": "NATIONALITY", "p": "IRL"},
             {"id": "lc", "label": "LICENCE_9", "p": "123456789"},
-            {"id": "is", "label": "ISSUE_2", "p": "01"},
+            {"id": "is", "label": "ISSUE_SEQ_2", "p": "01"},
             {"id": "dr", "label": "DRIVER_ID_PFX", "p": "55123456"}
         ]
 
@@ -31,7 +31,7 @@ class MrzEngine:
         return int(np.dot(vals, weights) % 10)
 
     def render(self, data: List[str], scan: bool = False) -> Dict[str, str]:
-        # Обробка вхідних даних 
+        # Обробка вхідних даних за логікою ie-dl-gen.py 
         sn, nt, lc, iss, drv = (data + [""] * 5)[:5]
         n_blk = nt.upper().replace(" ", "<")[:3].ljust(3, "<")
         i_blk = iss.zfill(2)[:2]
