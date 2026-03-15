@@ -1,16 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/main.py",
-      "use": "@vercel/python",
-      "config": { "includeFiles": ["api/*.ttf", "api/*.pdf", "api/*.json"] }
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/angular"
+  "functions": {
+    "api/main.py": {
+      "includeFiles": "api/**"
     }
-  ],
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/main.py" },
     { "source": "/(.*)", "destination": "/index.html" }
