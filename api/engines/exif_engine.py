@@ -20,7 +20,7 @@ class ExifEngine:
         return [
             {"id": "lat", "label": "LATITUDE", "p": "53.3498"},
             {"id": "lon", "label": "LONGITUDE", "p": "-6.2603"},
-            {"id": "date", "label": "TARGET_DATE", "p": "YYYY-MM-DD (Empty=Now)"}
+            {"id": "date", "label": "TARGET_DATE", "p": "YYYY-MM-DD"}
         ]
 
     def _to_exif_rational(self, value: float) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
@@ -32,13 +32,10 @@ class ExifEngine:
         return ((deg, 1), (minute, 1), (sec, 100))
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:
-        if not image_bytes:
-            raise ValueError("ERR_NO_IMAGE_PAYLOAD")
+        if not image_bytes: raise ValueError("ERR_NO_IMAGE_PAYLOAD")
 
-        # Дефолтні координати (Дублін), якщо фронт нічого не прислав [cite: 2026-02-05]
         lat, lon = 53.3498, -6.2603
         target_date = datetime.now()
-
         try:
             if len(lines) >= 2:
                 lat = float(lines[0]) if lines[0].strip() else lat
@@ -51,10 +48,8 @@ class ExifEngine:
         dt_str = dt_obj.strftime("%Y:%m:%d %H:%M:%S")
 
         with Image.open(io.BytesIO(image_bytes)) as img:
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-
-            # GPS Payload [cite: 2026-02-21]
+            if img.mode != "RGB": img = img.convert("RGB")
+            
             gps_ifd = {
                 piexif.GPSIFD.GPSVersionID: (2, 2, 0, 0),
                 piexif.GPSIFD.GPSLatitudeRef: 'N' if lat >= 0 else 'S',
@@ -67,7 +62,6 @@ class ExifEngine:
                 piexif.GPSIFD.GPSDateStamp: dt_obj.strftime("%Y:%m:%d"),
             }
 
-            # EXIF Payload (IMX519 Signature) [cite: 2026-02-05]
             exif_ifd = {
                 piexif.ExifIFD.DateTimeOriginal: dt_str,
                 piexif.ExifIFD.DateTimeDigitized: dt_str,
@@ -77,11 +71,9 @@ class ExifEngine:
                 piexif.ExifIFD.ExifVersion: b"0220",
                 piexif.ExifIFD.ImageUniqueID: hashlib.sha1(os.urandom(24)).hexdigest(),
                 piexif.ExifIFD.MakerNote: b'OnePlus_IMX519_V1.10_' + os.urandom(12),
-                piexif.ExifIFD.SceneType: b'\x01',
                 piexif.ExifIFD.ColorSpace: 1,
             }
 
-            # Device Meta [cite: 2026-02-05]
             zeroth_ifd = {
                 piexif.ImageIFD.Make: self._make,
                 piexif.ImageIFD.Model: self._model,
@@ -92,7 +84,6 @@ class ExifEngine:
 
             exif_dict = {"0th": zeroth_ifd, "Exif": exif_ifd, "GPS": gps_ifd}
             
-            # Thumbnail Rendering
             thumb_img = img.copy()
             thumb_img.thumbnail((256, 256), Image.Resampling.LANCZOS)
             thumb_io = io.BytesIO()
