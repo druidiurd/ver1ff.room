@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=JetBrains+Mono:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500&display=swap');
 
 :root {
   --bg-void: #000000;
-  --surface: #0a0a0a;
-  --glass: rgba(15, 15, 15, 0.7);
-  --accent-emerald: #10b981;
-  --accent-blue: #007aff;
-  --border-ios: rgba(255, 255, 255, 0.08);
-  --font-main: 'Plus Jakarta Sans', sans-serif;
+  --surface-titanium: #080808;
+  --accent-neon: #39ff14; /* Matrix Green */
+  --accent-glow: rgba(57, 255, 20, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.04);
+  --font-main: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --spacing-xl: 60px;
 }
 
 * {
@@ -30,13 +30,13 @@ body {
   align-items: center;
 }
 
-/* Ефект дорогого зерна (Film Grain) [cite: 2026-02-05] */
+/* Ефект зернистості високої роздільної здатності */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.03;
+  opacity: 0.02;
   pointer-events: none;
   z-index: 1000;
 }
