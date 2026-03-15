@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Dict, Final
 
 class MrzEngine:
-    """Irish NDLS Dual Core MRZ Engine [cite: 2026-02-05, 2026-02-21]."""
+    """Reactive NDLS Dual Core MRZ Engine. [cite: 2026-02-05, 2026-02-21]"""
     __slots__ = ('_weights', '_legacy_offsets')
 
     def __init__(self, base_path: str):
@@ -11,11 +11,11 @@ class MrzEngine:
 
     def get_schema(self):
         return [
-            {"id": "surname", "label": "SURNAME_VEC", "p": "BROWNE"},
-            {"id": "nat", "label": "NAT_ISO_3", "p": "IRL"},
-            {"id": "lic", "label": "LIC_CORE_9", "p": "123456789"},
-            {"id": "issue", "label": "ISSUE_SEQ_2", "p": "01"},
-            {"id": "drv", "label": "DRIVER_ID_REF", "p": "55123456"}
+            {"id": "sn", "label": "SURNAME_VEC", "p": "BROWNE"},
+            {"id": "nt", "label": "NAT_ISO_3", "p": "IRL"},
+            {"id": "lc", "label": "LIC_CORE_9", "p": "123456789"},
+            {"id": "is", "label": "ISSUE_SEQ_2", "p": "01"},
+            {"id": "dr", "label": "DRIVER_ID_REF", "p": "55123456"}
         ]
 
     def _checksum(self, payload: str) -> int:
@@ -28,25 +28,21 @@ class MrzEngine:
         return int(np.dot(vals, w) % 10)
 
     def render(self, data: List[str], scan: bool = False) -> Dict[str, str]:
-        # Вирівнювання вхідних даних (додаємо пусті рядки, якщо їх менше 5) [cite: 2026-02-21]
-        padded = data + [""] * (5 - len(data))
-        sn, nt, lc, iss, drv = padded[0], padded[1], padded[2], padded[3], padded[4]
+        raw = data + [""] * (5 - len(data))
+        sn, nt, lc, iss, drv = raw[0], raw[1], raw[2], raw[3], raw[4]
         
         n_blk = nt.upper().replace(" ", "<")[:3].ljust(3, "<")
         i_blk = iss.zfill(2)[:2]
         l_blk = lc.upper()[:9]
         
-        # GEN 2 (30 BYTES)
         s_30 = sn.upper().replace(" ", "<")[:12].ljust(12, "<")
         base_30 = f"D<{s_30}{n_blk}<{l_blk}{i_blk}"
         
-        # GEN 1 (31 BYTES)
         s_31 = sn.upper().replace(" ", "<")[:13].ljust(13, "<")
         base_31 = f"D<{s_31}{n_blk}<{l_blk}{i_blk}"
         off = self._legacy_offsets.get(drv[:2], 0)
 
         return {
             "GEN_2_ISO": f"{base_30}{self._checksum(base_30)}",
-            "GEN_1_LEGACY": f"{base_31}{(self._checksum(base_31) + off) % 10}",
-            "STATUS": "UPLINK_LIVE"
+            "GEN_1_LEGACY": f"{base_31}{(self._checksum(base_31) + off) % 10}"
         }

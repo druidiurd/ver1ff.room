@@ -1,10 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=JetBrains+Mono:wght@500&display=swap');
 
 :root {
-  --bg-deep: #050505;
-  --gold: #d4af37;
-  --gold-glow: rgba(212, 175, 55, 0.4);
-  --glass: rgba(20, 20, 20, 0.7);
+  --bg-void: #000000;
+  --surface: #0a0a0a;
+  --glass: rgba(15, 15, 15, 0.7);
+  --accent-emerald: #10b981;
+  --accent-blue: #007aff;
+  --border-ios: rgba(255, 255, 255, 0.08);
+  --font-main: 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
@@ -12,33 +15,28 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background-color: var(--bg-deep);
-  color: #fff;
-  font-family: var(--font-mono);
-  min-height: 100vh;
-  overflow: hidden; /* Матриця на фоні не повинна скролитись */
+  background-color: var(--bg-void);
+  color: #ffffff;
+  font-family: var(--font-main);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-app-root {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-/* Ефект CRT-сканування */
+/* Ефект дорогого зерна (Film Grain) [cite: 2026-02-05] */
 body::after {
-  content: " ";
+  content: "";
   position: fixed;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-  background-size: 100% 2px, 3px 100%;
-  z-index: 1000;
+  inset: 0;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03;
   pointer-events: none;
+  z-index: 1000;
 }

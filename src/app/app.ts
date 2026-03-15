@@ -1,4 +1,4 @@
-import { Component, signal, inject, AfterViewInit, effect } from '@angular/core';
+import { Component, signal, inject, AfterViewInit, effect, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EngineService } from './services/engine';
@@ -8,91 +8,147 @@ import { EngineService } from './services/engine';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <canvas id="matrix"></canvas>
-    <div class="dashboard-container">
-      <aside class="sidebar">
-        <div class="brand">VER1FF<span>.ROOM</span></div>
-        <nav>
-          <div class="nav-label">MODULE_SELECT</div>
-          <button (click)="module.set('energia')" [class.active]="module() === 'energia'" class="nav-item">IE_ENERGIA</button>
-          <button (click)="module.set('ndls_mrz')" [class.active]="module() === 'ndls_mrz'" class="nav-item">IE_NDLS_MRZ</button>
-        </nav>
-        <div class="sidebar-footer">
-          <label class="scan-toggle" *ngIf="module() === 'energia'">
-            <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-            <div class="checkbox-ui"><span class="led" [class.active]="scanMode()"></span></div>
-            <span class="toggle-text">SCAN_ARTIFACTS</span>
-          </label>
+    <div class="stealth-wrapper">
+      <div class="dynamic-island">
+        <div class="island-inner">
+          <span class="pulse-dot"></span>
+          <span class="status-text">UPLINK_STABLE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
         </div>
-      </aside>
+      </div>
 
-      <main class="panel">
-        <header class="panel-header">
-          <span class="path">~/ROOM/{{ module().toUpperCase() }}</span>
-          <span class="status">SYNC: {{ engine.loading() ? 'BUSY' : 'IDLE' }} // RAM: {{ memoryUsage() }}MB</span>
-        </header>
+      <div class="bento-container">
+        <aside class="bento-card sidebar glass">
+          <div class="brand-area">
+            <div class="brand-orb"></div>
+            <span class="brand-name">VER1FF<span>.ROOM</span></span>
+          </div>
+          
+          <nav class="module-stack">
+            <button (click)="module.set('energia')" [class.active]="module() === 'energia'" class="ios-nav-item">
+              <span class="module-icon">⚡</span> IE_ENERGIA_V57
+            </button>
+            <button (click)="module.set('ndls_mrz')" [class.active]="module() === 'ndls_mrz'" class="ios-nav-item">
+              <span class="module-icon">🆔</span> IE_NDLS_MRZ
+            </button>
+          </nav>
 
-        <div class="grid-form">
-          @for (field of schema(); track field.id) {
-            <div class="field-row">
-              <label>{{ field.label }}</label>
-              <div class="field-input">
-                <input 
-                  [(ngModel)]="lines()[$index]" 
-                  (ngModelChange)="onInputChange()"
-                  [placeholder]="field.p" 
-                  spellcheck="false" 
-                  autocomplete="off"
-                >
+          <div class="sidebar-footer" *ngIf="module() === 'energia'">
+            <div class="tool-box glass-inset">
+              <span class="tool-label">ANTI_FORENSICS_MODE</span>
+              <label class="ios-switch">
+                <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </aside>
+
+        <main class="bento-card control-unit glass">
+          <header class="card-header">
+            <span class="path-indicator">/ROOT/MODULES/{{ module().toUpperCase() }}</span>
+            <span class="encryption-tag">AES_256_ACTIVE</span>
+          </header>
+
+          <div class="input-matrix">
+            @for (field of schema(); track field.id) {
+              <div class="modern-input-group">
+                <label>{{ field.label }}</label>
+                <div class="input-field-wrap glass-inset">
+                  <input 
+                    [(ngModel)]="lines()[$index]" 
+                    (ngModelChange)="onInputChange()"
+                    [placeholder]="field.p" 
+                    spellcheck="false"
+                    autocomplete="off"
+                  >
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="mrz-output-console glass-dark" *ngIf="mrzData()">
+            <div class="console-label">>> REALTIME_MRZ_DUMP</div>
+            <div class="console-rows">
+              <div class="row">
+                <span class="tag">G2_30B</span>
+                <code>{{ mrzData().GEN_2_ISO }}</code>
+                <button (click)="copy(mrzData().GEN_2_ISO)" class="pill-btn">COPY</button>
+              </div>
+              <div class="row">
+                <span class="tag">G1_31B</span>
+                <code>{{ mrzData().GEN_1_LEGACY }}</code>
               </div>
             </div>
-          }
-        </div>
-
-        <div class="output-console" *ngIf="mrzData()">
-          <div class="console-line">
-            <span class="c-tag">[GEN_2]</span> {{ mrzData().GEN_2_ISO }}
-            <button (click)="copy(mrzData().GEN_2_ISO)">COPY</button>
           </div>
-          <div class="console-line">
-            <span class="c-tag">[GEN_1]</span> {{ mrzData().GEN_1_LEGACY }}
-          </div>
-        </div>
 
-        <footer class="panel-footer">
-          <button [disabled]="engine.loading()" (click)="fireManual()" class="exec-btn">
-            <span class="btn-label">> {{ module() === 'ndls_mrz' ? 'RE-SYNC_CORE' : 'EXECUTE_GENERATION' }}</span>
-            <div class="loading-bar" [style.width.%]="engine.loading() ? 100 : 0"></div>
-          </button>
-        </footer>
-      </main>
+          <footer class="execution-area">
+            <button [disabled]="engine.loading()" (click)="fire()" class="primary-exec-btn">
+              <span class="btn-text">> {{ engine.loading() ? 'PROCCESSING_ENCRYPTION...' : 'EXECUTE_SYNC_COMMAND' }}</span>
+              <div class="btn-loader" [style.width.%]="engine.loading() ? 100 : 0"></div>
+            </button>
+          </footer>
+        </main>
+      </div>
     </div>
   `,
   styles: [`
-    canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.1; }
-    .dashboard-container { position: relative; z-index: 10; display: flex; width: 95vw; max-width: 920px; height: 550px; background: rgba(8,8,8,0.95); border: 1px solid rgba(212,175,55,0.2); font-family: 'JetBrains Mono', monospace; }
-    .sidebar { width: 240px; border-right: 1px solid rgba(212,175,55,0.1); display: flex; flex-direction: column; padding: 25px 0; }
-    .brand { padding: 0 25px 30px; font-size: 1.4rem; font-weight: 900; color: #d4af37; letter-spacing: 2px; }
-    .brand span { color: #fff; }
-    nav { flex: 1; padding: 0 15px; }
-    .nav-item { width: 100%; background: transparent; border: none; color: #666; padding: 12px 15px; text-align: left; font-size: 0.65rem; cursor: pointer; }
-    .nav-item.active { color: #d4af37; background: rgba(212,175,55,0.05); border-left: 2px solid #d4af37; }
-    .grid-form { padding: 30px 45px; display: grid; gap: 12px; }
-    .field-row { display: grid; grid-template-columns: 140px 1fr; align-items: center; gap: 20px; }
-    .field-row label { font-size: 0.6rem; color: #d4af37; font-weight: 800; }
-    .field-input { background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(212,175,55,0.15); padding: 8px 15px; }
-    input { width: 100%; background: transparent; border: none; color: #fff; font-size: 0.85rem; outline: none; }
-    .output-console { margin: 0 45px; padding: 15px; background: #000; border-left: 3px solid #d4af37; font-size: 0.75rem; color: #fff; }
-    .c-tag { color: #d4af37; margin-right: 10px; }
-    .exec-btn { width: 100%; background: transparent; border: 1px solid #d4af37; padding: 20px; cursor: pointer; position: relative; overflow: hidden; }
-    .loading-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: #fff; transition: width 2s; }
-    /* Checkbox & Sidebar Footer */
-    .sidebar-footer { padding: 20px; border-top: 1px solid rgba(212,175,55,0.1); }
-    .scan-toggle { display: flex; align-items: center; gap: 12px; cursor: pointer; }
-    .checkbox-ui { width: 14px; height: 14px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; }
-    .led { width: 6px; height: 6px; background: #222; }
-    .led.active { background: #d4af37; box-shadow: 0 0 10px #d4af37; }
-    .toggle-text { font-size: 0.5rem; color: #888; }
+    .stealth-wrapper { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 30px; position: relative; }
+    
+    /* DYNAMIC ISLAND [cite: 2026-02-05] */
+    .dynamic-island { background: #000; padding: 10px 30px; border-radius: 50px; border: 1px solid var(--border-ios); box-shadow: 0 15px 40px rgba(0,0,0,0.9); }
+    .island-inner { display: flex; align-items: center; gap: 12px; font-size: 0.65rem; font-weight: 800; color: #555; letter-spacing: 1px; }
+    .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    /* BENTO GRID [cite: 2026-02-21] */
+    .bento-container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; width: 100%; max-width: 1100px; height: 100%; }
+    .glass { background: var(--glass); backdrop-filter: blur(50px) saturate(200%); border: 1px solid var(--border-ios); border-radius: 30px; }
+    .glass-inset { background: rgba(0,0,0,0.3); border: 1px solid var(--border-ios); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); }
+    .glass-dark { background: #000; border: 1px solid var(--border-ios); border-radius: 20px; }
+    
+    .bento-card { padding: 35px; display: flex; flex-direction: column; }
+    
+    /* SIDEBAR */
+    .brand-area { display: flex; align-items: center; gap: 15px; margin-bottom: 50px; }
+    .brand-orb { width: 16px; height: 16px; background: var(--accent-blue); border-radius: 50%; box-shadow: 0 0 15px var(--accent-blue); }
+    .brand-name { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; }
+    .brand-name span { color: var(--accent-blue); }
+
+    .module-stack { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    .ios-nav-item { width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid transparent; border-radius: 18px; color: #666; font-family: inherit; font-size: 0.75rem; font-weight: 800; text-align: left; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 12px; }
+    .ios-nav-item.active { background: #fff; color: #000; transform: scale(1.02); }
+
+    /* CONTROL UNIT */
+    .card-header { display: flex; justify-content: space-between; font-size: 0.6rem; color: #444; font-weight: 800; margin-bottom: 40px; letter-spacing: 1px; }
+    .input-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .modern-input-group label { font-size: 0.6rem; font-weight: 800; color: #666; margin-bottom: 10px; display: block; padding-left: 5px; }
+    .input-field-wrap { padding: 14px 20px; border-radius: 15px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: var(--font-mono); font-size: 0.85rem; }
+
+    /* CONSOLE */
+    .mrz-output-console { margin-top: 40px; padding: 25px; }
+    .console-label { font-size: 0.55rem; color: #444; margin-bottom: 15px; font-weight: 800; }
+    .mrz-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; }
+    .tag { color: var(--accent-emerald); font-size: 0.6rem; font-weight: 900; }
+    code { flex: 1; font-family: var(--font-mono); font-size: 0.85rem; color: #fff; letter-spacing: 2px; }
+    .pill-btn { background: var(--accent-blue); color: #fff; border: none; padding: 4px 15px; border-radius: 20px; font-size: 0.6rem; font-weight: 900; cursor: pointer; }
+
+    /* BUTTONS */
+    .execution-area { margin-top: auto; padding-top: 30px; }
+    .primary-exec-btn { width: 100%; padding: 24px; background: #fff; color: #000; border-radius: 20px; border: none; font-weight: 900; font-size: 0.95rem; letter-spacing: 2px; cursor: pointer; position: relative; overflow: hidden; transition: 0.3s; }
+    .primary-exec-btn:active { transform: scale(0.98); }
+    .btn-loader { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent-blue); transition: 2s linear; }
+
+    /* IOS SWITCH */
+    .sidebar-footer { padding-top: 30px; }
+    .tool-box { padding: 15px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .tool-label { font-size: 0.55rem; color: #888; font-weight: 800; }
+    .ios-switch { position: relative; width: 38px; height: 20px; }
+    .ios-switch input { display: none; }
+    .slider { position: absolute; inset: 0; background: #1c1c1e; border-radius: 20px; transition: 0.3s; }
+    .slider::after { content: ""; position: absolute; height: 16px; width: 16px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.3s; }
+    input:checked + .slider { background: var(--accent-emerald); }
+    input:checked + .slider::after { transform: translateX(18px); }
   `]
 })
 export class App implements AfterViewInit {
@@ -103,6 +159,7 @@ export class App implements AfterViewInit {
   scanMode = signal(false);
   mrzData = signal<any>(null);
   memoryUsage = signal(128);
+  nodeId = Math.random().toString(16).substring(2, 8).toUpperCase();
 
   constructor() {
     effect(() => {
@@ -114,26 +171,24 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
-  /** Реактивне оновлення при введенні [cite: 2026-02-05] */
   onInputChange() {
     if (this.module() === 'ndls_mrz') {
-      this.engine.execute(this.module(), this.lines(), false).subscribe(res => {
-        this.mrzData.set(res);
-      });
+      this.engine.execute(this.module(), this.lines(), false).subscribe(res => this.mrzData.set(res));
     }
   }
 
-  /** Ручний запуск (для PDF) [cite: 2026-02-21] */
-  fireManual() {
+  fire() {
     this.engine.execute(this.module(), this.lines(), this.scanMode()).subscribe(res => {
       if (this.module() === 'ndls_mrz') this.mrzData.set(res);
       else {
+        const url = URL.createObjectURL(res);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(res); a.download = `V_ROOM_${Date.now()}.pdf`; a.click();
+        a.href = url; a.download = `V_ROOM_EXTRACT_${Date.now()}.pdf`; a.click();
+        URL.revokeObjectURL(url);
       }
     });
   }
 
   copy(t: string) { navigator.clipboard.writeText(t); }
-  ngAfterViewInit() { /* Matrix logic */ }
+  ngAfterViewInit() { setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 2000); }
 }
