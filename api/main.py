@@ -6,95 +6,38 @@ import os
 import numpy as np
 from PIL import Image, ImageFilter
 from datetime import datetime, timedelta
-from typing import List, Final, Dict, Any, Optional
+from typing import List, Final, Dict, Any
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import StreamingResponse, JSONResponse
 
 app = FastAPI()
 
-class IrishNDLSDualCore:
-    """Staff-level Dual Engine для MRZ. [cite: 2026-02-05, 2026-02-21]."""
-    __slots__ = ('_weights', '_doc_type', '_pad', '_legacy_offsets')
+class BaseEngine:
+    """Core logic для всіх модулів [cite: 2026-02-21]."""
+    def __init__(self, base_path: str):
+        self.base_path = base_path
+    def get_p(self, f: str): return os.path.join(self.base_path, f)
 
-    def __init__(self) -> None:
-        self._weights: Final = np.array([7, 3, 1], dtype=np.int32)
-        self._doc_type: Final = "D<"
-        self._pad: Final = "<"
-        self._legacy_offsets: Final = {"55": 8, "29": 2, "04": 0, "26": 0, "17": 0, "28": 0}
+class EnergiaEngine(BaseEngine):
+    """Модуль Ірландської енергії [cite: 2026-02-05]."""
+    def get_schema(self):
+        return [
+            {"id": "name", "label": "IDENTITY_NAME", "p": "Mr Peter Browne"},
+            {"id": "street", "label": "STREET_LOCUS", "p": "114 STANNAWAY RD"},
+            {"id": "dist1", "label": "DISTRICT_ZONE", "p": "KIMMAGE"},
+            {"id": "dist2", "label": "CITY_DISTRICT", "p": "DUBLIN 12"},
+            {"id": "county", "label": "COUNTY_REGION", "p": "Co. Dublin 12"},
+            {"id": "zip", "label": "ZIP_POSTCODE", "p": "D12 N4V9"}
+        ]
 
-    def _fast_checksum(self, payload: str) -> int:
-        arr = np.frombuffer(payload.encode('ascii'), dtype=np.uint8)
-        vals = np.zeros_like(arr, dtype=np.int32)
-        is_num = (arr >= 48) & (arr <= 57)
-        is_alpha = (arr >= 65) & (arr <= 90)
-        vals[is_num] = arr[is_num] - 48
-        vals[is_alpha] = arr[is_alpha] - 55
-        weights = np.tile(self._weights, (len(arr) + 2) // 3)[:len(arr)]
-        return int(np.dot(vals, weights) % 10)
-
-    async def build(self, data: List[str]) -> Dict[str, str]:
-        # Мапінг: 0:Surname, 1:Nationality, 2:Licence9, 3:Issue2, 4:DriverID_Prefix
-        try:
-            surname, nat, lic_9, issue_num, drv_id = data[0], data[1], data[2], data[3], data[4]
-            n_block = nat.upper().replace(" ", self._pad)[:3].ljust(3, self._pad)
-            i_block = issue_num.zfill(2)[:2]
-            l_block = lic_9.upper()[:9]
-            
-            # GEN 2 (30 BYTES)
-            s_30 = surname.upper().replace(" ", self._pad)[:12].ljust(12, self._pad)
-            mrz_30_base = f"{self._doc_type}{s_30}{n_block}{self._pad}{l_block}{i_block}"
-            cs_30 = self._fast_checksum(mrz_30_base) % 10
-            
-            # GEN 1 (31 BYTES)
-            s_31 = surname.upper().replace(" ", self._pad)[:13].ljust(13, self._pad)
-            mrz_31_base = f"{self._doc_type}{s_31}{n_block}{self._pad}{l_block}{i_block}"
-            offset = self._legacy_offsets.get(drv_id[:2], 0)
-            cs_31 = (self._fast_checksum(mrz_31_base) + offset) % 10
-
-            return {
-                "GEN_2_ISO": f"{mrz_30_base}{cs_30}",
-                "GEN_1_LEGACY": f"{mrz_31_base}{cs_31}"
-            }
-        except Exception as e:
-            raise ValueError(f"MRZ_VEC_ERR: {e}")
-
-class SeniorProductionV57:
-    """PDF Engine v57.3. [cite: 2026-02-05, 2026-02-21]."""
-    __slots__ = ('base_path', 'f_reg', 'f_bold')
-
-    def __init__(self) -> None:
-        self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.f_reg = self._get_path("arial.ttf")
-        self.f_bold = self._get_path("arialbd.ttf")
-
-    def _get_path(self, filename: str) -> str:
-        p = os.path.join(self.base_path, filename)
-        if not os.path.exists(p): raise FileNotFoundError(f"Asset missing: {filename}")
-        return p
-
-    def _fmt(self, val: float) -> str: return f"\u20ac{val:,.2f}"
-
-    def _apply_scan(self, pdf_bytes: io.BytesIO) -> io.BytesIO:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
-        img = Image.open(io.BytesIO(pix.tobytes()))
-        img = img.rotate(random.uniform(-0.4, 0.4), resample=Image.BICUBIC, expand=True, fillcolor=(255, 255, 255))
-        arr = np.array(img)
-        noise = np.random.normal(0, 2.5, arr.shape).astype('int16')
-        arr = np.clip(arr.astype('int16') + noise, 0, 255).astype('uint8')
-        img = Image.fromarray(arr).filter(ImageFilter.GaussianBlur(radius=0.32))
-        out = io.BytesIO()
-        img.save(out, format="PDF", resolution=300.0, quality=82, optimize=True)
-        out.seek(0)
-        return out
-
-    async def generate_pdf(self, raw_addr: List[str], scan_mode: bool) -> io.BytesIO:
-        with open(self._get_path("coords.json"), "r") as f: cfg = json.load(f)
+    def process(self, lines: List[str], scan: bool) -> io.BytesIO:
+        f_reg, f_bold = self.get_p("arial.ttf"), self.get_p("arialbd.ttf")
+        with open(self.get_p("coords.json"), "r") as f: cfg = json.load(f)
         now = datetime.now()
         p_bal, trans = round(random.uniform(70, 135), 2), round(random.uniform(85, 225), 2)
-        addr = [l.upper() if i in [1,2,3,5] else l for i, l in enumerate(raw_addr)]
+        addr = [l.upper() if i in [1,2,3,5] else l for i, l in enumerate(lines)]
         
-        with fitz.open(self._get_path("Utilydy_bill_Energia-1.pdf")) as doc:
+        with fitz.open(self.get_p("Utilydy_bill_Energia-1.pdf")) as doc:
             page = doc[0]
             page.clean_contents()
             for n, d in cfg.items():
@@ -102,39 +45,80 @@ class SeniorProductionV57:
                     page.add_redact_annot(fitz.Rect(d["rect"]), fill=(1, 1, 1))
             page.apply_redactions()
             
-            # Рендеринг (спрощено для моноліту)
+            # Address Block
             b_a = cfg["Address_Block"]
             for i, t in enumerate(addr):
-                page.insert_text((b_a["rect"][0], b_a["rect"][1] + 10 + (i * b_a["line_height"])), t, fontname="Arial", fontfile=self.f_reg, fontsize=b_a["font_size"])
+                page.insert_text((b_a["rect"][0], b_a["rect"][1] + 10 + (i * b_a["line_height"])), t, fontname="Arial", fontfile=f_reg, fontsize=b_a["font_size"])
             
-            # Right Alignment Logic [cite: 2026-02-05]
-            fin_vals = [self._fmt(p_bal), self._fmt(p_bal), "\u20ac0.00", self._fmt(trans), self._fmt(trans)]
+            # Right-Align Finance [cite: 2026-02-05]
+            fin_vals = [f"\u20ac{p_bal:,.2f}", f"\u20ac{p_bal:,.2f}", "\u20ac0.00", f"\u20ac{trans:,.2f}", f"\u20ac{trans:,.2f}"]
             for i, k in enumerate(["Fin_Val_1_PrevBal", "Fin_Val_2_Payment", "Fin_Val_3_AccBalBefore", "Fin_Val_4_Trans", "Fin_Val_5_NewBal"]):
-                z, val = cfg[k], fin_vals[i]
-                f_p = self.f_bold if i > 1 else self.f_reg
-                tw = fitz.Font(fontfile=f_p).text_length(val, fontsize=z["font_size"])
-                page.insert_text((z["rect"][2] - tw, z["rect"][1] + 10), val, fontname="Arial-Bold" if i > 1 else "Arial", fontfile=f_p, fontsize=z["font_size"])
+                z = cfg[k]
+                fp = f_bold if i > 1 else f_reg
+                tw = fitz.Font(fontfile=fp).text_length(fin_vals[i], fontsize=z["font_size"])
+                page.insert_text((z["rect"][2] - tw, z["rect"][1] + 10), fin_vals[i], fontname="Arial-Bold" if i > 1 else "Arial", fontfile=fp, fontsize=z["font_size"])
 
+            # Метадані та збереження
             doc.set_metadata({"producer": "macOS 15.3.1 Quartz PDFContext", "creator": "Pages"})
             tmp = io.BytesIO()
             doc.save(tmp, garbage=4, deflate=True)
             tmp.seek(0)
-            return self._apply_scan(tmp) if scan_mode else tmp
+            return self.apply_artifacts(tmp) if scan else tmp
 
-pdf_engine = SeniorProductionV57()
-mrz_engine = IrishNDLSDualCore()
+    def apply_artifacts(self, pdf_bytes: io.BytesIO) -> io.BytesIO:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
+        img = Image.open(io.BytesIO(pix.tobytes()))
+        # Artifact Injection: Rotation, Noise, Blur [cite: 2026-02-05]
+        img = img.rotate(random.uniform(-0.4, 0.4), resample=Image.BICUBIC, expand=True, fillcolor=(255, 255, 255))
+        arr = np.array(img)
+        noise = np.random.normal(0, 2.8, arr.shape).astype('int16')
+        arr = np.clip(arr.astype('int16') + noise, 0, 255).astype('uint8')
+        img = Image.fromarray(arr).filter(ImageFilter.GaussianBlur(radius=0.35))
+        out = io.BytesIO()
+        img.save(out, format="PDF", resolution=300.0, quality=82)
+        out.seek(0)
+        return out
 
-@app.post("/api/process")
-async def handle_request(payload: Dict[str, Any] = Body(...)):
-    try:
-        m_type = payload.get("type", "energia")
-        lines = payload.get("lines", [])
-        
-        if m_type == "ndls_mrz":
-            res = await mrz_engine.build(lines)
-            return JSONResponse(content=res)
-        
-        pdf = await pdf_engine.generate_pdf(lines, payload.get("scan_mode", False))
-        return StreamingResponse(pdf, media_type="application/pdf")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+class MrzEngine(BaseEngine):
+    """Модуль MRZ обчислень на Numpy [cite: 2026-02-05, 2026-02-21]."""
+    def get_schema(self):
+        return [
+            {"id": "s", "label": "SURNAME_VEC", "p": "BROWNE"},
+            {"id": "n", "label": "NAT_ISO_3", "p": "IRL"},
+            {"id": "l", "label": "LIC_CORE_9", "p": "123456789"},
+            {"id": "i", "label": "ISSUE_SEQ_2", "p": "01"},
+            {"id": "d", "label": "DRIVER_ID", "p": "55123456"}
+        ]
+
+    def process(self, data: List[str], scan: bool):
+        # Векторний чексум [cite: 2026-02-05]
+        w = np.array([7, 3, 1], dtype=np.int32)
+        def cs(p):
+            a = np.frombuffer(p.encode('ascii'), dtype=np.uint8)
+            v = np.zeros_like(a, dtype=np.int32)
+            num, alp = (a >= 48) & (a <= 57), (a >= 65) & (a <= 90)
+            v[num], v[alp] = a[num] - 48, a[alp] - 55
+            weights = np.tile(w, (len(a) + 2) // 3)[:len(a)]
+            return int(np.dot(v, weights) % 10)
+
+        s_30 = data[0].upper().replace(" ", "<")[:12].ljust(12, "<")
+        mrz = f"D<{s_30}{data[1].upper()[:3]}<{data[2].upper()[:9]}{data[3].zfill(2)[:2]}"
+        return {"GEN_2_ISO": f"{mrz}{cs(mrz)}", "STATUS": "DECODED_SUCCESS"}
+
+# Registry
+bp = os.path.dirname(os.path.abspath(__file__))
+registry = {"energia": EnergiaEngine(bp), "ndls_mrz": MrzEngine(bp)}
+
+@app.get("/api/schema/{module}")
+async def schema(module: str):
+    if module not in registry: raise HTTPException(404)
+    return JSONResponse(registry[module].get_schema())
+
+@app.post("/api/execute")
+async def execute(payload: Dict[str, Any] = Body(...)):
+    mod = payload.get("type")
+    if mod not in registry: raise HTTPException(404)
+    res = registry[mod].process(payload.get("lines", []), payload.get("scan_mode", False))
+    if isinstance(res, dict): return JSONResponse(res)
+    return StreamingResponse(res, media_type="application/pdf")
