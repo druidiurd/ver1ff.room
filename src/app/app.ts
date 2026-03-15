@@ -60,7 +60,7 @@ import { EngineService } from './services/engine';
             @for (field of schema(); track field.id) {
               <div class="input-node-compact">
                 <label>{{ field.label }}</label>
-                <div class="field-wrap-compact glass-inset">
+                <div class="field-wrap-compact">
                   <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="field.p" spellcheck="false" autocomplete="off">
                 </div>
               </div>
@@ -86,7 +86,7 @@ import { EngineService } from './services/engine';
 
         <div class="face-crop-container" *ngIf="selectedApp() === 'face_crop'">
           <div class="crop-workspace">
-            <div class="dnd-zone glass-inset" [class.drag-over]="isDragging()" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+            <div class="dnd-zone glass-dark" [class.drag-over]="isDragging()" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
               <span class="dnd-text" *ngIf="!faceSource()">DRAG_DROP_IMAGE_HERE</span>
               <img *ngIf="faceSource()" [src]="faceSource()" class="img-preview">
             </div>
@@ -106,11 +106,11 @@ import { EngineService } from './services/engine';
         </div>
 
         <div class="console-output glass-dark" *ngIf="mrzData() && selectedApp() === 'ndls_mrz'">
-          <div class="row"><span class="tag">G2</span> <code>{{ mrzData().GEN_2_ISO }}</code> <button (click)="copy(mrzData().GEN_2_ISO)">CPY</button></div>
+          <div class="row"><span class="tag">G2</span> <code>{{ mrzData().GEN_2_ISO }}</code> <button (click)="copy(mrzData().GEN_2_ISO)" class="copy-btn">CPY</button></div>
           <div class="row"><span class="tag">G1</span> <code>{{ mrzData().GEN_1_LEGACY }}</code></div>
         </div>
 
-        <footer class="view-footer" *ngIf="selectedApp() !== 'face_crop'">
+        <footer class="view-footer" *ngIf="selectedApp() === 'energia'">
           <button [disabled]="engine.loading()" (click)="fire()" class="primary-btn">
             <span class="btn-txt">> {{ engine.loading() ? 'PROCCESSING_ENCRYPTION...' : 'EXECUTE_SYNC_COMMAND' }}</span>
             <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
@@ -122,8 +122,7 @@ import { EngineService } from './services/engine';
   styles: [`
     .os-wrapper { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; z-index: 10; position: relative; }
     .glass { background: rgba(10,10,10,0.85); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
-    .glass-inset { background: rgba(0,255,65,0.01); border: 1px solid rgba(255,255,255,0.08); box-shadow: inset 0 2px 10px #000; }
-    .glass-dark { background: #000; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
+    .glass-dark { background: #000; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; }
 
     .dynamic-island { padding: 8px 25px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
     .island-inner { display: flex; align-items: center; gap: 15px; font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
@@ -139,61 +138,68 @@ import { EngineService } from './services/engine';
     .app-card { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .app-card:hover { transform: scale(1.1) translateY(-5px); border-color: #00ff41; box-shadow: 0 0 30px rgba(0,255,65,0.4); }
     .app-icon { font-size: 2rem; }
+    .neon-cyan { text-shadow: 0 0 15px cyan; }
     .app-label { font-size: 0.7rem; font-weight: 700; color: #666; text-align: center; }
 
-    .app-view { position: absolute; inset: 20px; padding: 50px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; z-index: 100; border-radius: 40px; }
-    .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    /* APP VIEW - Виправлена висота і overflow */
+    .app-view { position: absolute; inset: 20px; padding: 40px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; z-index: 100; border-radius: 40px; overflow: hidden; }
+    .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-shrink: 0; }
     .back-btn { background: transparent; border: none; color: #666; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
     .module-name { color: #00ff41; font-weight: 900; font-size: 1.4rem; letter-spacing: 3px; text-shadow: 0 0 15px rgba(0,255,65,0.4); }
 
     /* SPLIT WORKSPACE */
-    .split-workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; flex: 1; overflow-y: auto; padding-right: 15px; }
+    .split-workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; flex: 1; overflow-y: auto; padding-right: 15px; min-height: 0; }
     .form-column { display: flex; flex-direction: column; gap: 15px; }
     .input-node-compact label { font-size: 0.6rem; font-weight: 900; color: #666; margin-bottom: 6px; display: block; letter-spacing: 1px; }
-    .field-wrap-compact { padding: 12px 18px; border-radius: 12px; }
-    .field-wrap-compact input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
-    .field-wrap-compact input::placeholder { color: #222; }
+    
+    /* КОНТРАСТ ІНПУТІВ [cite: 2026-02-05] */
+    .field-wrap-compact { padding: 12px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); transition: 0.3s; }
+    .field-wrap-compact:focus-within { border-color: #00ff41; background: rgba(0, 255, 65, 0.08); box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); }
+    .field-wrap-compact input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; }
+    .field-wrap-compact input::placeholder { color: #888; }
 
-    .manual-column { padding: 25px; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); }
+    .manual-column { padding: 25px; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); }
     .manual-header { font-size: 0.7rem; color: #00ff41; font-weight: 900; margin-bottom: 20px; letter-spacing: 2px; }
     .manual-content p { font-size: 0.7rem; color: #aaa; margin-bottom: 15px; line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
     .hlt { color: #00ff41; font-weight: 900; }
     .sys-ready { margin-top: auto; font-size: 0.6rem; color: #444; font-weight: 900; letter-spacing: 2px; text-align: right; }
 
-    /* FACE CROP STYLES */
-    .face-crop-container { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-    .crop-workspace { display: flex; gap: 20px; flex: 1; min-height: 300px; }
-    .dnd-zone { flex: 1; border-radius: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,255,255,0.08); transition: 0.3s; position: relative; }
+    /* FACE CROP STYLES - Фікс висоти [cite: 2026-02-05] */
+    .face-crop-container { flex: 1; display: flex; flex-direction: column; gap: 15px; min-height: 0; }
+    .crop-workspace { display: flex; gap: 20px; flex: 1; min-height: 0; }
+    .dnd-zone { flex: 1; border-radius: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,255,255,0.2); transition: 0.3s; position: relative; }
     .dnd-zone.drag-over { border-color: #00ff41; background: rgba(0, 255, 65, 0.05); }
     .dnd-text { font-weight: 900; color: #666; letter-spacing: 2px; }
     .img-preview { width: 100%; height: 100%; object-fit: contain; }
-    .result-zone { width: 350px; padding: 20px; display: flex; flex-direction: column; }
+    .result-zone { width: 300px; padding: 15px; display: flex; flex-direction: column; }
     .zone-label { font-size: 0.6rem; color: #00ff41; font-weight: 900; margin-bottom: 15px; }
     .result-box { flex: 1; display: flex; align-items: center; justify-content: center; background: #050505; border-radius: 10px; overflow: hidden; border: 1px solid #222; }
     .img-result { max-width: 100%; max-height: 100%; object-fit: contain; }
     .wait-txt { font-size: 0.7rem; color: #333; font-weight: 800; }
     .err-txt { font-size: 0.7rem; color: #ff003c; font-weight: 900; text-align: center; padding: 10px; }
-    .slider-control { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+    
+    .slider-control { padding: 15px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); }
     .slider-control label { font-size: 0.7rem; font-weight: 900; color: #00ff41; }
     .cyber-slider { -webkit-appearance: none; width: 100%; background: transparent; }
     .cyber-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #00ff41; cursor: pointer; box-shadow: 0 0 10px #00ff41; margin-top: -8px; }
     .cyber-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #222; border-radius: 2px; }
 
-    .console-output { background: #000; padding: 20px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.08); border-radius: 15px; }
-    .tag { color: #00ff41; font-weight: 900; margin-right: 20px; }
+    .console-output { background: #000; padding: 20px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.15); border-radius: 15px; flex-shrink: 0; }
+    .row { display: flex; align-items: center; margin-bottom: 10px; }
+    .tag { color: #00ff41; font-weight: 900; margin-right: 20px; font-size: 0.8rem;}
     code { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; flex: 1; letter-spacing: 2px; }
     .copy-btn { background: #00ff41; color: #000; border: none; padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; font-weight: 900; cursor: pointer; }
 
-    .view-footer { margin-top: auto; padding-top: 20px; }
+    .view-footer { padding-top: 20px; flex-shrink: 0; }
     .primary-btn { width: 100%; padding: 25px; background: transparent; color: #00ff41; border: 1px solid #00ff41; border-radius: 20px; font-weight: 900; font-size: 1.1rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; transition: 0.3s; }
     .primary-btn:hover:not(:disabled) { background: #00ff41; color: #000; box-shadow: 0 0 30px rgba(0,255,65,0.4); }
     .load-fill { position: absolute; bottom: 0; left: 0; height: 5px; background: #fff; transition: 2s linear; }
 
     .scan-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
     .scan-switch input { display: none; }
-    .slider { width: 38px; height: 20px; background: #222; border-radius: 30px; position: relative; transition: 0.3s; }
-    .slider::after { content: ""; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.3s; }
-    input:checked + .slider { background: #00ff41; }
+    .slider { width: 38px; height: 20px; background: #222; border-radius: 30px; position: relative; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
+    .slider::after { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.3s; }
+    input:checked + .slider { background: #00ff41; border-color: #00ff41; }
     input:checked + .slider::after { transform: translateX(18px); }
   `]
 })
