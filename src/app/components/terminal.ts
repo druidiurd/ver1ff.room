@@ -28,7 +28,15 @@ import { MapComponent } from './map';
               <div class="field-box">
                 <label>{{ field.label }}</label>
                 <div class="input-bg">
-                  <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [placeholder]="field.p" autocomplete="off">
+                  <ng-container *ngIf="!field.opts">
+                    <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [placeholder]="field.p" autocomplete="off" spellcheck="false">
+                  </ng-container>
+                  <ng-container *ngIf="field.opts">
+                    <select [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
+                      <option value="" disabled selected>{{ field.p }}</option>
+                      <option *ngFor="let opt of field.opts" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </ng-container>
                 </div>
               </div>
             }
@@ -52,6 +60,11 @@ import { MapComponent } from './map';
           <div class="mrz-box" *ngIf="store.mrzData()">
             <div class="m-row"><span class="tag">G2</span><code>{{ store.mrzData().GEN_2_ISO }}</code><button (click)="copy(store.mrzData().GEN_2_ISO)">CPY</button></div>
             <div class="m-row"><span class="tag">G1</span><code>{{ store.mrzData().GEN_1_LEGACY }}</code></div>
+          </div>
+
+          <div class="mrz-box bypass-box" *ngIf="store.bypassData()">
+            <div class="m-row"><span class="tag">AI_DETECT_PROBABILITY</span><code class="alert-code">{{ store.bypassData().AI_PROBABILITY }}</code></div>
+            <div class="m-row"><span class="tag">API_STATUS</span><code>{{ store.bypassData().STATUS }}</code></div>
           </div>
         </div>
       </div>
@@ -79,7 +92,10 @@ import { MapComponent } from './map';
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
     .field-box label { display: block; font-size: 0.7rem; font-weight: 900; color: #fff; margin-bottom: 12px; letter-spacing: 1px; }
     .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 18px 25px; border-radius: 20px; }
-    input { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; }
+    
+    /* STYLING FOR DYNAMIC SELECT [cite: 2026-02-05] */
+    input, select { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; appearance: none; }
+    select option { background: #111; color: #00ff41; }
 
     .drop-zone { flex: 1; border: 3px dashed rgba(255,255,255,0.1); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
     .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
@@ -92,13 +108,24 @@ import { MapComponent } from './map';
     .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; }
 
     .mrz-box { background: #000; border: 1px solid #00ff41; padding: 40px; border-radius: 30px; }
+    .bypass-box { border-color: #a855f7; box-shadow: 0 0 30px rgba(168,85,247,0.2); }
     .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 20px; font-family: 'JetBrains Mono'; font-size: 1.3rem; }
     .tag { color: #00ff41; font-weight: 900; }
+    .bypass-box .tag { color: #a855f7; }
+    .alert-code { color: #ff3b30 !important; font-size: 1.8rem; font-weight: 900; }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
     button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
 
     .exec-btn { width: 100%; margin-top: 40px; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; cursor: pointer; position: relative; overflow: hidden; }
     .bar { position: absolute; bottom: 0; left: 0; height: 8px; background: #00ff41; transition: 2s; }
+
+    .scan-ui { display: flex; align-items: center; gap: 15px; cursor: pointer; }
+    .scan-ui input { display: none; }
+    .slider { width: 40px; height: 22px; background: #222; border-radius: 20px; position: relative; transition: 0.3s; }
+    .slider::after { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+    .slider.on { background: #00ff41; }
+    .slider.on::after { transform: translateX(18px); background: #000; }
+    .txt { font-weight: 900; color: #fff; letter-spacing: 2px; font-size: 0.8rem; }
   `]
 })
 export class TerminalComponent {
@@ -128,10 +155,22 @@ export class TerminalComponent {
     const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines())); fd.append('scan_mode', this.store.scanMode().toString());
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
-    this.store.executeCommand(fd, false).subscribe((res: Blob) => {
-      const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
-      a.download = `V_OUT_${Date.now()}.${this.store.isMediaApp() ? 'jpg' : 'pdf'}`;
-      a.click(); URL.revokeObjectURL(url);
+    const isJson = ['ndls_mrz', 'ai_bypass'].includes(this.store.selectedApp() || '');
+    
+    this.store.executeCommand(fd, isJson).subscribe((res: any) => {
+      if (this.store.selectedApp() === 'ndls_mrz') {
+        this.store.mrzData.set(res);
+      } else if (this.store.selectedApp() === 'ai_bypass') {
+        this.store.bypassData.set(res);
+        const a = document.createElement('a');
+        a.href = `data:image/jpeg;base64,${res.IMAGE_BASE64}`;
+        a.download = `V_STEALTH_${Date.now()}.jpg`;
+        a.click();
+      } else {
+        const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
+        a.download = `V_OUT_${Date.now()}.${this.store.isMediaApp() ? 'jpg' : 'pdf'}`;
+        a.click(); URL.revokeObjectURL(url);
+      }
     });
   }
 

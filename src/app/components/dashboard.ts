@@ -21,11 +21,12 @@ import { AppStore } from '../store';
         <div class="app-grid">
           <div class="app-card" (click)="store.openApp('exif_cleaner')"><div class="icon glass-inset neon-amber">📸</div><span class="label">EXIF-Sniper</span></div>
           <div class="app-card" (click)="store.openApp('face_cut')"><div class="icon glass-inset neon-red">👤</div><span class="label">Face-Cut</span></div>
-          <div class="app-card" (click)="store.openApp('ai_refiner')"><div class="icon glass-inset neon-purple">AI</div><span class="label">AI-Refiner</span></div>
+          <div class="app-card" (click)="store.openApp('ai_bypass')"><div class="icon glass-inset neon-purple">🥷</div><span class="label">AI-Stealth</span></div>
         </div>
       </div>
     </section>
   `,
+  // ... styles залишаються без змін з минулого кроку
   styles: [`
     .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .springboard { width: 100%; max-width: 950px; display: flex; gap: 40px; margin: 0 auto; }

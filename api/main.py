@@ -1,11 +1,10 @@
-import os, sys, json
+import os
+import sys
+import json
+import asyncio
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Optional
-from PIL import Image
-
-# Відключаємо ліміти для RAW-фото [cite: 2026-03-16]
-Image.MAX_IMAGE_PIXELS = None 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -13,21 +12,22 @@ from engines.energia_engine import EnergiaEngine
 from engines.mrz_engine import MrzEngine
 from engines.exif_engine import ExifEngine
 from engines.face_engine import FaceEngine
+from engines.ai_bypass_engine import AIBypassEngine
 
 app = FastAPI()
-bd = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Реєстрація всіх бойових одиниць [cite: 2026-03-16]
 registry = {
-    "energia": EnergiaEngine(bd),
-    "ndls_mrz": MrzEngine(bd),
-    "exif_cleaner": ExifEngine(bd),
-    "face_cut": FaceEngine(bd)
+    "energia": EnergiaEngine(base_dir),
+    "ndls_mrz": MrzEngine(base_dir),
+    "exif_cleaner": ExifEngine(base_dir),
+    "face_cut": FaceEngine(base_dir),
+    "ai_bypass": AIBypassEngine(base_dir) # Новий глушник [cite: 2026-02-05]
 }
 
 @app.get("/api/schema/{module}")
 async def get_schema(module: str):
-    if module not in registry: raise HTTPException(404)
+    if module not in registry: raise HTTPException(404, "MOD_NOT_FOUND")
     return JSONResponse(registry[module].get_schema())
 
 @app.post("/api/execute")
@@ -37,17 +37,23 @@ async def execute(
     scan_mode: str = Form("false"),
     file: Optional[UploadFile] = File(None)
 ):
-    if type not in registry: raise HTTPException(404)
+    if type not in registry: raise HTTPException(404, "UNKNOWN_TYPE")
+    
     try:
         p_lines = json.loads(lines)
         is_scan = scan_mode.lower() == "true"
-        image_data = await file.read() if file else None
+        image_bytes = await file.read() if file else None
         
-        res = registry[type].render(p_lines, is_scan, image_data)
+        engine = registry[type]
+        if asyncio.iscoroutinefunction(engine.render):
+            res = await engine.render(p_lines, is_scan, image_bytes)
+        else:
+            res = engine.render(p_lines, is_scan, image_bytes)
+        
         if isinstance(res, dict): return JSONResponse(res)
         
         m_type = "image/jpeg" if type in ["exif_cleaner", "face_cut"] else "application/pdf"
         return StreamingResponse(res, media_type=m_type)
     except Exception as e:
-        print(f"CORE_CRASH_{type.upper()}: {str(e)}")
-        raise HTTPException(500, detail=str(e))
+        print(f"CORE_ERR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

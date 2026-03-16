@@ -6,22 +6,21 @@ import { finalize, Observable } from 'rxjs';
 export class AppStore {
   private http = inject(HttpClient);
 
-  // Global State
   loading = signal<boolean>(false);
   selectedApp = signal<string | null>(null);
   schema = signal<any[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal<boolean>(false);
   selectedFile = signal<File | null>(null);
+  
   mrzData = signal<any>(null);
+  bypassData = signal<any>(null); // Дані від Sightengine [cite: 2026-02-05]
   previewUrl = signal<string | null>(null);
 
-  // Computed Selectors (Fixed TS2339) [cite: 2026-03-16]
-  isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_refiner'].includes(this.selectedApp() || ''));
-  hasPreview = computed(() => ['face_cut', 'ai_refiner'].includes(this.selectedApp() || ''));
+  isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_bypass'].includes(this.selectedApp() || ''));
+  hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || '')); // Прев'ю тільки для кропу
   requiresFile = computed(() => this.isMediaApp());
 
-  // Actions
   openApp(name: string) {
     this.selectedApp.set(name);
     this.http.get<any[]>(`/api/schema/${name}`).subscribe(s => {
@@ -34,11 +33,11 @@ export class AppStore {
     this.selectedApp.set(null);
     this.selectedFile.set(null);
     this.mrzData.set(null);
+    this.bypassData.set(null);
     if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
     this.previewUrl.set(null);
   }
 
-  // API Execution
   executeCommand(fd: FormData, isJson: boolean): Observable<any> {
     this.loading.set(true);
     return this.http.post('/api/execute', fd, {
