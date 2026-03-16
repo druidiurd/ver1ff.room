@@ -12,7 +12,7 @@ class AIBypassEngine:
     def __init__(self, base_path: str):
         self.base_path = base_path
         self.profiles = {
-            "PROFILE_1": (os.environ.get("SE_USER_1", "YOUR_USER_1"), os.environ.get("SE_SECRET_1", "YOUR_SECRET_1")),
+            "PROFILE_1": (os.environ.get("SE_USER_1", "661088083"), os.environ.get("SE_SECRET_1", "vjoitWMLAvEyuu9CvBSwAyRfRUraBEL8")),
             "PROFILE_2": (os.environ.get("SE_USER_2", "YOUR_USER_2"), os.environ.get("SE_SECRET_2", "YOUR_SECRET_2")),
             "PROFILE_3": (os.environ.get("SE_USER_3", "YOUR_USER_3"), os.environ.get("SE_SECRET_3", "YOUR_SECRET_3"))
         }
