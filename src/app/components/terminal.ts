@@ -43,7 +43,7 @@ import { MapComponent } from './map';
                   <ng-container *ngIf="field.type === 'range'">
                     <div class="range-wrap">
                       <input type="range" class="custom-range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [min]="field.min" [max]="field.max">
-                      <span class="range-val">{{ store.lines()[$index] || field.p }}%</span>
+                      <span class="range-val">{{ store.lines()[$index] || field.p }}</span>
                     </div>
                   </ng-container>
 
@@ -75,7 +75,7 @@ import { MapComponent } from './map';
           <div class="mrz-box bypass-box" *ngIf="store.bypassData()">
             
             <ng-container *ngIf="store.bypassData().TYPE === 'ai_bypass'">
-              <div class="m-row"><span class="tag">AI_DETECT</span><code class="alert-code">{{ store.bypassData().AI_PROBABILITY }}</code></div>
+              <div class="m-row"><span class="tag">AI_DETECT</span><code class="alert-code" [class.safe]="store.bypassData().AI_PROBABILITY !== '100.0%'">{{ store.bypassData().AI_PROBABILITY }}</code></div>
               <div class="m-row"><span class="tag">API_STATUS</span><code>{{ store.bypassData().STATUS }}</code></div>
             </ng-container>
 
@@ -123,19 +123,19 @@ import { MapComponent } from './map';
     .t-layout { display: flex; gap: 50px; flex: 1; min-height: 0; }
     .col-form, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 30px; }
     
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-    .field-box label { display: block; font-size: 0.7rem; font-weight: 900; color: #fff; margin-bottom: 12px; letter-spacing: 1px; }
-    .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 18px 25px; border-radius: 20px; }
-    .range-bg { padding: 12px 25px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .field-box label { display: block; font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
+    .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 20px; }
+    .range-bg { padding: 10px 20px; }
     
     input, .custom-select { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; appearance: none; }
     .custom-select option { background: #111; color: #00ff41; }
     
-    .range-wrap { display: flex; align-items: center; gap: 15px; }
+    .range-wrap { display: flex; align-items: center; gap: 12px; }
     .custom-range { flex: 1; cursor: pointer; accent-color: #00ff41; }
-    .range-val { color: #fff; font-weight: 900; font-family: 'JetBrains Mono'; width: 45px; text-align: right; }
+    .range-val { color: #fff; font-weight: 900; font-family: 'JetBrains Mono'; width: 35px; text-align: right; font-size: 0.9rem; }
 
-    .drop-zone { flex: 1; border: 3px dashed rgba(255,255,255,0.1); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+    .drop-zone { flex: 1; border: 3px dashed rgba(255,255,255,0.1); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; min-height: 120px; }
     .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
     .d-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
     .d-icon.locked { opacity: 1; text-shadow: 0 0 20px #00ff41; }
@@ -151,7 +151,7 @@ import { MapComponent } from './map';
     .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; }
     .bypass-box .tag { color: #a855f7; }
     .alert-code { color: #ff3b30 !important; font-size: 1.5rem; font-weight: 900; }
-    .alert-code.safe { color: #00ff41 !important; }
+    .alert-code.safe { color: #00ff41 !important; text-shadow: 0 0 15px rgba(0,255,65,0.4); }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
     button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
 
@@ -207,7 +207,6 @@ export class TerminalComponent {
     fd.append('type', this.store.selectedApp()!); 
     fd.append('lines', JSON.stringify(this.store.lines())); 
     
-    // Overriding scan_mode dynamically. If AI-Bypass & Auto-Find -> scan_mode='true' [cite: 2026-03-16]
     if (this.store.selectedApp() === 'ai_bypass' && isBatch) {
       fd.append('scan_mode', 'true');
     } else {
