@@ -1,63 +1,58 @@
 import io
+import cv2
 import numpy as np
-import mediapipe as mp
 from PIL import Image, ImageOps
 from typing import List
 
 class FaceEngine:
-    """Senior Biometric Engine з захистом від Decompression Bomb. [cite: 2026-03-15, 2026-03-16]."""
-    __slots__ = ('_face_mesh',)
+    """Senior Biometric Engine: OpenCV Cascade Edition (Lightweight). [cite: 2026-03-16]."""
+    __slots__ = ('_face_cascade',)
 
     def __init__(self, base_path: str):
-        self._face_mesh = mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5
-        )
+        # Завантажуємо вбудований каскад облич [cite: 2026-03-16]
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        self._face_cascade = cv2.CascadeClassifier(cascade_path)
 
     def get_schema(self):
         return [
             {"id": "zoom", "label": "ZOOM_FACTOR (%)", "p": "100"},
             {"id": "shift", "label": "VERTICAL_SHIFT", "p": "0"},
-            {"id": "info", "label": "STATUS", "p": "AI-Detection Active."}
+            {"id": "info", "label": "STATUS", "p": "OpenCV-Haar Active. 3x4 Output."}
         ]
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:
-        if not image_bytes: raise ValueError("EMPTY_IMAGE")
+        if not image_bytes: raise ValueError("EMPTY_STREAM")
         
-        # Захист: не даємо зуму впасти нижче 10% [cite: 2026-03-16]
-        raw_zoom = float(lines[0] or 100)
-        zoom = max(10.0, raw_zoom) / 100.0
+        zoom = max(10.0, float(lines[0] or 100)) / 100.0
         v_shift = int(lines[1] or 0)
 
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        img_np = np.array(img)
-        h, w, _ = img_np.shape
-
-        results = self._face_mesh.process(img_np)
+        # Конвертуємо для OpenCV [cite: 2026-02-05]
+        img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        img_np = np.array(img_pil)
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        
+        # Детекція обличчя [cite: 2026-03-16]
+        faces = self._face_cascade.detectMultiScale(gray, 1.1, 4)
+        
+        h, w = img_np.shape[:2]
         cx, cy = w // 2, h // 2
 
-        if results.multi_face_landmarks:
-            landmarks = results.multi_face_landmarks[0].landmark
-            xs = [lm.x * w for lm in landmarks]
-            ys = [lm.y * h for lm in landmarks]
-            cx, cy = int(sum(xs) / len(xs)), int(sum(ys) / len(ys))
+        if len(faces) > 0:
+            (x, y, fw, fh) = faces[0]
+            cx, cy = x + fw // 2, y + fh // 2
 
+        # Розрахунок 3х4 [cite: 2026-02-05, 2026-03-16]
         target_ratio = 3/4
-        if w/h > target_ratio:
-            bw, bh = h * target_ratio, h
-        else:
-            bw, bh = w, w / target_ratio
-
-        # Застосування безпечного зуму [cite: 2026-03-16]
-        bw, bh = bw / zoom, bh / zoom
+        bw, bh = (h * target_ratio, h) if w/h > target_ratio else (w, w / target_ratio)
         
-        l, t = cx - (bw / 2), cy - (bh / 2) + v_shift
-        r, b = cx + (bw / 2), cy + (bh / 2) + v_shift
+        bw, bh = bw / zoom, bh / zoom
+        l, t, r, b = cx - bw/2, cy - bh/2 + v_shift, cx + bw/2, cy + bh/2 + v_shift
 
-        # Фінальна обрізка з валідацією меж [cite: 2026-02-05]
-        img_cropped = img.crop((max(0, l), max(0, t), min(w, r), min(h, b)))
-        img_final = img_cropped.resize((600, 800), Image.Resampling.LANCZOS)
+        # Фінальний кроп та ахуєнний ресайз [cite: 2026-02-05]
+        cropped = img_pil.crop((max(0, l), max(0, t), min(w, r), min(h, b)))
+        final = ImageOps.autocontrast(cropped, cutoff=0.5).resize((600, 800), Image.Resampling.LANCZOS)
         
         out = io.BytesIO()
-        img_final.save(out, format="jpeg", quality=98)
+        final.save(out, format="jpeg", quality=98)
         out.seek(0)
         return out
