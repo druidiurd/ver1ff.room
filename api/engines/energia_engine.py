@@ -19,7 +19,6 @@ class EnergiaEngine:
         self.f_reg, self.f_bold = self._prepare_fonts()
 
     def _prepare_fonts(self) -> tuple[str, str]:
-        """Копіює системні шрифти в робочу директорію (сумісно з Windows та Vercel)."""
         wdir = Path(os.environ.get('WINDIR', 'C:\\Windows')) / "Fonts"
         local_dir = Path(self.base_path)
         reg_name, bold_name = "arial.ttf", "arialbd.ttf"
@@ -45,7 +44,6 @@ class EnergiaEngine:
         ]
 
     def _fmt(self, val: float) -> str:
-        """Символ Євро через стабільний Unicode."""
         return f"\u20ac{val:,.2f}"
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:
@@ -58,7 +56,6 @@ class EnergiaEngine:
         trans = round(random.uniform(85.0, 225.0), 2)
         cutoff_dt = now - timedelta(days=20)
         
-        # МАПУВАННЯ (1-2 Regular, 3-5 Bold)
         fin_map = {
             "Fin_Val_1_PrevBal": {"v": self._fmt(p_bal), "file": self.f_reg, "name": "Arial"},
             "Fin_Val_2_Payment": {"v": self._fmt(p_bal), "file": self.f_reg, "name": "Arial"},
@@ -84,32 +81,27 @@ class EnergiaEngine:
             page = doc[0]
             page.clean_contents()
 
-            # ЗАЧИСТКА
             for name, data in cfg.items():
                 if name not in ["Page_1_Shield", "Finance_Values_Zone"]:
                     page.add_redact_annot(fitz.Rect(data["rect"]), fill=(1, 1, 1))
             page.apply_redactions()
 
-            # АДРЕСА
             b_a = cfg["Address_Block"]
             for i, text in enumerate(addr):
                 page.insert_text((b_a["rect"][0], b_a["rect"][1] + 10 + (i * b_a["line_height"])), 
                                text, fontname="Arial", fontfile=self.f_reg, fontsize=b_a["font_size"])
 
-            # ТАБЛИЦЯ ІНФО
             b_t = cfg["Invoice_Table"]
             for i, val in enumerate(table_map.values()):
                 page.insert_text((b_t["rect"][0], b_t["rect"][1] + 8 + (i * b_t["line_height"])), 
                                val, fontname="Arial", fontfile=self.f_reg, fontsize=b_t["font_size"])
 
-            # ДАТА ПЛАТЕЖУ
             if "Finance_Date_Zone" in cfg:
                 fdz = cfg["Finance_Date_Zone"]
                 page.insert_text((fdz["rect"][0], fdz["rect"][1] + 10), 
                                f"Payment(s) received up to {cutoff_dt:%d %B %Y}", 
                                fontname="Arial", fontfile=self.f_reg, fontsize=9)
 
-            # АТОМАРНІ СУМИ: RIGHT ALIGNMENT LOGIC
             for key, item in fin_map.items():
                 if key in cfg:
                     z = cfg[key]
@@ -119,13 +111,11 @@ class EnergiaEngine:
                     page.insert_text((x_pos, z["rect"][1] + 10), item["v"], 
                                    fontname=item["name"], fontfile=item["file"], fontsize=z["font_size"])
 
-            # БЛОК PREMISES
             b_p = cfg["Premises_Block"]
             page.insert_text((b_p["rect"][0], b_p["rect"][1] + 10), 
-                           f"{addr[1]}, {addr[2]}, {addr[5]}", 
+                           f"{addr[1]}, {addr[3]}, {addr[5]}", 
                            fontname="Arial", fontfile=self.f_reg, fontsize=b_p["font_size"])
 
-            # АНОНІМІЗАЦІЯ
             meta = {
                 "producer": "macOS Version 15.3.1 (Build 24D70) Quartz PDFContext",
                 "creator": "Pages",
