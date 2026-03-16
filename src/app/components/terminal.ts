@@ -27,16 +27,26 @@ import { MapComponent } from './map';
             @for (field of store.schema(); track field.id) {
               <div class="field-box">
                 <label>{{ field.label }}</label>
-                <div class="input-bg">
-                  <ng-container *ngIf="!field.opts">
+                <div class="input-bg" [class.range-bg]="field.type === 'range'">
+                  
+                  <ng-container *ngIf="!field.type || field.type === 'text'">
                     <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [placeholder]="field.p" autocomplete="off" spellcheck="false">
                   </ng-container>
-                  <ng-container *ngIf="field.opts">
-                    <select [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
-                      <option value="" disabled selected>{{ field.p }}</option>
+                  
+                  <ng-container *ngIf="field.type === 'select'">
+                    <select class="custom-select" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
+                      <option value="" disabled>{{ field.p }}</option>
                       <option *ngFor="let opt of field.opts" [value]="opt">{{ opt }}</option>
                     </select>
                   </ng-container>
+
+                  <ng-container *ngIf="field.type === 'range'">
+                    <div class="range-wrap">
+                      <input type="range" class="custom-range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [min]="field.min" [max]="field.max">
+                      <span class="range-val">{{ store.lines()[$index] || field.p }}%</span>
+                    </div>
+                  </ng-container>
+
                 </div>
               </div>
             }
@@ -63,17 +73,41 @@ import { MapComponent } from './map';
           </div>
 
           <div class="mrz-box bypass-box" *ngIf="store.bypassData()">
-            <div class="m-row"><span class="tag">AI_DETECT_PROBABILITY</span><code class="alert-code">{{ store.bypassData().AI_PROBABILITY }}</code></div>
-            <div class="m-row"><span class="tag">API_STATUS</span><code>{{ store.bypassData().STATUS }}</code></div>
+            
+            <ng-container *ngIf="store.bypassData().TYPE === 'ai_bypass'">
+              <div class="m-row"><span class="tag">AI_DETECT</span><code class="alert-code">{{ store.bypassData().AI_PROBABILITY }}</code></div>
+              <div class="m-row"><span class="tag">API_STATUS</span><code>{{ store.bypassData().STATUS }}</code></div>
+            </ng-container>
+
+            <ng-container *ngIf="store.bypassData().TYPE === 'ai_batch'">
+              <div class="batch-header">AUTO-FIND ANALYSIS:</div>
+              <div class="batch-grid">
+                <div class="b-row" *ngFor="let r of store.bypassData().RESULTS">
+                  <span class="b-q">Q: {{ r.quality }}%</span>
+                  <span class="b-s" [class.safe]="r.score < 0.1" [class.danger]="r.score >= 0.1">AI: {{ (r.score * 100).toFixed(1) }}%</span>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="m-row"><span class="tag">BEST_Q</span><code>{{ store.bypassData().BEST_Q }}%</code></div>
+              <div class="m-row"><span class="tag">BEST_SCORE</span><code class="alert-code safe">{{ store.bypassData().BEST_SCORE }}</code></div>
+            </ng-container>
+            
           </div>
         </div>
       </div>
 
       <footer *ngIf="store.selectedApp() !== 'ndls_mrz'">
-        <button [disabled]="store.loading() || (store.requiresFile() && !store.selectedFile())" (click)="execute()" class="exec-btn">
-          > INITIATE_CORE_SEQUENCE
-          <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
-        </button>
+        <div class="action-grid" [class.dual]="store.selectedApp() === 'ai_bypass'">
+          <button [disabled]="store.loading() || (store.requiresFile() && !store.selectedFile())" (click)="execute(false)" class="exec-btn">
+            > {{ store.selectedApp() === 'ai_bypass' ? 'TEST_CURRENT_QUALITY' : 'INITIATE_CORE_SEQUENCE' }}
+            <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
+          </button>
+          
+          <button *ngIf="store.selectedApp() === 'ai_bypass'" [disabled]="store.loading() || !store.selectedFile()" (click)="execute(true)" class="exec-btn stealth-btn">
+            > AUTO-FIND_BEST_COMPRESSION
+            <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
+          </button>
+        </div>
       </footer>
     </main>
   `,
@@ -92,10 +126,14 @@ import { MapComponent } from './map';
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
     .field-box label { display: block; font-size: 0.7rem; font-weight: 900; color: #fff; margin-bottom: 12px; letter-spacing: 1px; }
     .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 18px 25px; border-radius: 20px; }
+    .range-bg { padding: 12px 25px; }
     
-    /* STYLING FOR DYNAMIC SELECT [cite: 2026-02-05] */
-    input, select { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; appearance: none; }
-    select option { background: #111; color: #00ff41; }
+    input, .custom-select { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; appearance: none; }
+    .custom-select option { background: #111; color: #00ff41; }
+    
+    .range-wrap { display: flex; align-items: center; gap: 15px; }
+    .custom-range { flex: 1; cursor: pointer; accent-color: #00ff41; }
+    .range-val { color: #fff; font-weight: 900; font-family: 'JetBrains Mono'; width: 45px; text-align: right; }
 
     .drop-zone { flex: 1; border: 3px dashed rgba(255,255,255,0.1); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
     .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
@@ -107,17 +145,30 @@ import { MapComponent } from './map';
     .pv-img { max-width: 100%; max-height: 100%; border-radius: 15px; }
     .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; }
 
-    .mrz-box { background: #000; border: 1px solid #00ff41; padding: 40px; border-radius: 30px; }
+    .mrz-box { background: #000; border: 1px solid #00ff41; padding: 30px 40px; border-radius: 30px; }
     .bypass-box { border-color: #a855f7; box-shadow: 0 0 30px rgba(168,85,247,0.2); }
-    .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 20px; font-family: 'JetBrains Mono'; font-size: 1.3rem; }
-    .tag { color: #00ff41; font-weight: 900; }
+    .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
+    .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; }
     .bypass-box .tag { color: #a855f7; }
-    .alert-code { color: #ff3b30 !important; font-size: 1.8rem; font-weight: 900; }
+    .alert-code { color: #ff3b30 !important; font-size: 1.5rem; font-weight: 900; }
+    .alert-code.safe { color: #00ff41 !important; }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
     button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
 
-    .exec-btn { width: 100%; margin-top: 40px; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; cursor: pointer; position: relative; overflow: hidden; }
+    .batch-header { color: #888; font-size: 0.7rem; font-weight: 900; letter-spacing: 2px; margin-bottom: 15px; }
+    .batch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    .b-row { background: rgba(168,85,247,0.1); padding: 10px 15px; border-radius: 10px; display: flex; justify-content: space-between; font-family: 'JetBrains Mono'; font-size: 0.9rem; font-weight: 900; }
+    .b-q { color: #fff; }
+    .b-s.safe { color: #00ff41; } .b-s.danger { color: #ff3b30; }
+    .divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
+
+    .action-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
+    .action-grid.dual { grid-template-columns: 1fr 1fr; }
+    .exec-btn { width: 100%; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; }
+    .stealth-btn { background: transparent; border: 2px solid #a855f7; color: #a855f7; }
+    .stealth-btn:hover:not(:disabled) { background: rgba(168,85,247,0.1); }
     .bar { position: absolute; bottom: 0; left: 0; height: 8px; background: #00ff41; transition: 2s; }
+    .stealth-btn .bar { background: #a855f7; }
 
     .scan-ui { display: flex; align-items: center; gap: 15px; cursor: pointer; }
     .scan-ui input { display: none; }
@@ -151,8 +202,18 @@ export class TerminalComponent {
     });
   }
 
-  execute() {
-    const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines())); fd.append('scan_mode', this.store.scanMode().toString());
+  execute(isBatch: boolean = false) {
+    const fd = new FormData(); 
+    fd.append('type', this.store.selectedApp()!); 
+    fd.append('lines', JSON.stringify(this.store.lines())); 
+    
+    // Overriding scan_mode dynamically. If AI-Bypass & Auto-Find -> scan_mode='true' [cite: 2026-03-16]
+    if (this.store.selectedApp() === 'ai_bypass' && isBatch) {
+      fd.append('scan_mode', 'true');
+    } else {
+      fd.append('scan_mode', this.store.scanMode().toString());
+    }
+
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
     const isJson = ['ndls_mrz', 'ai_bypass'].includes(this.store.selectedApp() || '');
