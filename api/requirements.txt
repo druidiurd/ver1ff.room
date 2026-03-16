@@ -6,3 +6,5 @@ pillow
 numpy
 piexif
 httpx
+mediapipe
+opencv-python-headless

@@ -15,14 +15,14 @@ declare var L: any;
     <div class="os-loader" *ngIf="engine.loading() && !selectedApp()">
       <div class="loader-content">
         <div class="spinner"></div>
-        <div class="loader-text">SYNCING_CORE...</div>
+        <div class="loader-text">SYNCING_WITH_CORE...</div>
       </div>
     </div>
 
     <div class="v-os-container" [class.app-active]="selectedApp()">
       <div class="status-island glass fade-in">
         <span class="led pulse"></span>
-        <span class="id-code">V_OS // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
+        <span class="id-code">UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
       </div>
 
       <section class="springboard fade-in" *ngIf="!selectedApp()">
@@ -57,10 +57,10 @@ declare var L: any;
 
       <main class="app-terminal glass fade-in" *ngIf="selectedApp()">
         <header class="t-header">
-          <button (click)="closeApp()" class="esc">‹ BACK_TO_ROOT</button>
-          <div class="t-module">{{ selectedApp()?.toUpperCase() }}</div>
+          <button (click)="closeApp()" class="esc">‹ ESC_TO_ROOT</button>
+          <div class="t-module">{{ getAppTitle() }}</div>
           <div class="t-tools">
-            <span class="f-info" *ngIf="selectedFile()">[SYNC: {{ selectedFile()?.name }}]</span>
+            <span class="f-info" *ngIf="selectedFile()">[FILE: {{ selectedFile()?.name }}]</span>
             <label class="scan-mode" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
               <span class="slider" [class.on]="scanMode()"></span>
@@ -70,7 +70,7 @@ declare var L: any;
         </header>
 
         <div class="t-guide glass-inset">
-          <span class="g-tag">INFO:</span> {{ getGuideText() }}
+          <span class="g-tag">MANUAL:</span> {{ getGuideText() }}
         </div>
 
         <div class="t-body">
@@ -80,17 +80,25 @@ declare var L: any;
                 <div class="field">
                   <label>{{ field.label }}</label>
                   <div class="i-wrap glass-inset">
-                    <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="field.p" spellcheck="false" autocomplete="off">
+                    <input 
+                      [(ngModel)]="lines()[$index]" 
+                      (ngModelChange)="onInputChange()" 
+                      [placeholder]="field.p" 
+                      spellcheck="false" 
+                      autocomplete="off"
+                    >
                   </div>
                 </div>
               }
             </div>
 
-            <div class="drop-zone glass-inset" *ngIf="isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
-              <input type="file" #fi (change)="onFile($event)" hidden>
+            <div class="drop-zone glass-inset" 
+                 *ngIf="isMediaApp()" 
+                 (click)="fIn.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
+              <input type="file" #fIn (change)="onFile($event)" hidden>
               <div class="drop-info">
                 <span class="icon">{{ selectedFile() ? '✅' : '📤' }}</span>
-                <span class="label">{{ selectedFile() ? 'LOCKED' : 'DROP_IMAGE' }}</span>
+                <span class="label">{{ selectedFile() ? 'LOCKED_IN_BUFFER' : 'DROP_SOURCE_IMAGE' }}</span>
               </div>
             </div>
           </div>
@@ -99,8 +107,8 @@ declare var L: any;
             <div id="map" class="glass-inset" *ngIf="selectedApp() === 'exif_cleaner'"></div>
             
             <div class="preview-box glass-inset" *ngIf="selectedApp() === 'face_cut' && previewUrl()">
-              <img [src]="previewUrl()" alt="Biometric Preview" class="face-img">
-              <div class="p-tag">LIVE_PREVIEW_3X4</div>
+              <img [src]="previewUrl()" alt="AI Biometric Preview" class="face-img">
+              <div class="p-tag">LIVE_AI_CROP_3X4</div>
             </div>
 
             <div class="mrz-output glass-dark" *ngIf="mrzData()">
@@ -110,9 +118,9 @@ declare var L: any;
           </div>
         </div>
 
-        <footer>
+        <footer class="terminal-footer" *ngIf="selectedApp() !== 'ndls_mrz'">
           <button [disabled]="engine.loading() || (requiresFile() && !selectedFile())" (click)="fire()" class="exec-btn-titan">
-            <span class="bt">> {{ engine.loading() ? 'PROCCESSING...' : 'EXECUTE_SYNC_COMMAND' }}</span>
+            <span class="bt">> EXECUTE_CORE_SYNC</span>
             <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
         </footer>
@@ -121,64 +129,77 @@ declare var L: any;
   `,
   styles: [`
     .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .os-loader { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-    .spinner { width: 40px; height: 40px; border: 3px solid rgba(0,255,65,0.1); border-top-color: #00ff41; border-radius: 50%; animation: spin 1s linear infinite; }
+    .os-loader { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(20px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .spinner { width: 45px; height: 45px; border: 3px solid rgba(0,255,65,0.05); border-top-color: #00ff41; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loader-text { margin-top: 20px; font-size: 0.6rem; color: #00ff41; letter-spacing: 3px; font-family: monospace; }
+    .loader-text { margin-top: 25px; font-size: 0.65rem; color: #00ff41; letter-spacing: 4px; font-family: monospace; }
 
     .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
     canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.15; pointer-events: none; }
     
-    .glass { background: rgba(10, 10, 10, 0.93); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; }
-    .glass-inset { background: rgba(25, 25, 25, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
-    .glass-dark { background: #000; border: 1px solid #00ff41; border-radius: 30px; }
+    .glass { background: rgba(10, 10, 10, 0.94); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 45px; }
+    .glass-inset { background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 25px; box-shadow: inset 0 2px 15px #000; }
+    .glass-dark { background: #000; border: 1px solid #00ff41; border-radius: 35px; }
 
-    .status-island { padding: 8px 30px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 15px 50px #000; display: flex; align-items: center; gap: 15px; }
-    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
+    .status-island { padding: 10px 35px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 20px 60px #000; display: flex; align-items: center; gap: 15px; }
+    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 12px #00ff41; }
     .pulse { animation: p 2s infinite; } @keyframes p { 50% { opacity: 0.2; } }
-    .id-code { font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
+    .id-code { font-size: 0.7rem; font-weight: 800; color: #555; letter-spacing: 1.5px; }
 
     .springboard { width: 100%; max-width: 850px; display: flex; gap: 40px; }
-    .folder { flex: 1; padding: 35px; border-radius: 40px; }
-    .folder-title { font-size: 0.8rem; font-weight: 900; color: #555; text-align: center; letter-spacing: 3px; margin-bottom: 30px; }
-    .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .folder { flex: 1; padding: 40px; border-radius: 45px; border: 1px solid rgba(255,255,255,0.05); }
+    .folder-title { font-size: 0.85rem; font-weight: 900; color: #444; text-align: center; letter-spacing: 4px; margin-bottom: 35px; }
+    .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; }
     .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; }
-    .app-card:hover { transform: scale(1.1); }
-    .app-icon { width: 85px; height: 85px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; border: 1px solid rgba(255, 255, 255, 0.05); }
-    .app-label { font-size: 0.75rem; font-weight: 800; color: #666; margin-top: 15px; }
+    .app-card:hover { transform: scale(1.1) translateY(-5px); }
+    .app-icon { width: 90px; height: 90px; border-radius: 28px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .app-label { font-size: 0.8rem; font-weight: 900; color: #666; margin-top: 18px; }
 
-    .app-terminal { position: absolute; inset: 20px; padding: 45px; display: flex; flex-direction: column; }
-    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .esc { background: transparent; border: none; color: #444; font-weight: 900; font-size: 0.85rem; cursor: pointer; }
-    .t-module { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; }
+    .app-terminal { position: absolute; inset: 25px; padding: 50px; display: flex; flex-direction: column; }
+    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .esc { background: transparent; border: none; color: #fff; font-weight: 900; font-size: 0.9rem; cursor: pointer; opacity: 0.4; transition: 0.2s; }
+    .esc:hover { opacity: 1; color: #00ff41; }
+    .t-module { color: #00ff41; font-weight: 900; font-size: 1.6rem; letter-spacing: 5px; text-shadow: 0 0 20px rgba(0, 255, 65, 0.4); }
 
-    .t-guide { padding: 12px 25px; font-size: 0.7rem; color: #888; margin-bottom: 30px; border-radius: 15px; }
-    .g-tag { color: #00ff41; font-weight: 900; margin-right: 10px; }
+    .t-guide { padding: 15px 30px; font-size: 0.75rem; color: #888; margin-bottom: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.02); }
+    .g-tag { color: #00ff41; font-weight: 900; margin-right: 15px; }
 
-    .t-body { display: flex; gap: 45px; flex: 1; min-height: 0; }
-    .col-inputs, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 25px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .field label { font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; display: block; }
-    .i-wrap { padding: 16px 22px; }
-    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1rem; }
+    .t-body { display: flex; gap: 50px; flex: 1; min-height: 0; }
+    .col-inputs, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 30px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .field label { font-size: 0.7rem; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; letter-spacing: 1px; }
+    .i-wrap { padding: 18px 25px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; }
+    input::placeholder { color: #222; }
 
-    /* PREVIEW UI [cite: 2026-03-16] */
     .preview-box { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .face-img { max-height: 100%; max-width: 100%; border-radius: 10px; box-shadow: 0 10px 30px #000; }
-    .p-tag { position: absolute; bottom: 15px; right: 15px; font-size: 0.55rem; font-weight: 900; color: #333; }
+    .face-img { max-height: 100%; max-width: 100%; border-radius: 12px; box-shadow: 0 15px 40px #000; border: 1px solid rgba(255,255,255,0.1); }
+    .p-tag { position: absolute; bottom: 20px; right: 20px; font-size: 0.6rem; font-weight: 900; color: #00ff41; background: #000; padding: 4px 10px; border: 1px solid #00ff41; border-radius: 4px; }
 
-    .mrz-output { padding: 35px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
-    .m-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
-    .t { color: #00ff41; font-weight: 900; font-size: 0.75rem; width: 40px; }
-    code { color: #fff; flex: 1; letter-spacing: 2px; }
+    .mrz-output { padding: 45px; min-height: 220px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 0 30px rgba(0,255,65,0.1); }
+    .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 18px; font-family: 'JetBrains Mono'; font-size: 1.2rem; }
+    .t { color: #00ff41; font-weight: 900; font-size: 0.8rem; width: 50px; }
+    code { color: #fff; flex: 1; letter-spacing: 3px; }
     
-    #map { flex: 1; border-radius: 25px; min-height: 300px; }
-    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.1); cursor: pointer; text-align: center; }
-    .drop-info .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
-    .drop-info .label { font-size: 0.75rem; font-weight: 900; color: #333; }
+    #map { flex: 1; border-radius: 30px; min-height: 350px; }
+    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.08); cursor: pointer; text-align: center; transition: 0.3s; }
+    .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.01); }
+    .drop-info .icon { font-size: 3rem; display: block; margin-bottom: 15px; opacity: 0.6; }
+    .drop-info .label { font-size: 0.8rem; font-weight: 900; color: #333; letter-spacing: 2px; }
 
-    .exec-btn-titan { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 25px; font-weight: 900; font-size: 1.2rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; margin-top: 25px; }
-    .load-fill { position: absolute; bottom: 0; left: 0; height: 6px; background: #00ff41; transition: 2s; }
+    .exec-btn-titan { width: 100%; padding: 32px; background: #fff; color: #000; border: none; border-radius: 28px; font-weight: 900; font-size: 1.3rem; letter-spacing: 4px; cursor: pointer; position: relative; overflow: hidden; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .exec-btn-titan:hover:not(:disabled) { transform: translateY(-5px); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+    .exec-btn-titan:active { transform: scale(0.98); }
+    .load-fill { position: absolute; bottom: 0; left: 0; height: 8px; background: #00ff41; transition: 2.5s linear; }
+
+    /* IOS SWITCH */
+    .scan-mode { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .scan-mode input { display: none; }
+    .slider { width: 40px; height: 22px; background: #1a1a1a; border-radius: 30px; position: relative; transition: 0.3s; border: 1px solid rgba(255,255,255,0.05); }
+    .slider::after { content: ""; position: absolute; width: 18px; height: 18px; left: 2px; top: 1px; background: #333; border-radius: 50%; transition: 0.3s; }
+    .slider.on { background: #00ff41; border-color: #00ff41; }
+    .slider.on::after { transform: translateX(18px); background: #fff; }
+    .txt { font-size: 0.65rem; font-weight: 900; color: #444; }
   `]
 })
 export class App implements AfterViewInit {
@@ -189,11 +210,13 @@ export class App implements AfterViewInit {
   scanMode = signal(false);
   selectedFile = signal<File | null>(null);
   mrzData = signal<any>(null);
-  previewUrl = signal<string | null>(null); // Signal for live preview [cite: 2026-03-16]
+  previewUrl = signal<string | null>(null);
   
   memoryUsage = signal(128);
   nodeId = Math.random().toString(16).substring(2, 8).toUpperCase();
   private map: any; private marker: any;
+
+  @ViewChild('matrixCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   constructor() {
     effect(() => {
@@ -208,14 +231,19 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
+  getAppTitle(): string {
+    const map: any = { 'energia': 'IE_BILL_GEN_V57', 'ndls_mrz': 'IE_NDLS_MRZ_SYNC', 'exif_cleaner': 'EXIF_SNIPER_PRO', 'face_cut': 'FACE_BIO_CENTER' };
+    return map[this.selectedApp() || ''] || 'CORE_SYSTEM';
+  }
+
   getGuideText(): string {
     const map: any = {
-      'energia': 'Auto-aligned Irish Utility Bill generator. Scan artifacts are optional.',
-      'ndls_mrz': 'Real-time dual-core MRZ generator. Updates instantly on keypress.',
-      'exif_cleaner': 'OnePlus 6 (IMX519) metadata injector. Pick coordinates on map.',
-      'face_cut': 'Biometric 3x4 crop tool. Zoom and Shift update the preview instantly.'
+      'energia': 'Auto-aligned Irish Utility Bill. Scan artifacts for deep-forensics.',
+      'ndls_mrz': 'Dual-core MRZ generator. Updates instantly as you type.',
+      'exif_cleaner': 'OnePlus 6 metadata injection. Pick coordinates on the dark map.',
+      'face_cut': 'AI Face Detection + 3x4 Crop. Adjust Zoom and Shift for live results.'
     };
-    return map[this.selectedApp() || ''] || 'Awaiting command.';
+    return map[this.selectedApp() || ''] || 'Ready for uplink.';
   }
 
   isMediaApp() { return ['exif_cleaner', 'face_cut'].includes(this.selectedApp() || ''); }
@@ -223,12 +251,9 @@ export class App implements AfterViewInit {
   openApp(n: string) { this.selectedApp.set(n); }
   
   closeApp() { 
-    this.selectedApp.set(null); 
-    this.selectedFile.set(null); 
-    this.mrzData.set(null); 
-    if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!); // Clean memory [cite: 2026-02-05]
-    this.previewUrl.set(null);
-    this.map = null; 
+    this.selectedApp.set(null); this.selectedFile.set(null); this.mrzData.set(null); 
+    if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
+    this.previewUrl.set(null); this.map = null; 
   }
 
   initMap() {
@@ -246,7 +271,7 @@ export class App implements AfterViewInit {
 
   onFile(e: any) { 
     this.selectedFile.set(e.target.files[0]);
-    if (this.selectedApp() === 'face_cut') this.updatePreview(); // Trigger initial preview [cite: 2026-03-16]
+    if (this.selectedApp() === 'face_cut') this.updatePreview();
   }
   
   onDrop(e: DragEvent) { 
@@ -257,7 +282,6 @@ export class App implements AfterViewInit {
     }
   }
 
-  /** Senior Reactive Sink [cite: 2026-03-16] */
   onInputChange() {
     if (this.selectedApp() === 'ndls_mrz') {
       const fd = new FormData();
@@ -265,19 +289,16 @@ export class App implements AfterViewInit {
       fd.append('lines', JSON.stringify(this.lines()));
       this.engine.execute(fd, true).subscribe(res => this.mrzData.set(res));
     }
-    if (this.selectedApp() === 'face_cut' && this.selectedFile()) {
-      this.updatePreview(); // Реагуємо на зум/шифт миттєво [cite: 2026-03-16]
-    }
+    if (this.selectedApp() === 'face_cut' && this.selectedFile()) this.updatePreview();
   }
 
-  /** Генерація живого прев'ю без скачування [cite: 2026-03-16] */
   updatePreview() {
     const fd = new FormData();
     fd.append('type', 'face_cut');
     fd.append('lines', JSON.stringify(this.lines()));
     fd.append('file', this.selectedFile()!);
     this.engine.execute(fd, false).subscribe((res: Blob) => {
-      if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!); // Revoke old to prevent leak
+      if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
       this.previewUrl.set(URL.createObjectURL(res));
     });
   }
@@ -306,7 +327,7 @@ export class App implements AfterViewInit {
   copy(t: string) { navigator.clipboard.writeText(t); }
 
   ngAfterViewInit() {
-    const canvas = (document.getElementById('matrix') as HTMLCanvasElement);
+    const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d')!;
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const drops = new Array(Math.floor(canvas.width / 18)).fill(1);
@@ -320,6 +341,6 @@ export class App implements AfterViewInit {
       });
     };
     setInterval(draw, 50);
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (240 - 180) + 180)), 3000);
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (260 - 210) + 210)), 3000);
   }
 }
