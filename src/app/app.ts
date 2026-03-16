@@ -12,63 +12,71 @@ declare var L: any;
   template: `
     <canvas #matrixCanvas id="matrix"></canvas>
 
+    <div class="os-loader" *ngIf="engine.loading()">
+      <div class="loader-content">
+        <div class="spinner"></div>
+        <div class="loader-text">SYNCING_WITH_CORE...</div>
+      </div>
+    </div>
+
     <div class="v-os-container" [class.app-active]="selectedApp()">
-      <div class="island-node glass">
-        <div class="inner">
-          <span class="led pulse"></span>
-          <span class="status-msg">UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
-        </div>
+      <div class="dynamic-island glass pulse-border">
+        <span class="led"></span>
+        <span class="status-msg">UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
       </div>
 
-      <section class="home-screen" *ngIf="!selectedApp()">
-        <div class="category-block">
-          <div class="cat-label">IRELAND_NODES</div>
-          <div class="grid">
-            <div class="app-card glass" (click)="openApp('energia')">
-              <div class="app-icon n-green">⚡</div>
-              <span class="app-name">IE-bill-gen</span>
+      <section class="springboard fade-in" *ngIf="!selectedApp()">
+        <div class="folder-group glass">
+          <div class="folder-title">IRELAND_NODES</div>
+          <div class="app-grid">
+            <div class="app-card" (click)="openApp('energia')">
+              <div class="app-icon"><span class="neon-green">⚡</span></div>
+              <span class="app-label">IE-bill-gen</span>
             </div>
-            <div class="app-card glass" (click)="openApp('ndls_mrz')">
-              <div class="app-icon n-blue">🆔</div>
-              <span class="app-name">IE-NDLS-MRZ</span>
+            <div class="app-card" (click)="openApp('ndls_mrz')">
+              <div class="app-icon"><span class="neon-blue">🆔</span></div>
+              <span class="app-label">IE-NDLS-MRZ</span>
             </div>
           </div>
         </div>
 
-        <div class="category-block">
-          <div class="cat-label">GLOBAL_TOOLS</div>
-          <div class="grid">
-            <div class="app-card glass" (click)="openApp('exif_cleaner')">
-              <div class="app-icon n-amber">📸</div>
-              <span class="app-name">EXIF-Sniper</span>
+        <div class="folder-group glass">
+          <div class="folder-title">GLOBAL_TOOLS</div>
+          <div class="app-grid">
+            <div class="app-card" (click)="openApp('exif_cleaner')">
+              <div class="app-icon"><span class="neon-amber">📸</span></div>
+              <span class="app-label">EXIF-Sniper</span>
             </div>
-            <div class="app-card glass" (click)="openApp('face_cut')">
-              <div class="app-icon n-red">👤</div>
-              <span class="app-name">Face-Cut</span>
+            <div class="app-card" (click)="openApp('face_cut')">
+              <div class="app-icon"><span class="neon-red">👤</span></div>
+              <span class="app-label">Face-Cut</span>
             </div>
           </div>
         </div>
       </section>
 
-      <main class="terminal-overlay glass" *ngIf="selectedApp()">
-        <header class="t-header">
-          <button (click)="closeApp()" class="back-link">‹ DASHBOARD</button>
-          <div class="t-title">{{ selectedApp() === 'energia' ? 'IE-BILL-GEN' : selectedApp()?.toUpperCase() }}</div>
-          <div class="t-tools">
-            <span class="file-status" *ngIf="selectedFile()">[SYNC: {{ selectedFile()?.name }}]</span>
-            <label class="scan-opt" *ngIf="selectedApp() === 'energia'">
+      <main class="app-terminal glass fade-in" *ngIf="selectedApp()">
+        <header class="terminal-header">
+          <button (click)="closeApp()" class="back-btn">‹ EXIT_TO_DASHBOARD</button>
+          <span class="module-id">{{ selectedApp()?.toUpperCase() }}</span>
+          <div class="header-tools">
+            <label class="ios-check" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-              <span class="ios-slider" [class.on]="scanMode()"></span>
-              <span class="lbl">ARTIFACTS</span>
+              <span class="slider" [class.on]="scanMode()"></span>
+              <span class="lbl">SCAN_MODE</span>
             </label>
           </div>
         </header>
 
-        <div class="t-layout">
-          <div class="t-inputs">
-            <div class="input-grid">
+        <div class="mini-guide glass-inset">
+          <span class="guide-tag">GUIDE:</span> {{ getInstruction() }}
+        </div>
+
+        <div class="terminal-body">
+          <div class="col-form">
+            <div class="form-grid">
               @for (f of schema(); track f.id) {
-                <div class="input-node">
+                <div class="field">
                   <label>{{ f.label }}</label>
                   <div class="input-wrap glass-inset">
                     <input [(ngModel)]="lines()[$index]" (ngModelChange)="onInputChange()" [placeholder]="f.p" spellcheck="false" autocomplete="off">
@@ -79,31 +87,26 @@ declare var L: any;
 
             <div class="drop-zone glass-inset" *ngIf="isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
               <input type="file" #fi (change)="onFile($event)" hidden>
-              <div class="drop-info">
-                <span class="icon">{{ selectedFile() ? '✅' : '📤' }}</span>
-                <span class="txt">{{ selectedFile() ? 'LOCKED' : 'DROP_IMAGE' }}</span>
-              </div>
+              <span class="drop-txt">{{ selectedFile() ? 'FILE_LOCKED: ' + selectedFile()?.name : 'DROP_IMAGE_OR_CLICK' }}</span>
             </div>
           </div>
 
-          <div class="t-visuals">
+          <div class="col-visuals">
             <div id="map" class="glass-inset" *ngIf="selectedApp() === 'exif_cleaner'"></div>
             
             <div class="mrz-output glass-dark" *ngIf="mrzData()">
-              <div class="console-line">
-                <span class="c-tag">[G2]</span> <code>{{ mrzData().GEN_2_ISO }}</code>
-                <button class="c-pill" (click)="copy(mrzData().GEN_2_ISO)">COPY</button>
-              </div>
-              <div class="console-line">
-                <span class="c-tag">[G1]</span> <code>{{ mrzData().GEN_1_LEGACY }}</code>
+              <div class="mrz-header">REALTIME_MRZ_DUMP</div>
+              <div class="mrz-body">
+                <div class="m-row"><span class="m-tag">G2</span> <code>{{ mrzData().GEN_2_ISO }}</code> <button class="c-pill" (click)="copy(mrzData().GEN_2_ISO)">COPY</button></div>
+                <div class="m-row"><span class="m-tag">G1</span> <code>{{ mrzData().GEN_1_LEGACY }}</code></div>
               </div>
             </div>
           </div>
         </div>
 
-        <footer class="t-footer">
-          <button [disabled]="engine.loading() || (isMediaApp() && !selectedFile())" (click)="fire()" class="exec-btn-full">
-            <span class="btn-txt">{{ engine.loading() ? 'PROCCESSING...' : 'EXECUTE_CORE_GEN' }}</span>
+        <footer class="terminal-footer" *ngIf="selectedApp() !== 'ndls_mrz'">
+          <button [disabled]="engine.loading() || (requiresFile() && !selectedFile())" (click)="fire()" class="exec-btn">
+            <span class="txt">=> INITIATE_EXECUTION_SEQUENCE</span>
             <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
         </footer>
@@ -111,55 +114,64 @@ declare var L: any;
     </div>
   `,
   styles: [`
-    .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
+    /* ANIMATIONS [cite: 2026-03-16] */
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .os-loader { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .spinner { width: 50px; height: 50px; border: 3px solid rgba(0,255,65,0.1); border-top-color: #00ff41; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { margin-top: 20px; font-size: 0.7rem; color: #00ff41; font-family: monospace; letter-spacing: 2px; }
+
+    .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
     canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.15; pointer-events: none; }
     
-    .glass { background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; }
+    .glass { background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(120px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; }
     .glass-inset { background: rgba(25, 25, 25, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
-    .glass-dark { background: #000; border: 1px solid var(--matrix-green); border-radius: 25px; }
+    .glass-dark { background: #000; border: 1px solid #00ff41; border-radius: 30px; }
 
-    /* DYNAMIC ISLAND [cite: 2026-02-05] */
-    .island-node { padding: 8px 30px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 15px 50px #000; }
+    .dynamic-island { padding: 8px 30px; border-radius: 50px; margin-bottom: 40px; display: flex; align-items: center; gap: 15px; box-shadow: 0 15px 50px #000; }
     .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 12px #00ff41; }
-    .pulse { animation: p 2s infinite; } @keyframes p { 50% { opacity: 0.2; } }
-    .status-msg { font-size: 0.65rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-left: 15px; }
 
     /* SPRINGBOARD [cite: 2026-02-21] */
-    .home-screen { width: 100%; max-width: 900px; display: flex; gap: 40px; }
-    .category-block { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-    .cat-label { font-size: 0.8rem; font-weight: 900; color: #555; text-align: center; letter-spacing: 3px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-    .app-card { display: flex; flex-direction: column; align-items: center; padding: 25px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .app-card:hover { transform: scale(1.08); border-color: #00ff41; box-shadow: 0 0 30px rgba(0,255,65,0.2); }
-    .app-icon { font-size: 2.2rem; margin-bottom: 15px; }
-    .app-name { font-size: 0.75rem; font-weight: 900; color: #fff; }
+    .springboard { width: 100%; max-width: 900px; display: flex; gap: 40px; }
+    .folder-group { flex: 1; padding: 35px; border-radius: 40px; }
+    .folder-title { font-size: 0.8rem; font-weight: 900; color: #555; text-align: center; letter-spacing: 3px; margin-bottom: 30px; }
+    .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; }
+    .app-card:hover { transform: scale(1.1); }
+    .app-icon { width: 85px; height: 85px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255,255,255,0.01); }
+    .app-label { font-size: 0.75rem; font-weight: 900; color: #666; margin-top: 15px; }
 
     /* TERMINAL [cite: 2026-02-05] */
-    .terminal-overlay { position: absolute; inset: 20px; padding: 45px; display: flex; flex-direction: column; box-shadow: 0 0 100px #000; z-index: 100; }
-    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-    .back-link { background: transparent; border: none; color: #fff; font-weight: 900; font-size: 0.85rem; cursor: pointer; opacity: 0.6; }
-    .back-link:hover { opacity: 1; }
-    .t-title { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; text-shadow: 0 0 15px rgba(0,255,65,0.3); }
+    .app-terminal { position: absolute; inset: 20px; padding: 40px; display: flex; flex-direction: column; }
+    .terminal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .back-btn { background: transparent; border: none; color: #fff; font-weight: 900; font-size: 0.8rem; opacity: 0.5; cursor: pointer; }
+    .module-id { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; }
 
-    .t-layout { display: flex; gap: 40px; flex: 1; min-height: 0; }
-    .t-inputs, .t-visuals { flex: 1; display: flex; flex-direction: column; gap: 25px; }
-    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    
-    /* TRUE CONTRAST FIX [cite: 2026-03-16] */
-    .input-node label { font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 10px; display: block; letter-spacing: 1px; }
-    .input-wrap { padding: 16px 22px; }
-    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1rem; font-weight: 700; }
-    input::placeholder { color: #333; }
+    .mini-guide { padding: 12px 25px; font-size: 0.7rem; color: #888; margin-bottom: 30px; border-radius: 15px; }
+    .guide-tag { color: #00ff41; font-weight: 900; margin-right: 10px; }
+
+    .terminal-body { display: flex; gap: 40px; flex: 1; min-height: 0; }
+    .col-form, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .field label { font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; display: block; }
+    .input-wrap { padding: 15px 20px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1rem; }
+
+    /* MRZ PRETTIER [cite: 2026-03-16] */
+    .mrz-output { padding: 35px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+    .mrz-header { font-size: 0.6rem; color: #555; margin-bottom: 20px; font-weight: 900; letter-spacing: 2px; }
+    .m-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; }
+    .m-tag { color: #00ff41; font-weight: 900; font-size: 0.75rem; width: 40px; }
+    code { color: #fff; flex: 1; font-size: 1.1rem; letter-spacing: 2px; font-family: 'JetBrains Mono'; }
+    .c-pill { background: #00ff41; color: #000; border: none; padding: 6px 15px; border-radius: 20px; font-size: 0.65rem; font-weight: 900; cursor: pointer; }
 
     #map { flex: 1; border-radius: 25px; min-height: 300px; }
-    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; }
-    .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
-    .drop-info { text-align: center; }
-    .drop-info .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
-    .drop-info .txt { font-size: 0.75rem; font-weight: 900; color: #fff; }
+    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.1); cursor: pointer; text-align: center; }
+    .drop-txt { font-size: 0.75rem; font-weight: 900; color: #444; padding: 20px; }
 
-    .exec-btn-full { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 25px; font-weight: 900; font-size: 1.2rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; margin-top: 30px; }
-    .exec-btn-full:active { transform: scale(0.98); }
+    .exec-btn { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 25px; font-weight: 900; font-size: 1.1rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; margin-top: 20px; }
     .load-fill { position: absolute; bottom: 0; left: 0; height: 6px; background: #00ff41; transition: 2s; }
   `]
 })
@@ -188,7 +200,18 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
+  getInstruction(): string {
+    const map: any = {
+      'energia': 'Enter address lines. Right-alignment is automatic. Scan artifacts optional.',
+      'ndls_mrz': 'Type to compute. No buttons needed. GEN1/GEN2 dual-core output.',
+      'exif_cleaner': 'Pick location on map or enter coords. Default date is TODAY.',
+      'face_cut': 'Upload photo. Set zoom % and vertical shift. Output: 600x800 px.'
+    };
+    return map[this.selectedApp() || ''] || 'Ready to execute.';
+  }
+
   isMediaApp() { return ['exif_cleaner', 'face_cut'].includes(this.selectedApp() || ''); }
+  requiresFile() { return this.isMediaApp(); }
   openApp(n: string) { this.selectedApp.set(n); }
   closeApp() { this.selectedApp.set(null); this.selectedFile.set(null); this.mrzData.set(null); this.map = null; }
 
@@ -232,7 +255,7 @@ export class App implements AfterViewInit {
         const a = document.createElement('a');
         a.href = url;
         const ext = this.isMediaApp() ? 'jpg' : 'pdf';
-        a.download = `V_OS_RESULT_${Date.now()}.${ext}`;
+        a.download = `V_SYNC_RES_${Date.now()}.${ext}`;
         a.click(); URL.revokeObjectURL(url);
       }
     });
@@ -255,6 +278,6 @@ export class App implements AfterViewInit {
       });
     };
     setInterval(draw, 50);
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (240 - 180) + 180)), 3000);
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (220 - 180) + 180)), 3000);
   }
 }
