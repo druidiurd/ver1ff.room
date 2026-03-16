@@ -1,58 +1,89 @@
-import io
 import cv2
+import mediapipe as mp
 import numpy as np
-from PIL import Image, ImageOps
-from typing import List
+from pathlib import Path
+from typing import Optional, Tuple, Final, List
 
-class FaceEngine:
-    """Senior Biometric Engine: OpenCV Cascade Edition (Lightweight). [cite: 2026-03-16]."""
-    __slots__ = ('_face_cascade',)
+# Ініціалізація MediaPipe один раз, щоб не жерти ресурси
+mp_face_detection = mp.solutions.face_detection
+face_detection = mp_face_detection.FaceDetection(
+    model_selection=1,  # 1 для фото далі 2 метрів, 0 для селфі
+    min_detection_confidence=0.6
+)
 
-    def __init__(self, base_path: str):
-        # Завантажуємо вбудований каскад облич [cite: 2026-03-16]
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        self._face_cascade = cv2.CascadeClassifier(cascade_path)
+class FaceCropper:
+    __slots__ = ['padding', 'target_ratio']
 
-    def get_schema(self):
-        return [
-            {"id": "zoom", "label": "ZOOM_FACTOR (%)", "p": "100"},
-            {"id": "shift", "label": "VERTICAL_SHIFT", "p": "0"},
-            {"id": "info", "label": "STATUS", "p": "OpenCV-Haar Active. 3x4 Output."}
-        ]
+    def __init__(self, padding: float = 0.25, target_ratio: Optional[float] = 0.75):
+        """
+        :param padding: Відступ від обличчя (0.25 = 25%)
+        :param target_ratio: Аспектне співвідношення (ширина/висота). 0.75 для 3:4.
+        """
+        self.padding: Final[float] = padding
+        self.target_ratio: Final[Optional[float]] = target_ratio
 
-    def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:
-        if not image_bytes: raise ValueError("EMPTY_STREAM")
+    def _get_crop_coords(self, img_w: int, img_h: int, detection) -> Tuple[int, int, int, int]:
+        bbox = detection.location_data.relative_bounding_box
         
-        zoom = max(10.0, float(lines[0] or 100)) / 100.0
-        v_shift = int(lines[1] or 0)
+        # Переводимо відносні координати в пікселі
+        x = int(bbox.xmin * img_w)
+        y = int(bbox.ymin * img_h)
+        w = int(bbox.width * img_w)
+        h = int(bbox.height * img_h)
 
-        # Конвертуємо для OpenCV [cite: 2026-02-05]
-        img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        img_np = np.array(img_pil)
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        
-        # Детекція обличчя [cite: 2026-03-16]
-        faces = self._face_cascade.detectMultiScale(gray, 1.1, 4)
-        
-        h, w = img_np.shape[:2]
-        cx, cy = w // 2, h // 2
+        # Додаємо падінг
+        pad_w = int(w * self.padding)
+        pad_h = int(h * self.padding)
 
-        if len(faces) > 0:
-            (x, y, fw, fh) = faces[0]
-            cx, cy = x + fw // 2, y + fh // 2
+        x1 = max(0, x - pad_w)
+        y1 = max(0, y - pad_h)
+        x2 = min(img_w, x + w + pad_w)
+        y2 = min(img_h, y + h + pad_h)
 
-        # Розрахунок 3х4 [cite: 2026-02-05, 2026-03-16]
-        target_ratio = 3/4
-        bw, bh = (h * target_ratio, h) if w/h > target_ratio else (w, w / target_ratio)
-        
-        bw, bh = bw / zoom, bh / zoom
-        l, t, r, b = cx - bw/2, cy - bh/2 + v_shift, cx + bw/2, cy + bh/2 + v_shift
+        return x1, y1, x2, y2
 
-        # Фінальний кроп та ахуєнний ресайз [cite: 2026-02-05]
-        cropped = img_pil.crop((max(0, l), max(0, t), min(w, r), min(h, b)))
-        final = ImageOps.autocontrast(cropped, cutoff=0.5).resize((600, 800), Image.Resampling.LANCZOS)
-        
-        out = io.BytesIO()
-        final.save(out, format="jpeg", quality=98)
-        out.seek(0)
-        return out
+    def cut(self, image_path: Path, output_path: Path) -> bool:
+        img = cv2.imread(str(image_path))
+        if img is None:
+            print(f"[X] Не вдалося прочитати: {image_path.name}")
+            return False
+
+        h_orig, w_orig = img.shape[:2]
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        results = face_detection.process(img_rgb)
+
+        if not results.detections:
+            print(f"[-] Лице не знайдено на {image_path.name}. Пропускаю.")
+            return False
+
+        # Беремо перше (найбільше) обличчя
+        primary_face = results.detections[0]
+        x1, y1, x2, y2 = self._get_crop_coords(w_orig, h_orig, primary_face)
+
+        # Кропаємо через numpy slicing
+        cropped = img[y1:y2, x1:x2]
+
+        if cropped.size == 0:
+            print(f"[X] Помилка розміру кропу для {image_path.name}")
+            return False
+
+        cv2.imwrite(str(output_path), cropped)
+        return True
+
+def main():
+    base_dir = Path(__file__).parent
+    input_dir = base_dir / "input_faces"
+    output_dir = base_dir / "output_faces"
+    
+    input_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True)
+
+    cropper = FaceCropper(padding=0.3)  # Більше місця зверху під документи
+
+    for img_file in input_dir.glob("*.jpg"):
+        target = output_dir / f"CUT_{img_file.name}"
+        if cropper.cut(img_file, target):
+            print(f"[+] Сніфнув обличчя: {img_file.name}")
+
+if __name__ == "__main__":
+    main()
