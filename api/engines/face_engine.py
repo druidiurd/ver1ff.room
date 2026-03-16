@@ -2,88 +2,85 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from pathlib import Path
-from typing import Optional, Tuple, Final, List
+from typing import Final, Tuple, List, Optional
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
-# Ініціалізація MediaPipe один раз, щоб не жерти ресурси
-mp_face_detection = mp.solutions.face_detection
-face_detection = mp_face_detection.FaceDetection(
-    model_selection=1,  # 1 для фото далі 2 метрів, 0 для селфі
-    min_detection_confidence=0.6
-)
+class FaceEngine:
+    """Senior-level engine for precise face extraction."""
+    __slots__ = ['detector', 'padding']
 
-class FaceCropper:
-    __slots__ = ['padding', 'target_ratio']
+    def __init__(self, model_path: str = "detector.tflite", min_confidence: float = 0.5):
+        # Ініціалізація детектора через Tasks API
+        base_options = python.BaseOptions(model_asset_path=model_path)
+        options = vision.FaceDetectorOptions(base_options=base_options)
+        self.detector = vision.FaceDetector.create_from_options(options)
+        self.padding: Final[float] = 0.25  # 25% запасу навколо пики
 
-    def __init__(self, padding: float = 0.25, target_ratio: Optional[float] = 0.75):
-        """
-        :param padding: Відступ від обличчя (0.25 = 25%)
-        :param target_ratio: Аспектне співвідношення (ширина/висота). 0.75 для 3:4.
-        """
-        self.padding: Final[float] = padding
-        self.target_ratio: Final[Optional[float]] = target_ratio
-
-    def _get_crop_coords(self, img_w: int, img_h: int, detection) -> Tuple[int, int, int, int]:
-        bbox = detection.location_data.relative_bounding_box
+    def _calculate_bounds(self, bbox, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+        """Розрахунок координат з урахуванням падінгів та кордонів кадру."""
+        x, y, w, h = bbox.origin_x, bbox.origin_y, bbox.width, bbox.height
         
-        # Переводимо відносні координати в пікселі
-        x = int(bbox.xmin * img_w)
-        y = int(bbox.ymin * img_h)
-        w = int(bbox.width * img_w)
-        h = int(bbox.height * img_h)
+        pad_x = int(w * self.padding)
+        pad_y = int(h * self.padding)
 
-        # Додаємо падінг
-        pad_w = int(w * self.padding)
-        pad_h = int(h * self.padding)
-
-        x1 = max(0, x - pad_w)
-        y1 = max(0, y - pad_h)
-        x2 = min(img_w, x + w + pad_w)
-        y2 = min(img_h, y + h + pad_h)
-
+        x1 = max(0, x - pad_x)
+        y1 = max(0, y - pad_y)
+        x2 = min(img_w, x + w + pad_x)
+        y2 = min(img_h, y + h + pad_y)
+        
         return x1, y1, x2, y2
 
-    def cut(self, image_path: Path, output_path: Path) -> bool:
-        img = cv2.imread(str(image_path))
-        if img is None:
-            print(f"[X] Не вдалося прочитати: {image_path.name}")
+    def process_image(self, input_path: Path, output_path: Path) -> bool:
+        # Читаємо через OpenCV (numpy array)
+        image = cv2.imread(str(input_path))
+        if image is None:
             return False
 
-        h_orig, w_orig = img.shape[:2]
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        results = face_detection.process(img_rgb)
+        h, w = image.shape[:2]
+        
+        # Конвертуємо для MediaPipe
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        
+        # Детекція
+        detection_result = self.detector.detect(mp_image)
 
-        if not results.detections:
-            print(f"[-] Лице не знайдено на {image_path.name}. Пропускаю.")
+        if not detection_result.detections:
+            print(f"[-] Face not found: {input_path.name}")
             return False
 
-        # Беремо перше (найбільше) обличчя
-        primary_face = results.detections[0]
-        x1, y1, x2, y2 = self._get_crop_coords(w_orig, h_orig, primary_face)
+        # Беремо перший бокс (найбільший пріоритет)
+        bbox = detection_result.detections[0].bounding_box
+        x1, y1, x2, y2 = self._calculate_bounds(bbox, w, h)
 
-        # Кропаємо через numpy slicing
-        cropped = img[y1:y2, x1:x2]
+        # Hardcore slicing через numpy
+        face_crop = image[y1:y2, x1:x2]
 
-        if cropped.size == 0:
-            print(f"[X] Помилка розміру кропу для {image_path.name}")
+        if face_crop.size == 0:
             return False
 
-        cv2.imwrite(str(output_path), cropped)
+        cv2.imwrite(str(output_path), face_crop)
         return True
 
-def main():
-    base_dir = Path(__file__).parent
-    input_dir = base_dir / "input_faces"
-    output_dir = base_dir / "output_faces"
+def run_cleanup():
+    # Налаштування шляхів під Windows 11
+    workspace = Path(__file__).parent
+    in_dir = workspace / "input_faces"
+    out_dir = workspace / "output_faces"
     
-    input_dir.mkdir(exist_ok=True)
-    output_dir.mkdir(exist_ok=True)
+    in_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(exist_ok=True)
 
-    cropper = FaceCropper(padding=0.3)  # Більше місця зверху під документи
-
-    for img_file in input_dir.glob("*.jpg"):
-        target = output_dir / f"CUT_{img_file.name}"
-        if cropper.cut(img_file, target):
-            print(f"[+] Сніфнув обличчя: {img_file.name}")
+    # Якщо немає моделі, MediaPipe може юзати дефолтну, але краще підкинути .tflite
+    # Для швидкого старту можна юзати старий медіапайп детекшн (див. нижче)
+    try:
+        engine = FaceEngine()
+        for img_path in in_dir.glob("*.jpg"):
+            target = out_dir / f"STRICT_CUT_{img_path.name}"
+            if engine.process_image(img_path, target):
+                print(f"[+] Grepped: {img_path.name}")
+    except Exception as e:
+        print(f"[!] Engine error: {e}. Check if detector.tflite exists.")
 
 if __name__ == "__main__":
-    main()
+    run_cleanup()
