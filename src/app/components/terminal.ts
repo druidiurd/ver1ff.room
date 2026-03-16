@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AppStore } from '../store';
 import { MapComponent } from './map';
+import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-terminal',
@@ -53,9 +54,17 @@ import { MapComponent } from './map';
           </div>
 
           <div class="drop-zone" *ngIf="store.isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
-            <input type="file" #fi (change)="onFile($event)" hidden>
-            <div class="d-icon" [class.locked]="store.selectedFile()">{{ store.selectedFile() ? '✅' : '📤' }}</div>
-            <div class="d-text">{{ store.selectedFile() ? 'BUFFER_LOCKED' : 'DROP_SOURCE_MEDIA' }}</div>
+            <input type="file" #fi (change)="onFile($event)" [multiple]="store.selectedApp() === 'ai_bypass'" hidden>
+            
+            <ng-container *ngIf="store.selectedApp() !== 'ai_bypass'">
+              <div class="d-icon" [class.locked]="store.selectedFile()">{{ store.selectedFile() ? '✅' : '📤' }}</div>
+              <div class="d-text">{{ store.selectedFile() ? 'BUFFER_LOCKED' : 'DROP_SOURCE_MEDIA' }}</div>
+            </ng-container>
+            
+            <ng-container *ngIf="store.selectedApp() === 'ai_bypass'">
+              <div class="d-icon" [class.locked]="store.batchFiles().length > 0">{{ store.batchFiles().length > 0 ? '✅' : '📦' }}</div>
+              <div class="d-text">{{ store.batchFiles().length > 0 ? store.batchFiles().length + ' FILES_BUFFERED' : 'DROP_UP_TO_5_FILES' }}</div>
+            </ng-container>
           </div>
         </div>
 
@@ -72,38 +81,51 @@ import { MapComponent } from './map';
             <div class="m-row"><span class="tag">G1</span><code>{{ store.mrzData().GEN_1_LEGACY }}</code></div>
           </div>
 
-          <div class="mrz-box bypass-box" *ngIf="store.bypassData()">
-            
-            <ng-container *ngIf="store.bypassData().TYPE === 'ai_bypass'">
-              <div class="m-row"><span class="tag">AI_DETECT</span><code class="alert-code" [class.safe]="store.bypassData().AI_PROBABILITY !== '100.0%'">{{ store.bypassData().AI_PROBABILITY }}</code></div>
-              <div class="m-row"><span class="tag">API_STATUS</span><code>{{ store.bypassData().STATUS }}</code></div>
-            </ng-container>
-
-            <ng-container *ngIf="store.bypassData().TYPE === 'ai_batch'">
-              <div class="batch-header">AUTO-FIND ANALYSIS:</div>
-              <div class="batch-grid">
-                <div class="b-row" *ngFor="let r of store.bypassData().RESULTS">
-                  <span class="b-q">Q: {{ r.quality }}%</span>
-                  <span class="b-s" [class.safe]="r.score < 0.1" [class.danger]="r.score >= 0.1">AI: {{ (r.score * 100).toFixed(1) }}%</span>
-                </div>
+          <div class="batch-container" *ngIf="store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0">
+            <div class="batch-item" *ngFor="let f of store.batchFiles(); let i = index">
+              
+              <div class="side orig-side glass-inset">
+                <span class="s-tag">ORIGINAL</span>
+                <img [src]="store.batchUrls()[i]" class="s-img">
               </div>
-              <div class="divider"></div>
-              <div class="m-row"><span class="tag">BEST_Q</span><code>{{ store.bypassData().BEST_Q }}%</code></div>
-              <div class="m-row"><span class="tag">BEST_SCORE</span><code class="alert-code safe">{{ store.bypassData().BEST_SCORE }}</code></div>
-            </ng-container>
-            
+
+              <div class="side res-side glass-dark">
+                <span class="s-tag">PROCESSED</span>
+                
+                <ng-container *ngIf="store.bypassResults()[i] as res; else loadingTpl">
+                  <ng-container *ngIf="res.STATUS !== 'ERROR'">
+                    <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="s-img">
+                    <div class="res-stats">
+                      <span class="r-prob" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
+                        {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
+                      </span>
+                      <button class="dl-btn" (click)="download(res.IMAGE_BASE64, f.name)">DL</button>
+                    </div>
+                  </ng-container>
+                  <ng-container *ngIf="res.STATUS === 'ERROR'">
+                    <span class="pv-empty error">API_TIMEOUT</span>
+                  </ng-container>
+                </ng-container>
+                
+                <ng-template #loadingTpl>
+                  <span class="pv-empty" *ngIf="store.loading()">PROCESSING...</span>
+                  <span class="pv-empty" *ngIf="!store.loading()">AWAITING_CMD</span>
+                </ng-template>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
 
       <footer *ngIf="store.selectedApp() !== 'ndls_mrz'">
         <div class="action-grid" [class.dual]="store.selectedApp() === 'ai_bypass'">
-          <button [disabled]="store.loading() || (store.requiresFile() && !store.selectedFile())" (click)="execute(false)" class="exec-btn">
+          <button [disabled]="store.loading() || !canExecute()" (click)="execute(false)" class="exec-btn">
             > {{ store.selectedApp() === 'ai_bypass' ? 'TEST_CURRENT_QUALITY' : 'INITIATE_CORE_SEQUENCE' }}
             <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
           </button>
           
-          <button *ngIf="store.selectedApp() === 'ai_bypass'" [disabled]="store.loading() || !store.selectedFile()" (click)="execute(true)" class="exec-btn stealth-btn">
+          <button *ngIf="store.selectedApp() === 'ai_bypass'" [disabled]="store.loading() || !canExecute()" (click)="execute(true)" class="exec-btn stealth-btn">
             > AUTO-FIND_BEST_COMPRESSION
             <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
           </button>
@@ -113,7 +135,7 @@ import { MapComponent } from './map';
   `,
   styles: [`
     .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-    .terminal-shell { background: rgba(10,10,10,0.95); backdrop-filter: blur(80px); border: 1px solid rgba(255,255,255,0.1); border-radius: 45px; padding: 50px; display: flex; flex-direction: column; width: 100%; max-width: 1200px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
+    .terminal-shell { background: rgba(10,10,10,0.95); backdrop-filter: blur(80px); border: 1px solid rgba(255,255,255,0.1); border-radius: 45px; padding: 50px; display: flex; flex-direction: column; width: 100%; max-width: 1300px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
     
     .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
     .esc-btn { background: transparent; border: none; color: #666; font-weight: 900; cursor: pointer; transition: 0.2s; }
@@ -121,9 +143,11 @@ import { MapComponent } from './map';
     .t-module { color: #00ff41; font-size: 1.8rem; font-weight: 900; letter-spacing: 5px; text-shadow: 0 0 20px rgba(0,255,65,0.4); }
 
     .t-layout { display: flex; gap: 50px; flex: 1; min-height: 0; }
-    .col-form, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 30px; }
+    .col-form { flex: 0.8; display: flex; flex-direction: column; gap: 30px; }
+    .col-visuals { flex: 1.2; display: flex; flex-direction: column; gap: 30px; min-height: 400px; overflow-y: auto; padding-right: 10px; }
+    .col-visuals::-webkit-scrollbar { width: 8px; } .col-visuals::-webkit-scrollbar-thumb { background: rgba(0,255,65,0.3); border-radius: 10px; }
     
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .field-box label { display: block; font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
     .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 20px; }
     .range-bg { padding: 10px 20px; }
@@ -141,27 +165,34 @@ import { MapComponent } from './map';
     .d-icon.locked { opacity: 1; text-shadow: 0 0 20px #00ff41; }
     .d-text { font-weight: 900; color: #fff; letter-spacing: 2px; }
 
+    /* PREVIEW & MRZ */
     .preview-box { flex: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .pv-img { max-width: 100%; max-height: 100%; border-radius: 15px; }
-    .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; }
+    .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; font-size: 0.8rem; }
+    .pv-empty.error { color: #ff3b30; }
 
     .mrz-box { background: #000; border: 1px solid #00ff41; padding: 30px 40px; border-radius: 30px; }
-    .bypass-box { border-color: #a855f7; box-shadow: 0 0 30px rgba(168,85,247,0.2); }
     .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
     .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; }
-    .bypass-box .tag { color: #a855f7; }
-    .alert-code { color: #ff3b30 !important; font-size: 1.5rem; font-weight: 900; }
-    .alert-code.safe { color: #00ff41 !important; text-shadow: 0 0 15px rgba(0,255,65,0.4); }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
     button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
 
-    .batch-header { color: #888; font-size: 0.7rem; font-weight: 900; letter-spacing: 2px; margin-bottom: 15px; }
-    .batch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-    .b-row { background: rgba(168,85,247,0.1); padding: 10px 15px; border-radius: 10px; display: flex; justify-content: space-between; font-family: 'JetBrains Mono'; font-size: 0.9rem; font-weight: 900; }
-    .b-q { color: #fff; }
-    .b-s.safe { color: #00ff41; } .b-s.danger { color: #ff3b30; }
-    .divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
+    /* SPLIT VIEW (BATCH) UI [cite: 2026-03-16] */
+    .batch-container { display: flex; flex-direction: column; gap: 20px; }
+    .batch-item { display: flex; gap: 15px; height: 180px; }
+    .side { flex: 1; border-radius: 20px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+    .glass-inset { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); }
+    .glass-dark { background: #000; border: 1px solid #a855f7; box-shadow: 0 0 20px rgba(168,85,247,0.1); }
+    .s-tag { position: absolute; top: 10px; left: 10px; font-size: 0.5rem; font-weight: 900; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 5px; color: #fff; z-index: 2; }
+    .glass-dark .s-tag { color: #a855f7; }
+    .s-img { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
+    
+    .res-stats { position: absolute; bottom: 10px; width: 90%; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.85); padding: 5px 10px; border-radius: 10px; z-index: 2; border: 1px solid rgba(168,85,247,0.3); }
+    .r-prob { font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
+    .r-prob.safe { color: #00ff41; } .r-prob.danger { color: #ff3b30; }
+    .dl-btn { background: #a855f7; color: #fff; padding: 5px 15px; font-size: 0.7rem; }
 
+    /* BUTTONS */
     .action-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
     .action-grid.dual { grid-template-columns: 1fr 1fr; }
     .exec-btn { width: 100%; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; }
@@ -182,8 +213,41 @@ import { MapComponent } from './map';
 export class TerminalComponent {
   store = inject(AppStore);
 
-  onFile(e: any) { const f = e.target.files[0]; if (f) { this.store.selectedFile.set(f); if (this.store.hasPreview()) this.reqPreview(); } }
-  onDrop(e: DragEvent) { e.preventDefault(); if (e.dataTransfer?.files.length) { this.store.selectedFile.set(e.dataTransfer.files[0]); if (this.store.hasPreview()) this.reqPreview(); } }
+  onFile(e: any) { 
+    this.handleFiles(e.target.files); 
+  }
+  
+  onDrop(e: DragEvent) { 
+    e.preventDefault(); 
+    if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); 
+  }
+
+  handleFiles(filesList: FileList) {
+    if (this.store.selectedApp() === 'ai_bypass') {
+      const files = Array.from(filesList).slice(0, 5) as File[]; // Limit to 5
+      this.store.batchUrls().forEach(url => URL.revokeObjectURL(url));
+      this.store.batchFiles.set(files);
+      this.store.batchUrls.set(files.map(f => URL.createObjectURL(f)));
+      this.store.bypassResults.set([]);
+    } else {
+      const f = filesList[0];
+      if (f) { 
+        this.store.selectedFile.set(f); 
+        if (this.store.hasPreview()) this.reqPreview(); 
+      }
+    }
+  }
+
+  canExecute() {
+    if (this.store.selectedApp() === 'ai_bypass') return this.store.batchFiles().length > 0;
+    if (this.store.requiresFile()) return !!this.store.selectedFile();
+    return true;
+  }
+
+  isSafe(res: any) {
+    if (res.TYPE === 'ai_batch') return parseFloat(res.BEST_SCORE) < 10.0;
+    return parseFloat(res.AI_PROBABILITY) < 10.0;
+  }
 
   onInput() {
     if (this.store.selectedApp() === 'ndls_mrz') {
@@ -202,36 +266,57 @@ export class TerminalComponent {
     });
   }
 
-  execute(isBatch: boolean = false) {
+  // АСИНХРОННА ПАКЕТНА ЧЕРГА (Senior Protection від Timeout 504) [cite: 2026-03-16]
+  async execute(isBatch: boolean = false) {
+    if (this.store.selectedApp() === 'ai_bypass') {
+      this.store.loading.set(true);
+      const files = this.store.batchFiles();
+      const results = new Array(files.length).fill(null);
+      this.store.bypassResults.set([...results]);
+
+      for (let i = 0; i < files.length; i++) {
+        const fd = new FormData();
+        fd.append('type', 'ai_bypass');
+        fd.append('lines', JSON.stringify(this.store.lines()));
+        fd.append('scan_mode', isBatch ? 'true' : 'false');
+        fd.append('file', files[i]);
+
+        try {
+          const res = await lastValueFrom(this.store.executeSilent(fd, true));
+          results[i] = res;
+        } catch (err) {
+          results[i] = { STATUS: 'ERROR' };
+        }
+        this.store.bypassResults.set([...results]); // Оновлюємо UI покроково [cite: 2026-02-05]
+      }
+      this.store.loading.set(false);
+      return;
+    }
+
+    // Default flow for others
     const fd = new FormData(); 
     fd.append('type', this.store.selectedApp()!); 
     fd.append('lines', JSON.stringify(this.store.lines())); 
-    
-    if (this.store.selectedApp() === 'ai_bypass' && isBatch) {
-      fd.append('scan_mode', 'true');
-    } else {
-      fd.append('scan_mode', this.store.scanMode().toString());
-    }
-
+    fd.append('scan_mode', this.store.scanMode().toString());
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
-    const isJson = ['ndls_mrz', 'ai_bypass'].includes(this.store.selectedApp() || '');
+    const isJson = ['ndls_mrz'].includes(this.store.selectedApp() || '');
     
     this.store.executeCommand(fd, isJson).subscribe((res: any) => {
-      if (this.store.selectedApp() === 'ndls_mrz') {
-        this.store.mrzData.set(res);
-      } else if (this.store.selectedApp() === 'ai_bypass') {
-        this.store.bypassData.set(res);
-        const a = document.createElement('a');
-        a.href = `data:image/jpeg;base64,${res.IMAGE_BASE64}`;
-        a.download = `V_STEALTH_${Date.now()}.jpg`;
-        a.click();
-      } else {
+      if (isJson) this.store.mrzData.set(res);
+      else {
         const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
         a.download = `V_OUT_${Date.now()}.${this.store.isMediaApp() ? 'jpg' : 'pdf'}`;
         a.click(); URL.revokeObjectURL(url);
       }
     });
+  }
+
+  download(base64Data: string, originalName: string) {
+    const a = document.createElement('a');
+    a.href = `data:image/jpeg;base64,${base64Data}`;
+    a.download = `STEALTH_${originalName}`;
+    a.click();
   }
 
   copy(t: string) { navigator.clipboard.writeText(t); }

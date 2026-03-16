@@ -11,14 +11,19 @@ export class AppStore {
   schema = signal<any[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal<boolean>(false);
-  selectedFile = signal<File | null>(null);
   
+  // Single mode files
+  selectedFile = signal<File | null>(null);
   mrzData = signal<any>(null);
-  bypassData = signal<any>(null); // Дані від Sightengine [cite: 2026-02-05]
   previewUrl = signal<string | null>(null);
 
+  // Batch mode files (AI_BYPASS) [cite: 2026-02-21]
+  batchFiles = signal<File[]>([]);
+  batchUrls = signal<string[]>([]);
+  bypassResults = signal<any[]>([]); 
+
   isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_bypass'].includes(this.selectedApp() || ''));
-  hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || '')); // Прев'ю тільки для кропу
+  hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || ''));
   requiresFile = computed(() => this.isMediaApp());
 
   openApp(name: string) {
@@ -33,9 +38,14 @@ export class AppStore {
     this.selectedApp.set(null);
     this.selectedFile.set(null);
     this.mrzData.set(null);
-    this.bypassData.set(null);
+    this.bypassResults.set([]);
+    this.batchFiles.set([]);
+    
     if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
     this.previewUrl.set(null);
+    
+    this.batchUrls().forEach(url => URL.revokeObjectURL(url));
+    this.batchUrls.set([]);
   }
 
   executeCommand(fd: FormData, isJson: boolean): Observable<any> {
@@ -43,5 +53,12 @@ export class AppStore {
     return this.http.post('/api/execute', fd, {
       responseType: (isJson ? 'json' : 'blob') as 'json'
     }).pipe(finalize(() => this.loading.set(false)));
+  }
+
+  // Для пакетної обробки без глобального лоадера [cite: 2026-02-05]
+  executeSilent(fd: FormData, isJson: boolean): Observable<any> {
+    return this.http.post('/api/execute', fd, {
+      responseType: (isJson ? 'json' : 'blob') as 'json'
+    });
   }
 }
