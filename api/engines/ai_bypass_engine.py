@@ -19,7 +19,6 @@ class AIBypassEngine:
 
     def get_schema(self) -> List[Dict[str, Any]]:
         return [
-            # type: 'range' дасть нам гарний повзунок на фронті [cite: 2026-02-21]
             {"id": "compress", "label": "JPEG_QUALITY (%)", "p": "72", "type": "range", "min": 10, "max": 100},
             {"id": "profile", "label": "SIGHTENGINE_NODE", "p": "PROFILE_1", "type": "select", "opts": ["PROFILE_1", "PROFILE_2", "PROFILE_3"]}
         ]
@@ -48,14 +47,17 @@ class AIBypassEngine:
     async def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> Dict[str, Any]:
         if not image_bytes: raise ValueError("ERR_NO_IMAGE_PAYLOAD")
 
-        quality = int(lines[0]) if lines and lines[0].strip() else 72
-        prof_key = lines[1] if len(lines) > 1 and lines[1].strip() else "PROFILE_1"
+        # SENIOR FIX: Примусове кастування до str() перед викликом strip() 
+        # Це убезпечує від падінь, якщо Angular надсилає int [cite: 2026-03-16]
+        quality = int(lines[0]) if lines and str(lines[0]).strip() else 72
+        prof_key = str(lines[1]).strip() if len(lines) > 1 and str(lines[1]).strip() else "PROFILE_1"
+        
         api_user, api_secret = self.profiles.get(prof_key, self.profiles["PROFILE_1"])
 
         with Image.open(io.BytesIO(image_bytes)) as img:
             img = img.convert("RGB")
 
-            # РЕЖИМ 1: AUTO-FIND BEST COMPRESSION (scan = True) [cite: 2026-02-05]
+            # РЕЖИМ 1: AUTO-FIND BEST COMPRESSION (scan = True)
             if scan:
                 results = []
                 best_score = 1.0
@@ -63,7 +65,6 @@ class AIBypassEngine:
                 best_bytes = None
                 
                 async with httpx.AsyncClient(timeout=45.0) as client:
-                    # Sequential loop щоб не зловити 429 Too Many Requests від API
                     for q in [90, 80, 70, 60]:
                         c_bytes = self._compress(img, q)
                         chk = await self._check_api(client, c_bytes, api_user, api_secret)
@@ -83,7 +84,7 @@ class AIBypassEngine:
                     "IMAGE_BASE64": base64.b64encode(best_bytes).decode('utf-8')
                 }
 
-            # РЕЖИМ 2: SINGLE COMPRESSION (scan = False) [cite: 2026-02-21]
+            # РЕЖИМ 2: SINGLE COMPRESSION (scan = False)
             c_bytes = self._compress(img, quality)
             async with httpx.AsyncClient(timeout=20.0) as client:
                 chk = await self._check_api(client, c_bytes, api_user, api_secret)
