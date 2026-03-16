@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EngineService } from './services/engine';
 
-declare var L: any; // Global Leaflet Engine [cite: 2026-02-05]
+declare var L: any; // Leaflet SDK [cite: 2026-02-05]
 
 @Component({
   selector: 'app-root',
@@ -15,96 +15,79 @@ declare var L: any; // Global Leaflet Engine [cite: 2026-02-05]
     <div class="os-loader" *ngIf="engine.loading() && !selectedApp()">
       <div class="loader-content">
         <div class="spinner"></div>
-        <div class="loader-text">SYNCING_V_OS_CORE_V11_STABLE...</div>
-        <div class="loader-bar-container"><div class="loader-bar-fill"></div></div>
+        <div class="loader-text">SYNCING_V_OS_CORE...</div>
       </div>
     </div>
 
     <div class="v-os-container" [class.app-active]="selectedApp()">
       
-      <header class="dynamic-island glass pulse-border">
-        <div class="island-inner">
-          <span class="status-led pulse"></span>
-          <span class="status-text">UPLINK_STABLE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB // V_OS_V11.0</span>
+      <div class="status-island glass fade-in">
+        <div class="inner">
+          <span class="led pulse"></span>
+          <span class="id-code">UPLINK_LIVE // NODE_{{ nodeId }} // RAM: {{ memoryUsage() }}MB</span>
         </div>
-      </header>
+      </div>
 
       <section class="springboard fade-in" *ngIf="!selectedApp()">
         
-        <div class="folder-group glass">
-          <div class="folder-header">
-            <span class="folder-tag">SEC</span>
-            <h2 class="folder-name">IRELAND_NODES</h2>
-          </div>
+        <div class="folder glass">
+          <div class="folder-title">IRELAND_NODES</div>
           <div class="app-grid">
             <div class="app-card" (click)="openApp('energia')">
-              <div class="app-icon-wrap glass-inset">
-                <span class="neon-green">⚡</span>
-              </div>
+              <div class="app-icon glass"><span class="neon-green">⚡</span></div>
               <span class="app-label">IE-bill-gen</span>
             </div>
             <div class="app-card" (click)="openApp('ndls_mrz')">
-              <div class="app-icon-wrap glass-inset">
-                <span class="neon-blue">🆔</span>
-              </div>
+              <div class="app-icon glass"><span class="neon-blue">🆔</span></div>
               <span class="app-label">IE-NDLS-MRZ</span>
             </div>
           </div>
         </div>
 
-        <div class="folder-block glass">
-          <div class="folder-header">
-            <span class="folder-tag">SYS</span>
-            <h2 class="folder-name">GLOBAL_TOOLS</h2>
-          </div>
+        <div class="folder glass">
+          <div class="folder-title">GLOBAL_TOOLS</div>
           <div class="app-grid">
             <div class="app-card" (click)="openApp('exif_cleaner')">
-              <div class="app-icon-wrap glass-inset">
-                <span class="neon-amber">📸</span>
-              </div>
+              <div class="app-icon glass"><span class="neon-amber">📸</span></div>
               <span class="app-label">EXIF-Sniper</span>
             </div>
             <div class="app-card" (click)="openApp('face_cut')">
-              <div class="app-icon-wrap glass-inset">
-                <span class="neon-red">👤</span>
-              </div>
+              <div class="app-icon glass"><span class="neon-red">👤</span></div>
               <span class="app-label">Face-Cut</span>
+            </div>
+            <div class="app-card" (click)="openApp('ai_refiner')">
+              <div class="app-icon glass"><span class="neon-purple">AI</span></div>
+              <span class="app-label">AI-Refiner</span>
             </div>
           </div>
         </div>
       </section>
 
       <main class="app-terminal glass fade-in" *ngIf="selectedApp()">
-        <header class="terminal-header">
-          <button (click)="closeApp()" class="back-btn">‹ EXIT_TO_DASHBOARD</button>
-          <div class="module-id-display">
-            <span class="module-prefix">NODE::</span>
-            <span class="module-name">{{ getAppTitle() }}</span>
-          </div>
-          <div class="header-tools">
-            <div class="file-status-pill" *ngIf="selectedFile()">
-              <span class="pill-dot"></span> [LOCK: {{ selectedFile()?.name }}]
-            </div>
-            <label class="scan-toggle-ui" *ngIf="selectedApp() === 'energia'">
+        <header class="t-header">
+          <button (click)="closeApp()" class="esc">‹ RETURN_TO_DASHBOARD</button>
+          <div class="t-module">{{ selectedApp()?.toUpperCase() }}</div>
+          <div class="t-tools">
+            <span class="f-info" *ngIf="selectedFile()">[SYNC: {{ selectedFile()?.name }}]</span>
+            <label class="scan-mode" *ngIf="selectedApp() === 'energia'">
               <input type="checkbox" [ngModel]="scanMode()" (ngModelChange)="scanMode.set($event)">
-              <span class="toggle-slider" [class.on]="scanMode()"></span>
-              <span class="toggle-label">ARTIFACTS</span>
+              <span class="slider" [class.on]="scanMode()"></span>
+              <span class="txt">SCAN</span>
             </label>
           </div>
         </header>
 
-        <div class="mini-guide-bar glass-inset">
-          <span class="guide-prefix">SYSTEM_MANUAL:</span>
-          <span class="guide-text">{{ getGuideText() }}</span>
+        <div class="t-guide glass-inset">
+          <span class="g-tag">GUIDE:</span> {{ getGuideText() }}
         </div>
 
-        <div class="terminal-main-layout">
-          <div class="input-column">
-            <div class="form-grid-layout">
+        <div class="t-body">
+          <div class="col-inputs">
+            <div class="form-grid">
               @for (field of schema(); track field.id) {
-                <div class="input-field-group">
-                  <label class="field-label">{{ field.label }}</label>
-                  <div class="field-input-container glass-inset">
+                <div class="field">
+                  <label>{{ field.label }}</label>
+                  <div class="i-wrap glass-inset">
                     <input 
                       [(ngModel)]="lines()[$index]" 
                       (ngModelChange)="onInputChange()" 
@@ -117,172 +100,114 @@ declare var L: any; // Global Leaflet Engine [cite: 2026-02-05]
               }
             </div>
 
-            <div class="media-drop-zone glass-inset" 
+            <div class="drop-zone glass-inset" 
                  *ngIf="isMediaApp()" 
-                 (click)="fileInput.click()" 
-                 (drop)="onDrop($event)" 
-                 (dragover)="$event.preventDefault()">
-              <input type="file" #fileInput (change)="onFile($event)" hidden>
-              <div class="drop-zone-content">
-                <div class="drop-icon-box" [class.file-ready]="selectedFile()">
-                  {{ selectedFile() ? '✅' : '📤' }}
-                </div>
-                <div class="drop-text-main">{{ selectedFile() ? 'IMAGE_SYNCED_TO_BUFFER' : 'DROP_SOURCE_IMAGE' }}</div>
-                <div class="drop-text-sub">SUPPORTED: JPEG, PNG, WEBP (MAX 30MB)</div>
+                 (click)="fIn.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
+              <input type="file" #fIn (change)="onFile($event)" hidden>
+              <div class="drop-info">
+                <span class="icon">{{ selectedFile() ? '✅' : '📤' }}</span>
+                <span class="label">{{ selectedFile() ? 'FILE_LOCKED' : 'DROP_IMAGE_FOR_SYNC' }}</span>
               </div>
             </div>
           </div>
 
-          <div class="visual-column">
-            <div class="map-wrapper glass-inset" *ngIf="selectedApp() === 'exif_cleaner'">
-              <div id="map"></div>
-              <div class="map-coord-overlay">GEO_SYNC_ACTIVE</div>
-            </div>
+          <div class="col-visuals">
+            <div id="map" class="glass-inset" *ngIf="selectedApp() === 'exif_cleaner'"></div>
             
-            <div class="face-preview-wrapper glass-inset" *ngIf="selectedApp() === 'face_cut'">
-              <img *ngIf="previewUrl()" [src]="previewUrl()" alt="AI Preview" class="preview-img-element fade-in">
-              <div *ngIf="!previewUrl()" class="preview-placeholder">AWAITING_SOURCE_IMAGE...</div>
-              <div class="preview-metadata-tag" *ngIf="previewUrl()">AI_BIOMETRIC_PREVIEW_V11</div>
+            <div class="preview-box glass-inset" *ngIf="hasPreview() && previewUrl()">
+              <img [src]="previewUrl()" alt="Buffer Preview" class="face-img">
+              <div class="p-tag">REALTIME_VFX_PREVIEW</div>
             </div>
 
-            <div class="mrz-output-container glass-dark" *ngIf="mrzData()">
-              <div class="mrz-header-label">REACTIVE_MRZ_DATA_STREAM</div>
-              <div class="mrz-data-body">
-                <div class="mrz-data-row">
-                  <span class="mrz-tag">G2_ISO</span>
-                  <code class="mrz-code">{{ mrzData().GEN_2_ISO }}</code>
-                  <button class="copy-pill-btn" (click)="copy(mrzData().GEN_2_ISO)">COPY</button>
-                </div>
-                <div class="mrz-data-row">
-                  <span class="mrz-tag">G1_LEG</span>
-                  <code class="mrz-code">{{ mrzData().GEN_1_LEGACY }}</code>
-                </div>
-              </div>
+            <div class="mrz-output glass-dark" *ngIf="mrzData()">
+              <div class="m-row"><span class="t">G2</span><code>{{ mrzData().GEN_2_ISO }}</code><button (click)="copy(mrzData().GEN_2_ISO)">CPY</button></div>
+              <div class="m-row"><span class="t">G1</span><code>{{ mrzData().GEN_1_LEGACY }}</code></div>
             </div>
           </div>
         </div>
 
-        <footer class="terminal-footer-action" *ngIf="selectedApp() !== 'ndls_mrz'">
-          <button 
-            [disabled]="engine.loading() || (requiresFile() && !selectedFile())" 
-            (click)="fire()" 
-            class="titan-execute-btn"
-          >
-            <span class="btn-text-main">> INITIATE_CORE_EXECUTION_SEQUENCE</span>
-            <div class="btn-progress-bar" [style.width.%]="engine.loading() ? 100 : 0"></div>
+        <footer>
+          <button [disabled]="engine.loading() || (requiresFile() && !selectedFile())" 
+                  (click)="fire()" 
+                  class="exec-btn-titan">
+            <span class="bt">{{ engine.loading() ? 'ENCRYPTING_BUFFER...' : 'EXECUTE_CORE_COMMAND' }}</span>
+            <div class="load-fill" [style.width.%]="engine.loading() ? 100 : 0"></div>
           </button>
         </footer>
       </main>
     </div>
   `,
   styles: [`
-    /* 1. GLOBAL OS CONSTANTS [cite: 2026-02-05] */
-    :host { --m-green: #00ff41; --m-glow: rgba(0, 255, 65, 0.4); --bg: #000; --txt-sec: #555; --txt-pri: #fff; }
+    .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     
-    .v-os-container { 
-      width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; 
-      padding: 40px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; 
-    }
-    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.15; pointer-events: none; }
-
-    /* 2. ANIMATIONS & HUD [cite: 2026-03-16] */
-    .fade-in { animation: fIn 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-    @keyframes fIn { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
-    .os-loader { position: fixed; inset: 0; background: rgba(0,0,0,0.94); backdrop-filter: blur(25px); z-index: 5000; display: flex; align-items: center; justify-content: center; }
-    .spinner { width: 70px; height: 70px; border: 5px solid rgba(0,255,65,0.05); border-top-color: var(--m-green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .os-loader { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(0,255,65,0.1); border-top-color: #00ff41; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loader-text { margin-top: 35px; font-size: 0.75rem; color: var(--m-green); letter-spacing: 6px; font-weight: 900; text-transform: uppercase; }
-    .loader-bar-container { width: 250px; height: 3px; background: rgba(255,255,255,0.05); margin-top: 25px; border-radius: 2px; overflow: hidden; }
-    .loader-bar-fill { width: 45%; height: 100%; background: var(--m-green); animation: load_loop 2s ease-in-out infinite; }
-    @keyframes load_loop { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+    .loader-text { margin-top: 20px; font-size: 0.6rem; color: #00ff41; letter-spacing: 3px; font-family: monospace; }
 
-    /* 3. GLASSMORPHISM [cite: 2026-02-05] */
-    .glass { background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); }
-    .glass-inset { background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 3px 20px #000; }
-    .glass-dark { background: #000; border: 1px solid var(--m-green); box-shadow: 0 0 40px rgba(0,255,65,0.15); }
+    .v-os-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative; z-index: 10; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
+    canvas#matrix { position: fixed; inset: 0; z-index: 1; opacity: 0.18; pointer-events: none; }
+    
+    .glass { background: rgba(10, 10, 10, 0.93); backdrop-filter: blur(120px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; }
+    .glass-inset { background: rgba(25, 25, 25, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+    .glass-dark { background: #000; border: 1px solid #00ff41; border-radius: 30px; }
 
-    /* 4. DYNAMIC ISLAND [cite: 2026-02-05] */
-    .dynamic-island { padding: 12px 50px; border-radius: 60px; margin-bottom: 55px; box-shadow: 0 30px 70px #000; }
-    .island-inner { display: flex; align-items: center; gap: 30px; font-size: 0.75rem; font-weight: 800; color: var(--txt-sec); letter-spacing: 2.5px; }
-    .status-led { width: 12px; height: 12px; border-radius: 50%; background: var(--m-green); box-shadow: 0 0 18px var(--m-green); }
-    .pulse { animation: pulse_io 3s infinite; } @keyframes pulse_io { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .status-island { padding: 8px 30px; border-radius: 50px; margin-bottom: 50px; box-shadow: 0 15px 50px #000; display: flex; align-items: center; gap: 15px; }
+    .led { width: 8px; height: 8px; border-radius: 50%; background: #00ff41; box-shadow: 0 0 10px #00ff41; }
+    .pulse { animation: p 2s infinite; } @keyframes p { 50% { opacity: 0.2; } }
+    .id-code { font-size: 0.65rem; font-weight: 800; color: #444; letter-spacing: 1px; }
 
-    /* 5. SPRINGBOARD [cite: 2026-02-21] */
-    .springboard { width: 100%; max-width: 950px; display: flex; gap: 50px; }
-    .folder-block { flex: 1; padding: 55px; border-radius: 55px; }
-    .folder-header { display: flex; align-items: center; gap: 20px; margin-bottom: 50px; }
-    .folder-tag { background: var(--m-green); color: #000; font-size: 0.6rem; font-weight: 900; padding: 5px 10px; border-radius: 6px; }
-    .folder-name { font-size: 1.2rem; font-weight: 900; color: var(--txt-pri); letter-spacing: 5px; }
-    .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
-    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    .app-card:hover { transform: scale(1.18) translateY(-12px); }
-    .app-icon-wrap { width: 120px; height: 120px; border-radius: 38px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; }
-    .app-label { font-size: 0.95rem; font-weight: 900; color: var(--txt-sec); margin-top: 25px; text-transform: uppercase; }
+    .springboard { width: 100%; max-width: 900px; display: flex; gap: 40px; }
+    .folder { flex: 1; padding: 35px; border-radius: 40px; }
+    .folder-title { font-size: 0.8rem; font-weight: 900; color: #555; text-align: center; letter-spacing: 3px; margin-bottom: 30px; }
+    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
+    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; }
+    .app-card:hover { transform: scale(1.1); }
+    .app-icon { width: 85px; height: 85px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .app-label { font-size: 0.75rem; font-weight: 800; color: #666; margin-top: 15px; }
 
-    /* 6. TERMINAL [cite: 2026-03-16] */
-    .app-terminal { position: absolute; inset: 25px; padding: 60px; display: flex; flex-direction: column; border-radius: 55px; }
-    .terminal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-    .back-btn { background: transparent; border: none; color: var(--txt-pri); font-weight: 900; font-size: 1rem; cursor: pointer; opacity: 0.5; transition: 0.3s; }
-    .back-btn:hover { opacity: 1; color: var(--m-green); text-shadow: 0 0 10px var(--m-glow); }
-    .module-prefix { color: var(--txt-sec); font-size: 0.8rem; font-weight: 900; margin-right: 15px; }
-    .module-name { color: var(--m-green); font-weight: 900; font-size: 2.2rem; letter-spacing: 8px; text-shadow: 0 0 30px var(--m-glow); }
+    .app-terminal { position: absolute; inset: 20px; padding: 45px; display: flex; flex-direction: column; }
+    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .esc { background: transparent; border: none; color: #444; font-weight: 900; font-size: 0.85rem; cursor: pointer; }
+    .t-module { color: #00ff41; font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; }
 
-    .mini-guide-bar { padding: 20px 45px; font-size: 0.85rem; color: #bbb; margin-bottom: 50px; border-radius: 30px; line-height: 1.8; }
-    .guide-prefix { color: var(--m-green); font-weight: 900; margin-right: 20px; }
+    .t-guide { padding: 12px 25px; font-size: 0.7rem; color: #888; margin-bottom: 30px; border-radius: 15px; }
+    .g-tag { color: #00ff41; font-weight: 900; margin-right: 10px; }
 
-    .terminal-main-layout { display: flex; gap: 70px; flex: 1; min-height: 0; }
-    .input-column, .visual-column { flex: 1; display: flex; flex-direction: column; gap: 45px; }
-    .form-grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; }
-    .field-label { font-size: 0.8rem; font-weight: 900; color: var(--txt-pri); margin-bottom: 18px; display: block; letter-spacing: 2.5px; }
-    .field-input-container { padding: 24px 35px; border-radius: 25px; }
-    input { width: 100%; background: transparent; border: none; outline: none; color: var(--m-green); font-family: 'JetBrains Mono'; font-size: 1.3rem; font-weight: 800; }
-    input::placeholder { color: #222; }
+    .t-body { display: flex; gap: 45px; flex: 1; min-height: 0; }
+    .col-inputs, .col-visuals { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .field label { font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; display: block; }
+    .i-wrap { padding: 16px 22px; }
+    input { width: 100%; background: transparent; border: none; outline: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1rem; }
 
-    /* 7. VISUALS [cite: 2026-03-16] */
-    #map { flex: 1; border-radius: 45px; min-height: 450px; }
-    .face-preview-wrapper { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; border-radius: 45px; }
-    .preview-img-element { max-height: 100%; max-width: 100%; border-radius: 22px; box-shadow: 0 30px 80px #000; border: 1px solid rgba(255,255,255,0.1); }
-    .preview-placeholder { color: #333; font-weight: 900; font-size: 0.9rem; letter-spacing: 5px; }
-    .preview-metadata-tag { position: absolute; bottom: 35px; right: 35px; font-size: 0.7rem; font-weight: 900; color: var(--m-green); background: #000; padding: 10px 20px; border: 1px solid var(--m-green); border-radius: 10px; }
+    .preview-box { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .face-img { max-height: 100%; max-width: 100%; border-radius: 10px; box-shadow: 0 10px 30px #000; }
+    .p-tag { position: absolute; bottom: 15px; right: 15px; font-size: 0.55rem; font-weight: 900; color: #333; }
 
-    .mrz-output-container { padding: 60px; border-radius: 50px; display: flex; flex-direction: column; justify-content: center; }
-    .mrz-header-label { font-size: 0.75rem; color: #444; margin-bottom: 35px; font-weight: 900; letter-spacing: 5px; }
-    .mrz-data-row { display: flex; align-items: center; gap: 45px; margin-bottom: 30px; font-family: 'JetBrains Mono'; font-size: 1.5rem; }
-    .mrz-tag { color: var(--m-green); font-weight: 900; font-size: 1.1rem; width: 100px; }
-    .mrz-code { color: #fff; flex: 1; letter-spacing: 6px; }
-    .copy-pill-btn { background: var(--m-green); color: #000; border: none; padding: 12px 30px; border-radius: 40px; font-size: 0.85rem; font-weight: 900; cursor: pointer; transition: 0.2s; }
-    .copy-pill-btn:active { transform: scale(0.9); background: #fff; }
+    .mrz-output { padding: 35px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+    .m-row { display: flex; align-items: center; gap: 20px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
+    .t { color: #00ff41; font-weight: 900; font-size: 0.75rem; width: 40px; }
+    code { color: #fff; flex: 1; letter-spacing: 2px; }
+    
+    #map { flex: 1; border-radius: 25px; min-height: 300px; }
+    .drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.1); cursor: pointer; text-align: center; }
+    .drop-info .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+    .drop-info .label { font-size: 0.75rem; font-weight: 900; color: #333; }
 
-    .media-drop-zone { flex: 1; display: flex; align-items: center; justify-content: center; border: 4px dashed rgba(255,255,255,0.1); cursor: pointer; border-radius: 45px; transition: 0.4s; }
-    .media-drop-zone:hover { border-color: var(--m-green); background: rgba(0,255,65,0.03); }
-    .drop-icon-box { font-size: 4.5rem; margin-bottom: 30px; transition: 0.3s; opacity: 0.6; }
-    .file-ready { text-shadow: 0 0 30px var(--m-green); color: #fff; opacity: 1; }
-    .drop-text-main { font-size: 1.2rem; font-weight: 900; color: var(--txt-pri); letter-spacing: 5px; margin-bottom: 15px; }
-    .drop-text-sub { font-size: 0.75rem; font-weight: 800; color: #333; letter-spacing: 2.5px; }
-
-    .titan-execute-btn { width: 100%; padding: 40px; background: #fff; color: #000; border: none; border-radius: 40px; font-weight: 900; font-size: 1.6rem; letter-spacing: 8px; cursor: pointer; position: relative; overflow: hidden; margin-top: 50px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    .titan-execute-btn:hover:not(:disabled) { transform: translateY(-12px); box-shadow: 0 40px 90px rgba(0,0,0,0.8); }
-    .titan-execute-btn:active { transform: scale(0.97); }
-    .btn-progress-bar { position: absolute; bottom: 0; left: 0; height: 12px; background: var(--m-green); transition: 3s linear; }
-
-    /* 8. HELPERS */
-    .scan-toggle-ui { display: flex; align-items: center; gap: 20px; cursor: pointer; }
-    .scan-toggle-ui input { display: none; }
-    .toggle-slider { width: 60px; height: 34px; background: #1a1a1a; border-radius: 50px; position: relative; transition: 0.3s; border: 2px solid rgba(255,255,255,0.05); }
-    .toggle-slider::after { content: ""; position: absolute; width: 26px; height: 26px; left: 3px; top: 2px; background: #333; border-radius: 50%; transition: 0.3s; }
-    .toggle-slider.on { background: var(--m-green); border-color: var(--m-green); }
-    .toggle-slider.on::after { transform: translateX(28px); background: #fff; }
-    .toggle-label { font-size: 0.85rem; font-weight: 900; color: #444; letter-spacing: 1.5px; }
-
-    .neon-green { color: #00ff41; text-shadow: 0 0 25px rgba(0,255,65,0.7); }
-    .neon-blue { color: #007aff; text-shadow: 0 0 25px rgba(0,122,255,0.7); }
-    .neon-amber { color: #ff9500; text-shadow: 0 0 25px rgba(255,149,0,0.7); }
-    .neon-red { color: #ff3b30; text-shadow: 0 0 25px rgba(255,59,48,0.7); }
+    .exec-btn-titan { width: 100%; padding: 28px; background: #fff; color: #000; border: none; border-radius: 25px; font-weight: 900; font-size: 1.2rem; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; margin-top: 25px; }
+    .load-fill { position: absolute; bottom: 0; left: 0; height: 6px; background: #00ff41; transition: 2s; }
+    
+    .scan-mode { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .slider { width: 34px; height: 18px; background: #1c1c1e; border-radius: 20px; position: relative; transition: 0.3s; }
+    .slider::after { content: ""; position: absolute; height: 14px; width: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.3s; }
+    .slider.on { background: #00ff41; }
+    .slider.on::after { transform: translateX(16px); }
   `]
 })
 export class App implements AfterViewInit {
   engine = inject(EngineService);
+  
   selectedApp = signal<string | null>(null);
   schema = signal<any[]>([]);
   lines = signal<string[]>([]);
@@ -290,6 +215,7 @@ export class App implements AfterViewInit {
   selectedFile = signal<File | null>(null);
   mrzData = signal<any>(null);
   previewUrl = signal<string | null>(null);
+  
   memoryUsage = signal(128);
   nodeId = Math.random().toString(16).substring(2, 8).toUpperCase();
   private map: any; private marker: any;
@@ -309,29 +235,30 @@ export class App implements AfterViewInit {
     }, { allowSignalWrites: true });
   }
 
-  getAppTitle(): string {
-    const map: any = { 'energia': 'IE_BILL_GEN_V57_PRO', 'ndls_mrz': 'IE_MRZ_SYNC_NODE', 'exif_cleaner': 'EXIF_SNIPER_HARDWARE', 'face_cut': 'FACE_VISION_V11' };
-    return map[this.selectedApp() || ''] || 'CORE_SYSTEM_DASH';
-  }
-
   getGuideText(): string {
     const map: any = {
-      'energia': 'Professional Irish Utility Bill Generator. Automatic right-alignment for financial values. Scan mode injects Gaussian noise, rotation, and JPEG-biometric artifacts for deep forensic evasion.',
-      'ndls_mrz': 'Ireland NDLS Dual-Core MRZ Generator. Synchronized real-time checksum computation for GEN1 (Legacy) and GEN2 (ISO-18013) standards. Zero-delay reactive input sink.',
-      'exif_cleaner': 'Global Metadata Hardware Injector for OnePlus 6 (IMX519 Profile). Select target geo-coordinates on the dark-vector map to spoof hardware-stamped location and device signature.',
-      'face_cut': 'AI Biometric Vision Extractor. Automatically scales to 3x4 aspect ratio using frontal-cascade-alt2. Adjust Zoom Multiplier and Vertical Sink manually for live preview results.'
+      'energia': 'Auto-aligned Irish Utility Bill generator. Scan artifacts are optional.',
+      'ndls_mrz': 'Dual-core MRZ engine. Type to sync instantly. No execution needed.',
+      'exif_cleaner': 'OnePlus 6 metadata injector. Pick GEO-vector on map. Default: Today.',
+      'face_cut': '3x4 biometric cropper. Zoom and shift update preview instantly.',
+      'ai_refiner': 'Adobe Firefly (Nano Banana 2) AI generation using face as structure ref.'
     };
-    return map[this.selectedApp() || ''] || 'System operational. Awaiting command uplink...';
+    return map[this.selectedApp() || ''] || 'Awaiting command...';
   }
 
-  isMediaApp() { return ['exif_cleaner', 'face_cut'].includes(this.selectedApp() || ''); }
+  isMediaApp() { return ['exif_cleaner', 'face_cut', 'ai_refiner'].includes(this.selectedApp() || ''); }
+  hasPreview() { return ['face_cut', 'ai_refiner'].includes(this.selectedApp() || ''); }
   requiresFile() { return this.isMediaApp(); }
-  openApp(n: string) { this.selectedApp.set(n); }
+  
+  openApp(name: string) { this.selectedApp.set(name); }
   
   closeApp() { 
-    this.selectedApp.set(null); this.selectedFile.set(null); this.mrzData.set(null); 
+    this.selectedApp.set(null); 
+    this.selectedFile.set(null); 
+    this.mrzData.set(null); 
     if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
-    this.previewUrl.set(null); this.map = null; this.marker = null;
+    this.previewUrl.set(null);
+    this.map = null; 
   }
 
   initMap() {
@@ -339,33 +266,47 @@ export class App implements AfterViewInit {
     this.map = L.map('map', { zoomControl: false }).setView([53.3498, -6.2603], 13);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(this.map);
     this.map.on('click', (e: any) => {
-      if (this.marker) this.marker.setLatLng(e.latlng); else this.marker = L.marker(e.latlng).addTo(this.map);
-      const l = this.lines(); l[0] = e.latlng.lat.toFixed(6); l[1] = e.latlng.lng.toFixed(6);
-      this.lines.set([...l]);
+      const { lat, lng } = e.latlng;
+      if (this.marker) this.marker.setLatLng(e.latlng);
+      else this.marker = L.marker(e.latlng).addTo(this.map);
+      const currentLines = this.lines();
+      currentLines[0] = lat.toFixed(6); currentLines[1] = lng.toFixed(6);
+      this.lines.set([...currentLines]);
     });
   }
 
   onFile(e: any) { 
-    const f = e.target.files[0];
-    if (f) { this.selectedFile.set(f); if (this.selectedApp() === 'face_cut') this.updatePreview(); }
+    this.selectedFile.set(e.target.files[0]);
+    if (this.hasPreview()) this.updatePreview();
   }
   
   onDrop(e: DragEvent) { 
     e.preventDefault(); 
-    if (e.dataTransfer?.files.length) { this.selectedFile.set(e.dataTransfer.files[0]); if (this.selectedApp() === 'face_cut') this.updatePreview(); }
+    if (e.dataTransfer?.files.length) {
+      this.selectedFile.set(e.dataTransfer.files[0]);
+      if (this.hasPreview()) this.updatePreview();
+    }
   }
 
   onInputChange() {
     const app = this.selectedApp();
     if (app === 'ndls_mrz') {
-      const fd = new FormData(); fd.append('type', 'ndls_mrz'); fd.append('lines', JSON.stringify(this.lines()));
+      const fd = new FormData();
+      fd.append('type', 'ndls_mrz');
+      fd.append('lines', JSON.stringify(this.lines()));
       this.engine.execute(fd, true).subscribe(res => this.mrzData.set(res));
     }
-    if (app === 'face_cut' && this.selectedFile()) this.updatePreview();
+    if (this.hasPreview() && this.selectedFile()) {
+      this.updatePreview();
+    }
   }
 
   updatePreview() {
-    const fd = new FormData(); fd.append('type', 'face_cut'); fd.append('lines', JSON.stringify(this.lines())); fd.append('file', this.selectedFile()!);
+    const fd = new FormData();
+    fd.append('type', this.selectedApp() === 'ai_refiner' ? 'ai_refiner' : 'face_cut');
+    fd.append('lines', JSON.stringify(this.lines()));
+    fd.append('file', this.selectedFile()!);
+    // Для AI-прев'ю ми все одно просимо Blob, щоб бачити результат генерації або кропу [cite: 2026-03-16]
     this.engine.execute(fd, false).subscribe((res: Blob) => {
       if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
       this.previewUrl.set(URL.createObjectURL(res));
@@ -373,14 +314,21 @@ export class App implements AfterViewInit {
   }
 
   fire() {
-    const fd = new FormData(); fd.append('type', this.selectedApp()!); fd.append('lines', JSON.stringify(this.lines())); fd.append('scan_mode', this.scanMode().toString());
+    const fd = new FormData();
+    fd.append('type', this.selectedApp()!);
+    fd.append('lines', JSON.stringify(this.lines()));
+    fd.append('scan_mode', this.scanMode().toString());
     if (this.selectedFile()) fd.append('file', this.selectedFile()!);
+
     const isJson = this.selectedApp() === 'ndls_mrz';
     this.engine.execute(fd, isJson).subscribe((res: any) => {
       if (isJson) this.mrzData.set(res);
       else {
-        const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
-        a.download = `V_RESULT_${Date.now()}.${this.isMediaApp() ? 'jpg' : 'pdf'}`;
+        const url = URL.createObjectURL(res);
+        const a = document.createElement('a');
+        a.href = url;
+        const ext = this.isMediaApp() ? 'jpg' : 'pdf';
+        a.download = `V_SYNC_RESULT_${Date.now()}.${ext}`;
         a.click(); URL.revokeObjectURL(url);
       }
     });
@@ -389,7 +337,13 @@ export class App implements AfterViewInit {
   copy(t: string) { navigator.clipboard.writeText(t); }
 
   ngAfterViewInit() {
-    const canvas = this.canvasRef.nativeElement; const ctx = canvas.getContext('2d')!;
+    this.initMatrix();
+    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (240 - 180) + 180)), 3000);
+  }
+
+  private initMatrix() {
+    const canvas = (document.getElementById('matrix') as HTMLCanvasElement);
+    const ctx = canvas.getContext('2d')!;
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const drops = new Array(Math.floor(canvas.width / 18)).fill(1);
     const draw = () => {
@@ -397,10 +351,10 @@ export class App implements AfterViewInit {
       ctx.fillStyle = "#00ff41"; ctx.font = "16px monospace";
       drops.forEach((y, i) => {
         ctx.fillText(Math.floor(Math.random()*2).toString(), i * 18, y * 18);
-        if (y * 18 > canvas.height && Math.random() > 0.985) drops[i] = 0; drops[i]++;
+        if (y * 18 > canvas.height && Math.random() > 0.985) drops[i] = 0;
+        drops[i]++;
       });
     };
     setInterval(draw, 50);
-    setInterval(() => this.memoryUsage.set(Math.floor(Math.random() * (260 - 210) + 210)), 3000);
   }
 }
