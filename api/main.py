@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from engines.energia_engine import EnergiaEngine
 from engines.mrz_engine import MrzEngine
+from engines.nld_mrz_engine import NldMrzEngine
 from engines.exif_engine import ExifEngine
 from engines.face_engine import FaceEngine
 from engines.ai_bypass_engine import AIBypassEngine
@@ -20,9 +21,10 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 registry = {
     "energia": EnergiaEngine(base_dir),
     "ndls_mrz": MrzEngine(base_dir),
+    "nld_mrz": NldMrzEngine(base_dir),
     "exif_cleaner": ExifEngine(base_dir),
     "face_cut": FaceEngine(base_dir),
-    "ai_bypass": AIBypassEngine(base_dir) # Новий глушник [cite: 2026-02-05]
+    "ai_bypass": AIBypassEngine(base_dir)
 }
 
 @app.get("/api/schema/{module}")

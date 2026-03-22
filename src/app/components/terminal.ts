@@ -29,25 +29,21 @@ import { lastValueFrom } from 'rxjs';
               <div class="field-box">
                 <label>{{ field.label }}</label>
                 <div class="input-bg" [class.range-bg]="field.type === 'range'">
-                  
                   <ng-container *ngIf="!field.type || field.type === 'text'">
                     <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [placeholder]="field.p" autocomplete="off" spellcheck="false">
                   </ng-container>
-                  
                   <ng-container *ngIf="field.type === 'select'">
                     <select class="custom-select" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
                       <option value="" disabled>{{ field.p }}</option>
                       <option *ngFor="let opt of field.opts" [value]="opt">{{ opt }}</option>
                     </select>
                   </ng-container>
-
                   <ng-container *ngIf="field.type === 'range'">
                     <div class="range-wrap">
                       <input type="range" class="custom-range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [min]="field.min" [max]="field.max">
                       <span class="range-val">{{ store.lines()[$index] || field.p }}</span>
                     </div>
                   </ng-container>
-
                 </div>
               </div>
             }
@@ -55,12 +51,10 @@ import { lastValueFrom } from 'rxjs';
 
           <div class="drop-zone" *ngIf="store.isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
             <input type="file" #fi (change)="onFile($event)" [multiple]="store.selectedApp() === 'ai_bypass'" hidden>
-            
             <ng-container *ngIf="store.selectedApp() !== 'ai_bypass'">
               <div class="d-icon" [class.locked]="store.selectedFile()">{{ store.selectedFile() ? '✅' : '📤' }}</div>
               <div class="d-text">{{ store.selectedFile() ? 'BUFFER_LOCKED' : 'DROP_SOURCE_MEDIA' }}</div>
             </ng-container>
-            
             <ng-container *ngIf="store.selectedApp() === 'ai_bypass'">
               <div class="d-icon" [class.locked]="store.batchFiles().length > 0">{{ store.batchFiles().length > 0 ? '✅' : '📦' }}</div>
               <div class="d-text">{{ store.batchFiles().length > 0 ? store.batchFiles().length + ' FILES_BUFFERED' : 'DROP_UP_TO_5_FILES' }}</div>
@@ -76,22 +70,28 @@ import { lastValueFrom } from 'rxjs';
             <span *ngIf="!store.previewUrl()" class="pv-empty">AWAITING_SOURCE...</span>
           </div>
 
-          <div class="mrz-box" *ngIf="store.mrzData()">
+          <div class="mrz-box" *ngIf="store.selectedApp() === 'ndls_mrz' && store.mrzData()">
             <div class="m-row"><span class="tag">G2</span><code>{{ store.mrzData().GEN_2_ISO }}</code><button (click)="copy(store.mrzData().GEN_2_ISO)">CPY</button></div>
             <div class="m-row"><span class="tag">G1</span><code>{{ store.mrzData().GEN_1_LEGACY }}</code></div>
           </div>
 
+          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'nld_mrz' && store.mrzData()">
+            <div class="m-row">
+              <span class="tag">L1</span><code>{{ store.mrzData().L1 }}</code>
+              <button class="multi-cpy" (click)="copy(store.mrzData().L1 + '\n' + store.mrzData().L2 + '\n' + store.mrzData().L3)">CPY_ALL</button>
+            </div>
+            <div class="m-row"><span class="tag">L2</span><code>{{ store.mrzData().L2 }}</code></div>
+            <div class="m-row"><span class="tag">L3</span><code>{{ store.mrzData().L3 }}</code></div>
+          </div>
+
           <div class="batch-container" *ngIf="store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0">
             <div class="batch-item" *ngFor="let f of store.batchFiles(); let i = index">
-              
               <div class="side orig-side glass-inset">
                 <span class="s-tag">ORIGINAL</span>
                 <img [src]="store.batchUrls()[i]" class="s-img">
               </div>
-
               <div class="side res-side glass-dark">
                 <span class="s-tag">PROCESSED</span>
-                
                 <ng-container *ngIf="store.bypassResults()[i] as res; else loadingTpl">
                   <ng-container *ngIf="res.STATUS !== 'ERROR'">
                     <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="s-img">
@@ -106,25 +106,22 @@ import { lastValueFrom } from 'rxjs';
                     <span class="pv-empty error">API_TIMEOUT</span>
                   </ng-container>
                 </ng-container>
-                
                 <ng-template #loadingTpl>
                   <span class="pv-empty" *ngIf="store.loading()">PROCESSING...</span>
                   <span class="pv-empty" *ngIf="!store.loading()">AWAITING_CMD</span>
                 </ng-template>
               </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      <footer *ngIf="store.selectedApp() !== 'ndls_mrz'">
+      <footer *ngIf="!['ndls_mrz', 'nld_mrz'].includes(store.selectedApp() || '')">
         <div class="action-grid" [class.dual]="store.selectedApp() === 'ai_bypass'">
           <button [disabled]="store.loading() || !canExecute()" (click)="execute(false)" class="exec-btn">
             > {{ store.selectedApp() === 'ai_bypass' ? 'TEST_CURRENT_QUALITY' : 'INITIATE_CORE_SEQUENCE' }}
             <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
           </button>
-          
           <button *ngIf="store.selectedApp() === 'ai_bypass'" [disabled]="store.loading() || !canExecute()" (click)="execute(true)" class="exec-btn stealth-btn">
             > AUTO-FIND_BEST_COMPRESSION
             <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
@@ -165,19 +162,20 @@ import { lastValueFrom } from 'rxjs';
     .d-icon.locked { opacity: 1; text-shadow: 0 0 20px #00ff41; }
     .d-text { font-weight: 900; color: #fff; letter-spacing: 2px; }
 
-    /* PREVIEW & MRZ */
     .preview-box { flex: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .pv-img { max-width: 100%; max-height: 100%; border-radius: 15px; }
     .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; font-size: 0.8rem; }
     .pv-empty.error { color: #ff3b30; }
 
     .mrz-box { background: #000; border: 1px solid #00ff41; padding: 30px 40px; border-radius: 30px; }
+    .td1-box { border-color: #ff9500; }
+    .td1-box .tag { color: #ff9500; }
     .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
-    .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; }
+    .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; width: 25px; }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
     button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
+    .multi-cpy { background: #ff9500; }
 
-    /* SPLIT VIEW (BATCH) UI [cite: 2026-03-16] */
     .batch-container { display: flex; flex-direction: column; gap: 20px; }
     .batch-item { display: flex; gap: 15px; height: 180px; }
     .side { flex: 1; border-radius: 20px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
@@ -192,7 +190,6 @@ import { lastValueFrom } from 'rxjs';
     .r-prob.safe { color: #00ff41; } .r-prob.danger { color: #ff3b30; }
     .dl-btn { background: #a855f7; color: #fff; padding: 5px 15px; font-size: 0.7rem; }
 
-    /* BUTTONS */
     .action-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
     .action-grid.dual { grid-template-columns: 1fr 1fr; }
     .exec-btn { width: 100%; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; }
@@ -213,28 +210,19 @@ import { lastValueFrom } from 'rxjs';
 export class TerminalComponent {
   store = inject(AppStore);
 
-  onFile(e: any) { 
-    this.handleFiles(e.target.files); 
-  }
-  
-  onDrop(e: DragEvent) { 
-    e.preventDefault(); 
-    if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); 
-  }
+  onFile(e: any) { this.handleFiles(e.target.files); }
+  onDrop(e: DragEvent) { e.preventDefault(); if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); }
 
   handleFiles(filesList: FileList) {
     if (this.store.selectedApp() === 'ai_bypass') {
-      const files = Array.from(filesList).slice(0, 5) as File[]; // Limit to 5
+      const files = Array.from(filesList).slice(0, 5) as File[];
       this.store.batchUrls().forEach(url => URL.revokeObjectURL(url));
       this.store.batchFiles.set(files);
       this.store.batchUrls.set(files.map(f => URL.createObjectURL(f)));
       this.store.bypassResults.set([]);
     } else {
       const f = filesList[0];
-      if (f) { 
-        this.store.selectedFile.set(f); 
-        if (this.store.hasPreview()) this.reqPreview(); 
-      }
+      if (f) { this.store.selectedFile.set(f); if (this.store.hasPreview()) this.reqPreview(); }
     }
   }
 
@@ -250,8 +238,8 @@ export class TerminalComponent {
   }
 
   onInput() {
-    if (this.store.selectedApp() === 'ndls_mrz') {
-      const fd = new FormData(); fd.append('type', 'ndls_mrz'); fd.append('lines', JSON.stringify(this.store.lines()));
+    if (['ndls_mrz', 'nld_mrz'].includes(this.store.selectedApp() || '')) {
+      const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines()));
       this.store.executeCommand(fd, true).subscribe(res => this.store.mrzData.set(res));
     } else if (this.store.hasPreview() && this.store.selectedFile()) {
       this.reqPreview();
@@ -266,7 +254,6 @@ export class TerminalComponent {
     });
   }
 
-  // АСИНХРОННА ПАКЕТНА ЧЕРГА (Senior Protection від Timeout 504) [cite: 2026-03-16]
   async execute(isBatch: boolean = false) {
     if (this.store.selectedApp() === 'ai_bypass') {
       this.store.loading.set(true);
@@ -287,20 +274,19 @@ export class TerminalComponent {
         } catch (err) {
           results[i] = { STATUS: 'ERROR' };
         }
-        this.store.bypassResults.set([...results]); // Оновлюємо UI покроково [cite: 2026-02-05]
+        this.store.bypassResults.set([...results]);
       }
       this.store.loading.set(false);
       return;
     }
 
-    // Default flow for others
     const fd = new FormData(); 
     fd.append('type', this.store.selectedApp()!); 
     fd.append('lines', JSON.stringify(this.store.lines())); 
     fd.append('scan_mode', this.store.scanMode().toString());
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
-    const isJson = ['ndls_mrz'].includes(this.store.selectedApp() || '');
+    const isJson = ['ndls_mrz', 'nld_mrz'].includes(this.store.selectedApp() || '');
     
     this.store.executeCommand(fd, isJson).subscribe((res: any) => {
       if (isJson) this.store.mrzData.set(res);
