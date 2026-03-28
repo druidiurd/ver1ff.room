@@ -18,7 +18,7 @@ import { TerminalComponent } from './components/terminal';
     <div class="v-os-root">
       <header class="dynamic-island">
         <span class="led pulse"></span>
-        <span class="hud">V_OS_MODULAR_V12 // RAM: {{ ram }}MB</span>
+        <span class="hud">V_OS_MODULAR_V13 // RAM: {{ ram }}MB</span>
       </header>
 
       <app-dashboard *ngIf="!store.selectedApp()"></app-dashboard>

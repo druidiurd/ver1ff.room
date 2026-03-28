@@ -24,6 +24,13 @@ import { AppStore } from '../store';
       </div>
 
       <div class="folder glass">
+        <div class="f-header"><span class="f-tag">SEC</span><h2 class="f-name">FRANCE_NODES</h2></div>
+        <div class="app-grid">
+          <div class="app-card" (click)="store.openApp('fra_mrz')"><div class="icon glass-inset neon-blue">🇫🇷</div><span class="label">FR-CNI-MRZ</span></div>
+        </div>
+      </div>
+
+      <div class="folder glass">
         <div class="f-header"><span class="f-tag">SYS</span><h2 class="f-name">GLOBAL_TOOLS</h2></div>
         <div class="app-grid">
           <div class="app-card" (click)="store.openApp('exif_cleaner')"><div class="icon glass-inset neon-amber">📸</div><span class="label">EXIF-Sniper</span></div>

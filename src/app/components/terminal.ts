@@ -13,7 +13,7 @@ import { lastValueFrom } from 'rxjs';
     <main class="terminal-shell fade-in">
       <header class="t-header">
         <button (click)="store.closeApp()" class="esc-btn">‹ EXIT_TO_ROOT</button>
-        <div class="t-module">NODE::{{ store.selectedApp()?.toUpperCase() }}</div>
+        <div class="t-module">NODE::{{ getAppTitle() }}</div>
         <div class="t-tools">
           <label class="scan-ui" *ngIf="store.selectedApp() === 'energia'">
             <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
@@ -21,6 +21,11 @@ import { lastValueFrom } from 'rxjs';
           </label>
         </div>
       </header>
+
+      <div class="mini-guide-bar glass-inset">
+        <span class="guide-prefix">SYSTEM_MANUAL:</span>
+        <span class="guide-text">{{ getGuideText() }}</span>
+      </div>
 
       <div class="t-layout">
         <div class="col-form">
@@ -84,6 +89,20 @@ import { lastValueFrom } from 'rxjs';
             <div class="m-row"><span class="tag">L3</span><code>{{ store.mrzData().L3 }}</code></div>
           </div>
 
+          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'fra_mrz' && store.mrzData()">
+            <ng-container *ngIf="store.mrzData().STATUS === 'SYNC_OK'">
+              <div class="m-row">
+                <span class="tag">L1</span><code>{{ store.mrzData().L1 }}</code>
+                <button class="multi-cpy" (click)="copy(store.mrzData().L1 + '\n' + store.mrzData().L2)">CPY_ALL</button>
+              </div>
+              <div class="m-row"><span class="tag">L2</span><code>{{ store.mrzData().L2 }}</code></div>
+            </ng-container>
+            
+            <ng-container *ngIf="store.mrzData().STATUS === 'VALIDATION_ERR'">
+              <div class="m-row"><span class="tag err">ERR</span><code class="err">{{ store.mrzData().ERR_MSG }}</code></div>
+            </ng-container>
+          </div>
+
           <div class="batch-container" *ngIf="store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0">
             <div class="batch-item" *ngFor="let f of store.batchFiles(); let i = index">
               <div class="side orig-side glass-inset">
@@ -116,7 +135,7 @@ import { lastValueFrom } from 'rxjs';
         </div>
       </div>
 
-      <footer *ngIf="!['ndls_mrz', 'nld_mrz'].includes(store.selectedApp() || '')">
+      <footer *ngIf="!['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(store.selectedApp() || '')">
         <div class="action-grid" [class.dual]="store.selectedApp() === 'ai_bypass'">
           <button [disabled]="store.loading() || !canExecute()" (click)="execute(false)" class="exec-btn">
             > {{ store.selectedApp() === 'ai_bypass' ? 'TEST_CURRENT_QUALITY' : 'INITIATE_CORE_SEQUENCE' }}
@@ -134,10 +153,13 @@ import { lastValueFrom } from 'rxjs';
     .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
     .terminal-shell { background: rgba(10,10,10,0.95); backdrop-filter: blur(80px); border: 1px solid rgba(255,255,255,0.1); border-radius: 45px; padding: 50px; display: flex; flex-direction: column; width: 100%; max-width: 1300px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
     
-    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .esc-btn { background: transparent; border: none; color: #666; font-weight: 900; cursor: pointer; transition: 0.2s; }
     .esc-btn:hover { color: #00ff41; }
     .t-module { color: #00ff41; font-size: 1.8rem; font-weight: 900; letter-spacing: 5px; text-shadow: 0 0 20px rgba(0,255,65,0.4); }
+
+    .mini-guide-bar { padding: 18px 40px; font-size: 0.8rem; color: #888; margin-bottom: 40px; border-radius: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 3px 20px #000; }
+    .guide-prefix { color: #00ff41; font-weight: 900; margin-right: 15px; }
 
     .t-layout { display: flex; gap: 50px; flex: 1; min-height: 0; }
     .col-form { flex: 0.8; display: flex; flex-direction: column; gap: 30px; }
@@ -170,6 +192,8 @@ import { lastValueFrom } from 'rxjs';
     .mrz-box { background: #000; border: 1px solid #00ff41; padding: 30px 40px; border-radius: 30px; }
     .td1-box { border-color: #ff9500; }
     .td1-box .tag { color: #ff9500; }
+    .tag.err { color: #ff3b30; }
+    code.err { color: #ff3b30; }
     .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
     .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; width: 25px; }
     code { color: #fff; flex: 1; letter-spacing: 4px; }
@@ -210,6 +234,32 @@ import { lastValueFrom } from 'rxjs';
 export class TerminalComponent {
   store = inject(AppStore);
 
+  getAppTitle(): string {
+    const map: any = { 
+      'energia': 'IE_BILL_GEN_V57_PRO', 
+      'ndls_mrz': 'IE_MRZ_SYNC_NODE', 
+      'nld_mrz': 'NL_MRZ_SYNC_NODE',
+      'fra_mrz': 'FR_CNI_SYNC_NODE',
+      'exif_cleaner': 'EXIF_SNIPER_HW', 
+      'face_cut': 'FACE_VISION_V12',
+      'ai_bypass': 'AI_STEALTH_V2' 
+    };
+    return map[this.store.selectedApp() || ''] || 'CORE_SYSTEM_DASH';
+  }
+
+  getGuideText(): string {
+    const map: any = {
+      'energia': 'Professional Irish Utility Bill Generator. Auto-right-alignment. Scan mode injects Gaussian noise and biometric artifacts.',
+      'ndls_mrz': 'Real-time dual-core MRZ generator. Synchronized checksums for GEN1 and GEN2 standards. Reactive input sink.',
+      'nld_mrz': 'Netherlands ID MRZ Generator (TD1). Vectorized ICAO-9303 math.',
+      'fra_mrz': 'France CNI MRZ Generator. Validates Department Code and CIN synchronously.',
+      'exif_cleaner': 'Metadata Hardware Injector for OnePlus 6. Select target coordinates on map to spoof hardware location.',
+      'face_cut': 'AI Biometric Extractor. 3x4 aspect ratio. Adjust Zoom and Vertical Sink manually for live preview results.',
+      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations and Noise to bypass AI Detection APIs.'
+    };
+    return map[this.store.selectedApp() || ''] || 'System operational. Ready...';
+  }
+
   onFile(e: any) { this.handleFiles(e.target.files); }
   onDrop(e: DragEvent) { e.preventDefault(); if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); }
 
@@ -238,7 +288,7 @@ export class TerminalComponent {
   }
 
   onInput() {
-    if (['ndls_mrz', 'nld_mrz'].includes(this.store.selectedApp() || '')) {
+    if (['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '')) {
       const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines()));
       this.store.executeCommand(fd, true).subscribe(res => this.store.mrzData.set(res));
     } else if (this.store.hasPreview() && this.store.selectedFile()) {
@@ -286,7 +336,7 @@ export class TerminalComponent {
     fd.append('scan_mode', this.store.scanMode().toString());
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
-    const isJson = ['ndls_mrz', 'nld_mrz'].includes(this.store.selectedApp() || '');
+    const isJson = ['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '');
     
     this.store.executeCommand(fd, isJson).subscribe((res: any) => {
       if (isJson) this.store.mrzData.set(res);
