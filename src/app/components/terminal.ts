@@ -112,17 +112,18 @@ import { lastValueFrom } from 'rxjs';
               <div class="side res-side glass-dark">
                 <span class="s-tag">PROCESSED</span>
                 <ng-container *ngIf="store.bypassResults()[i] as res; else loadingTpl">
-                  <ng-container *ngIf="res.STATUS !== 'ERROR'">
+                  <ng-container *ngIf="res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD'">
                     <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="s-img">
                     <div class="res-stats">
                       <span class="r-prob" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
                         {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
                       </span>
+                      <span class="r-node">[{{ res.USED_PROFILE }}]</span>
                       <button class="dl-btn" (click)="download(res.IMAGE_BASE64, f.name)">DL</button>
                     </div>
                   </ng-container>
-                  <ng-container *ngIf="res.STATUS === 'ERROR'">
-                    <span class="pv-empty error">API_TIMEOUT</span>
+                  <ng-container *ngIf="res.STATUS === 'ERROR' || res.STATUS === 'ALL_NODES_DEAD'">
+                    <span class="pv-empty error">NODES_DEPLETED</span>
                   </ng-container>
                 </ng-container>
                 <ng-template #loadingTpl>
@@ -212,6 +213,7 @@ import { lastValueFrom } from 'rxjs';
     .res-stats { position: absolute; bottom: 10px; width: 90%; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.85); padding: 5px 10px; border-radius: 10px; z-index: 2; border: 1px solid rgba(168,85,247,0.3); }
     .r-prob { font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
     .r-prob.safe { color: #00ff41; } .r-prob.danger { color: #ff3b30; }
+    .r-node { font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px; }
     .dl-btn { background: #a855f7; color: #fff; padding: 5px 15px; font-size: 0.7rem; }
 
     .action-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
@@ -242,7 +244,7 @@ export class TerminalComponent {
       'fra_mrz': 'FR_CNI_SYNC_NODE',
       'exif_cleaner': 'EXIF_SNIPER_HW', 
       'face_cut': 'FACE_VISION_V12',
-      'ai_bypass': 'AI_STEALTH_V2' 
+      'ai_bypass': 'AI_STEALTH_V3' 
     };
     return map[this.store.selectedApp() || ''] || 'CORE_SYSTEM_DASH';
   }
@@ -255,7 +257,7 @@ export class TerminalComponent {
       'fra_mrz': 'France CNI MRZ Generator. Validates Department Code and CIN synchronously.',
       'exif_cleaner': 'Metadata Hardware Injector for OnePlus 6. Select target coordinates on map to spoof hardware location.',
       'face_cut': 'AI Biometric Extractor. 3x4 aspect ratio. Adjust Zoom and Vertical Sink manually for live preview results.',
-      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations and Noise to bypass AI Detection APIs.'
+      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations, Noise, and iPhone EXIF to bypass AI Detection APIs. Auto-routes between 10 API nodes.'
     };
     return map[this.store.selectedApp() || ''] || 'System operational. Ready...';
   }
