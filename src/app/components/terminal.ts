@@ -16,21 +16,23 @@ import { lastValueFrom } from 'rxjs';
     <div class="shell fade-in">
 
       <div class="shell-header">
-        <div class="shell-title">
-          <span class="shell-dot"></span>
-          <span class="mono shell-name">{{ getAppTitle() }}</span>
+        <div class="shell-title-row">
+          <div class="shell-title">
+            <span class="shell-dot"></span>
+            <span class="mono shell-name">{{ getAppTitle() }}</span>
+          </div>
+            @if (store.selectedApp() === 'energia' || store.selectedApp() === 'revolut') {
+            <label class="toggle" [class.scan-active]="store.scanMode()">
+              <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
+              <span class="scan-icon">📷</span>
+              <span class="toggle-track" [class.on]="store.scanMode()">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="mono toggle-label">{{ i18n.t().scan }}</span>
+            </label>
+          }
         </div>
-        <div class="shell-meta mono">{{ getGuideText() }}</div>
-        @if (store.selectedApp() === 'energia' || store.selectedApp() === 'revolut') {
-          <label class="toggle" [class.scan-active]="store.scanMode()">
-            <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
-            <span class="scan-icon">📷</span>
-            <span class="toggle-track" [class.on]="store.scanMode()">
-              <span class="toggle-thumb"></span>
-            </span>
-            <span class="mono toggle-label">{{ i18n.t().scan }}</span>
-          </label>
-        }
+        <div class="shell-desc mono">{{ getGuideText() }}</div>
       </div>
 
       <div class="shell-body">
@@ -225,19 +227,28 @@ import { lastValueFrom } from 'rxjs';
 
     /* header */
     .shell-header {
-      display: flex; align-items: center; gap: 16px;
+      display: flex; flex-direction: column; gap: 10px;
       padding: 16px 24px;
       border-bottom: 1px solid var(--border);
-      flex-wrap: wrap; gap: 10px;
     }
-    .shell-title { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .shell-title-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .shell-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
     .shell-dot {
-      width: 6px; height: 6px; border-radius: 50%;
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
       background: var(--green); box-shadow: 0 0 8px var(--green);
       animation: pulse-green 2s infinite;
     }
     .shell-name { font-size: 0.75rem; font-weight: 700; color: var(--green); letter-spacing: 3px; }
-    .shell-meta { flex: 1; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 1px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shell-desc {
+      font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.5px;
+      line-height: 1.6; padding: 10px 14px;
+      background: rgba(0,255,65,0.03);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--border-green);
+      border-radius: var(--radius-sm);
+    }
 
     /* toggle / scan */
     .toggle {
@@ -456,11 +467,14 @@ export class TerminalComponent implements OnInit {
   titleSvc = inject(Title);
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    if (id) {
-      this.store.openApp(id);
-    }
-    this.titleSvc.setTitle(`${this.i18n.module(id).nav} — Ver1ff Room`);
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id') ?? '';
+      if (id) {
+        this.store.closeApp();
+        this.store.openApp(id);
+        this.titleSvc.setTitle(`${this.i18n.module(id).nav} — Ver1ff Room`);
+      }
+    });
   }
 
   getAppTitle(): string {

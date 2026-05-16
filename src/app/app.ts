@@ -29,9 +29,9 @@ const NAV: NavItem[] = [
       <button class="burger" (click)="drawerOpen.set(!drawerOpen())" aria-label="menu">
         <span></span><span></span><span></span>
       </button>
-      <div class="topbar-brand mono">
+      <button class="topbar-brand mono" (click)="goHome()">
         <span class="brand-dot"></span>{{ i18n.t().brand }}
-      </div>
+      </button>
       <div class="topbar-hud mono">RAM:{{ ram }}MB</div>
     </header>
 
@@ -41,10 +41,10 @@ const NAV: NavItem[] = [
     <div class="layout">
       <!-- Sidebar -->
       <nav class="sidebar" [class.drawer-open]="drawerOpen()">
-        <div class="sidebar-brand mono">
+        <button class="sidebar-brand mono" (click)="goHome()">
           <span class="brand-dot"></span>
           <span>{{ i18n.t().brand }}</span>
-        </div>
+        </button>
 
         <div class="nav-scroll">
           @for (group of groups; track group) {
@@ -127,6 +127,7 @@ const NAV: NavItem[] = [
       flex: 1; font-size: 0.75rem; font-weight: 700;
       color: var(--green); letter-spacing: 2px;
       display: flex; align-items: center; gap: 8px;
+      background: none; border: none; cursor: pointer; padding: 0;
     }
     .topbar-hud {
       font-size: 0.6rem; color: var(--text-dim); letter-spacing: 1px;
@@ -135,7 +136,7 @@ const NAV: NavItem[] = [
     /* ── DRAWER BACKDROP ── */
     .drawer-backdrop {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.6);
       z-index: 299;
     }
 
@@ -161,7 +162,11 @@ const NAV: NavItem[] = [
       display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      background: none; border-right: none; border-left: none; border-top: none;
+      cursor: pointer; text-align: left; width: 100%;
+      transition: background 0.15s;
     }
+    .sidebar-brand:hover { background: rgba(0,255,65,0.04); }
     .nav-scroll {
       flex: 1; overflow-y: auto; padding: 12px 0;
     }
@@ -293,6 +298,12 @@ export class App implements AfterViewInit, OnInit {
       exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
     };
     return icons[id] ?? '⬡';
+  }
+
+  goHome() {
+    this.store.closeApp();
+    this.router.navigate(['/']);
+    this.drawerOpen.set(false);
   }
 
   open(id: string) {
