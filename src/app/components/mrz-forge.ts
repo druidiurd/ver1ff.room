@@ -110,12 +110,38 @@ interface ForgeFields {
   optional: string;
 }
 
+interface Preset { label: string; docType: string; nat: string; issuer: string; custom?: boolean; }
+
+const DEFAULT_PRESETS: Preset[] = [
+  { label: 'US Passport', docType: 'Passport', nat: 'USA', issuer: 'USA' },
+  { label: 'DE ID Card',  docType: 'ID Card',  nat: 'DEU', issuer: 'DEU' },
+];
+
 @Component({
   selector: 'app-mrz-forge',
   standalone: true,
   imports: [FormsModule],
   template: `
     <div class="forge">
+
+      <!-- Quick presets -->
+      <div class="presets-row">
+        <span class="presets-label mono">QUICK_LOAD</span>
+        @for (p of allPresets(); track p.label) {
+          <button type="button" class="preset-btn mono"
+            [class.active]="isActivePreset(p)"
+            (click)="applyPreset(p)">
+            {{ p.label }}
+            @if (p.custom) {
+              <span class="preset-del" (click)="deletePreset(p.label); $event.stopPropagation()">×</span>
+            }
+          </button>
+        }
+        @if (canSavePreset()) {
+          <button type="button" class="preset-save mono" (click)="savePreset()">+ SAVE</button>
+        }
+      </div>
+
       <!-- Step indicator -->
       <div class="steps">
         @for (s of [1,2,3]; track s) {
@@ -268,12 +294,17 @@ interface ForgeFields {
                 placeholder="e.g. A" maxlength="1" autocomplete="off">
             </div>
             <div class="fg-field">
-              <label class="mono fg-label">PERSONAL_NUM <span class="opt">opt</span></label>
+              <label class="mono fg-label">
+                PERSONAL_NUM <span class="opt">opt</span>
+                @if (isUSA()) {
+                  <button type="button" class="btn-icn-gen mono" (click)="genICN()">⚡ GEN ICN</button>
+                }
+              </label>
               <input class="mono fg-input"
                 [ngModel]="fields().persNum"
                 (ngModelChange)="patch('persNum', $event)"
                 (blur)="trigger()"
-                placeholder="Optional" autocomplete="off">
+                [placeholder]="isUSA() ? 'ICN e.g. 617533091<1930' : 'Optional'" autocomplete="off">
             </div>
             <div class="fg-field fg-full">
               <label class="mono fg-label">OPTIONAL_FIELD <span class="opt">opt</span></label>
@@ -600,6 +631,53 @@ interface ForgeFields {
     .btn-copy.edl   { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: #a855f7; }
     .btn-copy.edl.copied   { background: #a855f7; color: #fff; }
 
+    /* Presets */
+    .presets-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .presets-label {
+      font-size: 0.45rem; font-weight: 700; color: var(--text-dim);
+      letter-spacing: 2px; flex-shrink: 0; margin-right: 4px;
+    }
+    .preset-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-mid);
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: 0.15s; font-family: inherit;
+    }
+    .preset-btn:hover { border-color: var(--border-green); color: var(--text); }
+    .preset-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .preset-del {
+      font-size: 0.7rem; line-height: 1; color: var(--text-dim);
+      margin-left: 2px; opacity: 0.6;
+    }
+    .preset-del:hover { opacity: 1; color: #ff3b30; }
+    .preset-save {
+      padding: 4px 10px;
+      background: none; border: 1px dashed var(--border-green);
+      border-radius: 20px; color: var(--green);
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: 0.15s; font-family: inherit; opacity: 0.7;
+    }
+    .preset-save:hover { opacity: 1; background: var(--green-dim); }
+
+    /* ICN gen button */
+    .btn-icn-gen {
+      display: inline-flex; align-items: center; gap: 3px;
+      margin-left: 8px; padding: 2px 7px;
+      background: rgba(255,149,0,0.1); border: 1px solid rgba(255,149,0,0.35);
+      border-radius: 4px; color: #ff9500;
+      font-size: 0.45rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; font-family: inherit; transition: 0.15s;
+      vertical-align: middle;
+    }
+    .btn-icn-gen:hover { background: rgba(255,149,0,0.2); }
+
     @media (max-width: 767px) {
       .doc-grid { grid-template-columns: 1fr 1fr; }
       .country-grid { grid-template-columns: 1fr; }
@@ -688,6 +766,81 @@ export class MrzForgeComponent {
       .subscribe(res => this.store.mrzGenResult.set(res));
   }
 
+  // ── Presets ──────────────────────────────────────────────
+  private customPresets = signal<Preset[]>(this.loadCustomPresets());
+
+  allPresets = computed(() => [...DEFAULT_PRESETS, ...this.customPresets()]);
+
+  isActivePreset(p: Preset) {
+    const f = this.fields();
+    return f.docType === p.docType && f.nationality === p.nat && f.issuer === p.issuer;
+  }
+
+  applyPreset(p: Preset) {
+    this.fields.update(f => ({ ...f, docType: p.docType, nationality: p.nat, issuer: p.issuer }));
+    this.store.mrzGenResult.set(null);
+    this.step.set(3);
+  }
+
+  canSavePreset() {
+    const f = this.fields();
+    if (!f.docType || !f.nationality || !f.issuer) return false;
+    const label = `${f.nationality} ${f.docType}`;
+    return !this.allPresets().some(p => p.label === label);
+  }
+
+  savePreset() {
+    const f = this.fields();
+    const label = `${f.nationality} ${f.docType}`;
+    const next = [...this.customPresets(), { label, docType: f.docType, nat: f.nationality, issuer: f.issuer, custom: true }];
+    this.customPresets.set(next);
+    localStorage.setItem('mrz_presets', JSON.stringify(next));
+  }
+
+  deletePreset(label: string) {
+    const next = this.customPresets().filter(p => p.label !== label);
+    this.customPresets.set(next);
+    localStorage.setItem('mrz_presets', JSON.stringify(next));
+  }
+
+  private loadCustomPresets(): Preset[] {
+    try { return JSON.parse(localStorage.getItem('mrz_presets') || '[]'); } catch { return []; }
+  }
+
+  // ── US ICN generator ─────────────────────────────────────
+  isUSA() {
+    const f = this.fields();
+    return f.nationality === 'USA' || f.issuer === 'USA';
+  }
+
+  genICN() {
+    const icn = this.randDigits(9);
+    const batch = this.randDigits(4);
+    const raw = icn + '<' + batch;
+    const cd = this.mrzCheckDigit(raw);
+    const result = raw + cd;
+    this.fields.update(f => ({ ...f, persNum: result }));
+    this.trigger();
+  }
+
+  private randDigits(n: number): string {
+    let s = '';
+    for (let i = 0; i < n; i++) s += i === 0 ? String(Math.floor(Math.random() * 9) + 1) : String(Math.floor(Math.random() * 10));
+    return s;
+  }
+
+  private mrzCheckDigit(s: string): number {
+    const weights = [7, 3, 1];
+    const val = (c: string) => {
+      if (c === '<') return 0;
+      if (c >= '0' && c <= '9') return +c;
+      return c.charCodeAt(0) - 55;
+    };
+    const sum = s.split('').reduce((acc, c, i) => acc + val(c) * weights[i % 3], 0);
+    return sum % 10;
+  }
+
+  // ── Copy ─────────────────────────────────────────────────
   copiedKey: string | null = null;
 
   copy(t: string, key: string) {
