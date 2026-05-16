@@ -1,7 +1,11 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { AppStore } from '../store';
+import { HttpClient } from '@angular/common/http';
+import { MrzGenResult } from '../store';
 
 interface Country { code: string; name: string; }
 
@@ -141,6 +145,11 @@ const DEFAULT_PRESETS: Preset[] = [
         @if (canSavePreset()) {
           <button type="button" class="preset-save mono" (click)="savePreset()">+ SAVE</button>
         }
+        @if (fields().docType && fields().nationality && fields().issuer) {
+          <button type="button" class="preset-share mono" [class.copied]="linkCopied()" (click)="shareLink()">
+            {{ linkCopied() ? '✓ COPIED' : '⎘ SHARE' }}
+          </button>
+        }
       </div>
 
       <!-- Step indicator -->
@@ -258,7 +267,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <label class="mono fg-label">BIRTH_DATE</label>
               <input class="mono fg-input"
                 [ngModel]="fields().birthDate"
-                (ngModelChange)="patch('birthDate', $event)"
+                (ngModelChange)="patchDate('birthDate', $event)"
                 (blur)="trigger()"
                 placeholder="DD-MM-YYYY" autocomplete="off">
             </div>
@@ -282,7 +291,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <label class="mono fg-label">EXPIRY_DATE</label>
               <input class="mono fg-input"
                 [ngModel]="fields().expiryDate"
-                (ngModelChange)="patch('expiryDate', $event)"
+                (ngModelChange)="patchDate('expiryDate', $event)"
                 (blur)="trigger()"
                 placeholder="DD-MM-YYYY" autocomplete="off">
             </div>
@@ -335,7 +344,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <div class="mf-header">
                 <span class="mf-tag mono">MRP</span>
                 <span class="mf-name mono">PASSPORT · TD3 · 2×44</span>
-                <button type="button" class="btn-copy mono" [class.copied]="copiedKey === 'MRP'" (click)="copy(gen.MRP!.join('\n'), 'MRP')">{{ copiedKey === 'MRP' ? '✓ OK' : 'COPY' }}</button>
+                <button type="button" class="btn-copy mono" [class.copied]="copiedKey() === 'MRP'" (click)="copy(gen.MRP!.join('\n'), 'MRP')">{{ copiedKey() === 'MRP' ? '✓ OK' : 'COPY' }}</button>
               </div>
               <div class="mrz-block">
                 @for (line of gen.MRP; track $index) {
@@ -349,7 +358,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <div class="mf-header">
                 <span class="mf-tag mono visa">MRV-A</span>
                 <span class="mf-name mono">VISA · 2×44</span>
-                <button type="button" class="btn-copy visa mono" [class.copied]="copiedKey === 'MRV_A'" (click)="copy(gen.MRV_A!.join('\n'), 'MRV_A')">{{ copiedKey === 'MRV_A' ? '✓ OK' : 'COPY' }}</button>
+                <button type="button" class="btn-copy visa mono" [class.copied]="copiedKey() === 'MRV_A'" (click)="copy(gen.MRV_A!.join('\n'), 'MRV_A')">{{ copiedKey() === 'MRV_A' ? '✓ OK' : 'COPY' }}</button>
               </div>
               <div class="mrz-block">
                 @for (line of gen.MRV_A; track $index) {
@@ -363,7 +372,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD1</span>
                 <span class="mf-name mono">ID CARD · 3×30</span>
-                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey === 'TD1'" (click)="copy(gen.TD1!.join('\n'), 'TD1')">{{ copiedKey === 'TD1' ? '✓ OK' : 'COPY' }}</button>
+                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey() === 'TD1'" (click)="copy(gen.TD1!.join('\n'), 'TD1')">{{ copiedKey() === 'TD1' ? '✓ OK' : 'COPY' }}</button>
               </div>
               <div class="mrz-block">
                 @for (line of gen.TD1; track $index) {
@@ -377,7 +386,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD2</span>
                 <span class="mf-name mono">ID CARD · 2×36</span>
-                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey === 'TD2'" (click)="copy(gen.TD2!.join('\n'), 'TD2')">{{ copiedKey === 'TD2' ? '✓ OK' : 'COPY' }}</button>
+                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey() === 'TD2'" (click)="copy(gen.TD2!.join('\n'), 'TD2')">{{ copiedKey() === 'TD2' ? '✓ OK' : 'COPY' }}</button>
               </div>
               <div class="mrz-block">
                 @for (line of gen.TD2; track $index) {
@@ -391,7 +400,7 @@ const DEFAULT_PRESETS: Preset[] = [
               <div class="mf-header">
                 <span class="mf-tag mono edl">eDL</span>
                 <span class="mf-name mono">DRIVER LICENSE · 1 LINE</span>
-                <button type="button" class="btn-copy edl mono" [class.copied]="copiedKey === 'EDL'" (click)="copy(gen.EDL![0], 'EDL')">{{ copiedKey === 'EDL' ? '✓ OK' : 'COPY' }}</button>
+                <button type="button" class="btn-copy edl mono" [class.copied]="copiedKey() === 'EDL'" (click)="copy(gen.EDL![0], 'EDL')">{{ copiedKey() === 'EDL' ? '✓ OK' : 'COPY' }}</button>
               </div>
               <div class="mrz-block">
                 <div class="mrz-line-wrap edl"><code class="mrz-line edl mono">{{ gen.EDL[0] }}</code></div>
@@ -666,6 +675,15 @@ const DEFAULT_PRESETS: Preset[] = [
       cursor: pointer; transition: 0.15s; font-family: inherit; opacity: 0.7;
     }
     .preset-save:hover { opacity: 1; background: var(--green-dim); }
+    .preset-share {
+      padding: 4px 10px; margin-left: auto;
+      background: none; border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-dim);
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: 0.15s; font-family: inherit;
+    }
+    .preset-share:hover { border-color: var(--border-green); color: var(--green); }
+    .preset-share.copied { background: var(--green-dim); border-color: var(--green); color: var(--green); }
 
     /* ICN gen button */
     .btn-icn-gen {
@@ -687,14 +705,16 @@ const DEFAULT_PRESETS: Preset[] = [
     }
   `]
 })
-export class MrzForgeComponent implements OnInit {
+export class MrzForgeComponent implements OnInit, OnDestroy {
   store = inject(AppStore);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
 
   step = signal(1);
   natSearch = signal('');
   issuerSearch = signal('');
+  copiedKey = signal<string | null>(null);
 
   fields = signal<ForgeFields>({
     docType: '', nationality: '', issuer: '',
@@ -726,6 +746,7 @@ export class MrzForgeComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.initTrigger();
     const p = this.route.snapshot.queryParamMap;
     const doc = p.get('doc');
     const nat = p.get('nat');
@@ -782,22 +803,50 @@ export class MrzForgeComponent implements OnInit {
     this.syncUrl();
   }
 
+  private triggerSubject = new Subject<void>();
+  private triggerSub?: Subscription;
+
+  ngOnDestroy() { this.triggerSub?.unsubscribe(); }
+
   patch(key: keyof ForgeFields, val: string) {
     this.fields.update(f => ({ ...f, [key]: val }));
   }
 
+  private formatDate(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 8) return `${digits.slice(0,2)}-${digits.slice(2,4)}-${digits.slice(4)}`;
+    return raw;
+  }
+
+  patchDate(key: 'birthDate' | 'expiryDate', val: string) {
+    this.fields.update(f => ({ ...f, [key]: this.formatDate(val) }));
+  }
+
   trigger() {
-    const f = this.fields();
-    const lines = [
-      f.docType, f.lastname, f.firstname, f.birthDate,
-      f.nationality, f.sex, f.docNum, f.expiryDate,
-      f.issuer, f.subType, f.persNum, f.optional,
-    ];
-    const fd = new FormData();
-    fd.append('type', 'mrz_gen');
-    fd.append('lines', JSON.stringify(lines));
-    this.store.executeJson<import('../store').MrzGenResult>(fd)
-      .subscribe(res => this.store.mrzGenResult.set(res));
+    if (!this.canGenerate()) return;
+    this.triggerSubject.next();
+  }
+
+  private initTrigger() {
+    this.triggerSub = this.triggerSubject.pipe(
+      debounceTime(250),
+      switchMap(() => {
+        const f = this.fields();
+        const lines = [
+          f.docType, f.lastname, f.firstname, f.birthDate,
+          f.nationality, f.sex, f.docNum, f.expiryDate,
+          f.issuer, f.subType, f.persNum, f.optional,
+        ];
+        const fd = new FormData();
+        fd.append('type', 'mrz_gen');
+        fd.append('lines', JSON.stringify(lines));
+        this.store.loading.set(true);
+        return this.http.post<MrzGenResult>('/api/execute', fd);
+      })
+    ).subscribe({
+      next: res => { this.store.loading.set(false); this.store.mrzGenResult.set(res); },
+      error: () => this.store.loading.set(false),
+    });
   }
 
   // ── Presets ──────────────────────────────────────────────
@@ -820,8 +869,7 @@ export class MrzForgeComponent implements OnInit {
   canSavePreset() {
     const f = this.fields();
     if (!f.docType || !f.nationality || !f.issuer) return false;
-    const label = `${f.nationality} ${f.docType}`;
-    return !this.allPresets().some(p => p.label === label);
+    return !this.allPresets().some(p => p.docType === f.docType && p.nat === f.nationality && p.issuer === f.issuer);
   }
 
   savePreset() {
@@ -876,11 +924,17 @@ export class MrzForgeComponent implements OnInit {
   }
 
   // ── Copy ─────────────────────────────────────────────────
-  copiedKey: string | null = null;
+  linkCopied = signal(false);
 
   copy(t: string, key: string) {
     navigator.clipboard.writeText(t);
-    this.copiedKey = key;
-    setTimeout(() => this.copiedKey = null, 1500);
+    this.copiedKey.set(key);
+    setTimeout(() => this.copiedKey.set(null), 1500);
+  }
+
+  shareLink() {
+    navigator.clipboard.writeText(window.location.href);
+    this.linkCopied.set(true);
+    setTimeout(() => this.linkCopied.set(false), 1500);
   }
 }

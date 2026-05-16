@@ -31,13 +31,34 @@ class MrzGenEngine:
 
     # ── Core helpers ─────────────────────────────────────────────────────────
 
-    @staticmethod
-    def _clean(s: str) -> str:
-        """Uppercase, keep A-Z 0-9, replace space with <, strip rest."""
+    # ICAO 9303 transliteration table for common diacritics
+    _DIACRITICS: dict = {
+        'Ä': 'AE', 'Ö': 'OE', 'Ü': 'UE', 'ß': 'SS',
+        'À': 'A',  'Á': 'A',  'Â': 'A',  'Ã': 'A',  'Å': 'A',  'Æ': 'AE',
+        'Ç': 'C',  'È': 'E',  'É': 'E',  'Ê': 'E',  'Ë': 'E',
+        'Ì': 'I',  'Í': 'I',  'Î': 'I',  'Ï': 'I',
+        'Ð': 'D',  'Ñ': 'N',
+        'Ò': 'O',  'Ó': 'O',  'Ô': 'O',  'Õ': 'O',  'Ø': 'OE',
+        'Ù': 'U',  'Ú': 'U',  'Û': 'U',  'Ý': 'Y',
+        'Þ': 'TH', 'Š': 'S',  'Ž': 'Z',  'Œ': 'OE', 'Ÿ': 'Y',
+        'Č': 'C',  'Ď': 'D',  'Ě': 'E',  'Ň': 'N',  'Ř': 'R',
+        'Ť': 'T',  'Ů': 'U',  'Ź': 'Z',  'Ż': 'Z',
+        'Ą': 'A',  'Ć': 'C',  'Ę': 'E',  'Ł': 'L',  'Ń': 'N',  'Ś': 'S',
+        'Ő': 'O',  'Ű': 'U',
+        'Ā': 'A',  'Ē': 'E',  'Ī': 'I',  'Ō': 'O',  'Ū': 'U',
+        'Ģ': 'G',  'Ķ': 'K',  'Ļ': 'L',  'Ņ': 'N',  'Ŗ': 'R',
+    }
+
+    def _clean(self, s: str) -> str:
+        """Uppercase, transliterate diacritics per ICAO 9303, keep A-Z 0-9."""
         s = s.upper().strip()
         out = []
         for c in s:
-            if c.isalpha() or c.isdigit():
+            if c in self._DIACRITICS:
+                out.append(self._DIACRITICS[c])
+            elif c.isalpha() and c.isascii():
+                out.append(c)
+            elif c.isdigit():
                 out.append(c)
             elif c in (' ', '<'):
                 out.append('<')

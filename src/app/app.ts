@@ -289,7 +289,8 @@ export class App implements AfterViewInit, OnInit {
   ngOnInit() {
     // Sync selectedApp signal from router URL (read-only, no side effects)
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      const segments = this.router.url.split('/');
+      const path = this.router.url.split('?')[0];
+      const segments = path.split('/');
       const toolIdx = segments.indexOf('tool');
       const id = toolIdx >= 0 ? segments[toolIdx + 1] : null;
       if (id && NAV.some(n => n.id === id)) {
