@@ -12,9 +12,10 @@ from engines.energia_engine import EnergiaEngine
 from engines.mrz_engine import MrzEngine
 from engines.nld_mrz_engine import NldMrzEngine
 from engines.exif_engine import ExifEngine
-from engines.fra_mrz_engine import FraMrzEngine # <-- НОВИЙ ІМПОРТ
+from engines.fra_mrz_engine import FraMrzEngine
 from engines.face_engine import FaceEngine
 from engines.ai_bypass_engine import AIBypassEngine
+from engines.revolut_engine import RevolutEngine
 
 app = FastAPI()
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +27,8 @@ registry = {
     "fra_mrz": FraMrzEngine(base_dir), # <-- РЕЄСТРАЦІЯ
     "exif_cleaner": ExifEngine(base_dir),
     "face_cut": FaceEngine(base_dir),
-    "ai_bypass": AIBypassEngine(base_dir)
+    "ai_bypass": AIBypassEngine(base_dir),
+    "revolut":   RevolutEngine(base_dir)
 }
 
 @app.get("/api/schema/{module}")

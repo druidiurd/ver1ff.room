@@ -13,8 +13,10 @@ from pathlib import Path
 # Senior Performance Setup [cite: 2026-02-21]
 warnings.filterwarnings("ignore")
 if sys.platform == 'win32':
-    try: asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    except: pass
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except RuntimeError as e:
+        print(f"[WARN] EventLoop policy setup failed: {e}")
 
 class SeniorProductionV57:
     """Enterprise Engine v57. Right Alignment & Precision Financial Logic [cite: 2026-02-05]."""

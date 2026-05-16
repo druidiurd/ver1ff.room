@@ -237,32 +237,34 @@ export class TerminalComponent {
   store = inject(AppStore);
 
   getAppTitle(): string {
-    const map: any = { 
+    const map: Record<string, string> = {
       'energia': 'IE_BILL_GEN_V57_PRO', 
       'ndls_mrz': 'IE_MRZ_SYNC_NODE', 
       'nld_mrz': 'NL_MRZ_SYNC_NODE',
       'fra_mrz': 'FR_CNI_SYNC_NODE',
       'exif_cleaner': 'EXIF_SNIPER_HW', 
       'face_cut': 'FACE_VISION_V12',
-      'ai_bypass': 'AI_STEALTH_V3' 
+      'ai_bypass': 'AI_STEALTH_V3',
+      'revolut':   'REVOLUT_STMT_GEN'
     };
     return map[this.store.selectedApp() || ''] || 'CORE_SYSTEM_DASH';
   }
 
   getGuideText(): string {
-    const map: any = {
+    const map: Record<string, string> = {
       'energia': 'Professional Irish Utility Bill Generator. Auto-right-alignment. Scan mode injects Gaussian noise and biometric artifacts.',
       'ndls_mrz': 'Real-time dual-core MRZ generator. Synchronized checksums for GEN1 and GEN2 standards. Reactive input sink.',
       'nld_mrz': 'Netherlands ID MRZ Generator (TD1). Vectorized ICAO-9303 math.',
       'fra_mrz': 'France CNI MRZ Generator. Validates Department Code and CIN synchronously.',
       'exif_cleaner': 'Metadata Hardware Injector for OnePlus 6. Select target coordinates on map to spoof hardware location.',
       'face_cut': 'AI Biometric Extractor. 3x4 aspect ratio. Adjust Zoom and Vertical Sink manually for live preview results.',
-      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations, Noise, and iPhone EXIF to bypass AI Detection APIs. Auto-routes between 10 API nodes.'
+      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations, Noise, and iPhone EXIF to bypass AI Detection APIs. Auto-routes between 10 API nodes.',
+      'revolut':   'Revolut EUR Statement Generator. Fill account holder data, IBAN, BIC, and one transaction row. Output is a ready PDF.'
     };
     return map[this.store.selectedApp() || ''] || 'System operational. Ready...';
   }
 
-  onFile(e: any) { this.handleFiles(e.target.files); }
+  onFile(e: Event) { this.handleFiles((e.target as HTMLInputElement).files!); }
   onDrop(e: DragEvent) { e.preventDefault(); if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); }
 
   handleFiles(filesList: FileList) {
@@ -284,15 +286,15 @@ export class TerminalComponent {
     return true;
   }
 
-  isSafe(res: any) {
-    if (res.TYPE === 'ai_batch') return parseFloat(res.BEST_SCORE) < 10.0;
-    return parseFloat(res.AI_PROBABILITY) < 10.0;
+  isSafe(res: import('../store').BypassResult) {
+    if (res.TYPE === 'ai_batch') return parseFloat(res.BEST_SCORE ?? '100') < 10.0;
+    return parseFloat(res.AI_PROBABILITY ?? '100') < 10.0;
   }
 
   onInput() {
     if (['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '')) {
       const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines()));
-      this.store.executeCommand(fd, true).subscribe(res => this.store.mrzData.set(res));
+      this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
     } else if (this.store.hasPreview() && this.store.selectedFile()) {
       this.reqPreview();
     }
@@ -300,7 +302,7 @@ export class TerminalComponent {
 
   reqPreview() {
     const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines())); fd.append('file', this.store.selectedFile()!);
-    this.store.executeCommand(fd, false).subscribe((res: Blob) => {
+    this.store.executeBlob(fd).subscribe(res => {
       if (this.store.previewUrl()) URL.revokeObjectURL(this.store.previewUrl()!);
       this.store.previewUrl.set(URL.createObjectURL(res));
     });
@@ -321,9 +323,9 @@ export class TerminalComponent {
         fd.append('file', files[i]);
 
         try {
-          const res = await lastValueFrom(this.store.executeSilent(fd, true));
+          const res = await lastValueFrom(this.store.executeSilentJson<import('../store').BypassResult>(fd));
           results[i] = res;
-        } catch (err) {
+        } catch {
           results[i] = { STATUS: 'ERROR' };
         }
         this.store.bypassResults.set([...results]);
@@ -339,15 +341,16 @@ export class TerminalComponent {
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
     
     const isJson = ['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '');
-    
-    this.store.executeCommand(fd, isJson).subscribe((res: any) => {
-      if (isJson) this.store.mrzData.set(res);
-      else {
+
+    if (isJson) {
+      this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
+    } else {
+      this.store.executeBlob(fd).subscribe(res => {
         const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
         a.download = `V_OUT_${Date.now()}.${this.store.isMediaApp() ? 'jpg' : 'pdf'}`;
         a.click(); URL.revokeObjectURL(url);
-      }
-    });
+      });
+    }
   }
 
   download(base64Data: string, originalName: string) {

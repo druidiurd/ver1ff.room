@@ -2,25 +2,54 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { finalize, Observable } from 'rxjs';
 
+export interface SchemaField {
+  id: string;
+  label: string;
+  p: string;
+  type?: 'text' | 'select' | 'range';
+  opts?: string[];
+  min?: number;
+  max?: number;
+}
+
+export interface MrzData {
+  GEN_2_ISO?: string;
+  GEN_1_LEGACY?: string;
+  L1?: string;
+  L2?: string;
+  L3?: string;
+  STATUS?: 'SYNC_OK' | 'VALIDATION_ERR';
+  ERR_MSG?: string;
+}
+
+export interface BypassResult {
+  STATUS: string;
+  TYPE?: string;
+  IMAGE_BASE64?: string;
+  AI_PROBABILITY?: string;
+  BEST_SCORE?: string;
+  USED_PROFILE?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AppStore {
   private http = inject(HttpClient);
 
   loading = signal<boolean>(false);
   selectedApp = signal<string | null>(null);
-  schema = signal<any[]>([]);
+  schema = signal<SchemaField[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal<boolean>(false);
-  
+
   // Single mode files
   selectedFile = signal<File | null>(null);
-  mrzData = signal<any>(null);
+  mrzData = signal<MrzData | null>(null);
   previewUrl = signal<string | null>(null);
 
-  // Batch mode files (AI_BYPASS) [cite: 2026-02-21]
+  // Batch mode files (AI_BYPASS)
   batchFiles = signal<File[]>([]);
   batchUrls = signal<string[]>([]);
-  bypassResults = signal<any[]>([]); 
+  bypassResults = signal<(BypassResult | null)[]>([]);
 
   isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_bypass'].includes(this.selectedApp() || ''));
   hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || ''));
@@ -28,7 +57,7 @@ export class AppStore {
 
   openApp(name: string) {
     this.selectedApp.set(name);
-    this.http.get<any[]>(`/api/schema/${name}`).subscribe(s => {
+    this.http.get<SchemaField[]>(`/api/schema/${name}`).subscribe(s => {
       this.schema.set(s);
       this.lines.set(new Array(s.length).fill(''));
     });
@@ -48,17 +77,21 @@ export class AppStore {
     this.batchUrls.set([]);
   }
 
-  executeCommand(fd: FormData, isJson: boolean): Observable<any> {
+  executeJson<T>(fd: FormData): Observable<T> {
     this.loading.set(true);
-    return this.http.post('/api/execute', fd, {
-      responseType: (isJson ? 'json' : 'blob') as 'json'
-    }).pipe(finalize(() => this.loading.set(false)));
+    return this.http.post<T>('/api/execute', fd).pipe(
+      finalize(() => this.loading.set(false))
+    );
   }
 
-  // Для пакетної обробки без глобального лоадера [cite: 2026-02-05]
-  executeSilent(fd: FormData, isJson: boolean): Observable<any> {
-    return this.http.post('/api/execute', fd, {
-      responseType: (isJson ? 'json' : 'blob') as 'json'
-    });
+  executeBlob(fd: FormData): Observable<Blob> {
+    this.loading.set(true);
+    return this.http.post('/api/execute', fd, { responseType: 'blob' }).pipe(
+      finalize(() => this.loading.set(false))
+    );
+  }
+
+  executeSilentJson<T>(fd: FormData): Observable<T> {
+    return this.http.post<T>('/api/execute', fd);
   }
 }

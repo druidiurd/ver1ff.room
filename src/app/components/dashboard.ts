@@ -13,6 +13,7 @@ import { AppStore } from '../store';
         <div class="app-grid">
           <div class="app-card" (click)="store.openApp('energia')"><div class="icon glass-inset neon-green">⚡</div><span class="label">IE-bill-gen</span></div>
           <div class="app-card" (click)="store.openApp('ndls_mrz')"><div class="icon glass-inset neon-blue">🆔</div><span class="label">IE-NDLS-MRZ</span></div>
+          <div class="app-card" (click)="store.openApp('revolut')"><div class="icon glass-inset neon-violet">💳</div><span class="label">Revolut-Stmt</span></div>
         </div>
       </div>
 
@@ -57,6 +58,7 @@ import { AppStore } from '../store';
     .neon-amber { color: #ff9500; text-shadow: 0 0 15px rgba(255,149,0,0.5); }
     .neon-red { color: #ff3b30; text-shadow: 0 0 15px rgba(255,59,48,0.5); }
     .neon-purple { color: #a855f7; text-shadow: 0 0 15px rgba(168,85,247,0.5); }
+    .neon-violet { color: #7c3aed; text-shadow: 0 0 15px rgba(124,58,237,0.5); }
   `]
 })
 export class DashboardComponent {
