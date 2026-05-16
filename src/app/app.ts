@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { id: 'face_cut',    group: 'TOOLS'       },
   { id: 'ai_bypass',   group: 'TOOLS'       },
   { id: 'revolut',     group: 'GLOBAL'      },
+  { id: 'mrz_gen',    group: 'GLOBAL'      },
 ];
 
 @Component({
@@ -267,6 +268,7 @@ export class App implements AfterViewInit, OnInit {
       energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
       nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
       exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
+      mrz_gen: '🔏',
     };
     return icons[id] ?? '⬡';
   }

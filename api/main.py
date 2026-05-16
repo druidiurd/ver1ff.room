@@ -16,19 +16,21 @@ from engines.fra_mrz_engine import FraMrzEngine
 from engines.face_engine import FaceEngine
 from engines.ai_bypass_engine import AIBypassEngine
 from engines.revolut_engine import RevolutEngine
+from engines.mrz_gen_engine import MrzGenEngine
 
 app = FastAPI()
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 registry = {
-    "energia": EnergiaEngine(base_dir),
-    "ndls_mrz": MrzEngine(base_dir),
-    "nld_mrz": NldMrzEngine(base_dir),
-    "fra_mrz": FraMrzEngine(base_dir), # <-- РЕЄСТРАЦІЯ
+    "energia":    EnergiaEngine(base_dir),
+    "ndls_mrz":   MrzEngine(base_dir),
+    "nld_mrz":    NldMrzEngine(base_dir),
+    "fra_mrz":    FraMrzEngine(base_dir),
     "exif_cleaner": ExifEngine(base_dir),
-    "face_cut": FaceEngine(base_dir),
-    "ai_bypass": AIBypassEngine(base_dir),
-    "revolut":   RevolutEngine(base_dir)
+    "face_cut":   FaceEngine(base_dir),
+    "ai_bypass":  AIBypassEngine(base_dir),
+    "revolut":    RevolutEngine(base_dir),
+    "mrz_gen":    MrzGenEngine(base_dir),
 }
 
 @app.get("/api/schema/{module}")

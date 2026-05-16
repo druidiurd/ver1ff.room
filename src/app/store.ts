@@ -22,6 +22,16 @@ export interface MrzData {
   ERR_MSG?: string;
 }
 
+export interface MrzGenResult {
+  STATUS: string;
+  DOC_TYPE?: string;
+  MRP?: string[];
+  TD1?: string[];
+  TD2?: string[];
+  MRV_A?: string[];
+  EDL?: string[];
+}
+
 export interface BypassResult {
   STATUS: string;
   TYPE?: string;
@@ -44,6 +54,7 @@ export class AppStore {
   // Single mode files
   selectedFile = signal<File | null>(null);
   mrzData = signal<MrzData | null>(null);
+  mrzGenResult = signal<MrzGenResult | null>(null);
   previewUrl = signal<string | null>(null);
 
   // Batch mode files (AI_BYPASS)
@@ -68,6 +79,7 @@ export class AppStore {
     this.selectedApp.set(null);
     this.selectedFile.set(null);
     this.mrzData.set(null);
+    this.mrzGenResult.set(null);
     this.bypassResults.set([]);
     this.batchFiles.set([]);
     this.batchProgress.set(null);

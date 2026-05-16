@@ -34,6 +34,7 @@ export const T = {
     exif_cleaner: { label: 'EXIF-SNIPER',   nav: 'EXIF',        desc: 'Metadata injector for OnePlus 6. Spoof GPS coordinates via map selection.' },
     face_cut:     { label: 'FACE-VISION',   nav: 'Face-Cut',    desc: 'AI biometric extractor. 3×4 ratio. Adjust zoom and vertical offset for live preview.' },
     ai_bypass:    { label: 'AI-STEALTH',    nav: 'AI-Stealth',  desc: 'Camera pipeline emulator. Radial chromatic aberration, PRNU sensor noise, double JPEG, frequency domain break. Physically plausible — passes forensic AI detectors.' },
+    mrz_gen:      { label: 'MRZ-FORGE',    nav: 'MRZ Forge',   desc: 'Universal ICAO 9303 MRZ generator. Passport (MRP/TD3), ID Card (TD1, TD2), Visa (MRV-A), eDL. Weighted checksum engine. All 4 formats simultaneously.' },
   } as Record<string, { label: string; nav: string; desc: string }>,
 };
 

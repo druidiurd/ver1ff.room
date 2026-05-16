@@ -90,7 +90,7 @@ import { lastValueFrom } from 'rxjs';
             </div>
           }
 
-          @if (!['ndls_mrz','nld_mrz','fra_mrz'].includes(store.selectedApp() || '')) {
+          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen'].includes(store.selectedApp() || '')) {
             <div class="actions" [class.col]="store.selectedApp() === 'ai_bypass'">
               <button class="btn-exec mono"
                 [disabled]="store.loading() || !canExecute()"
@@ -120,6 +120,77 @@ import { lastValueFrom } from 'rxjs';
         <div class="panel-visuals">
           @if (store.selectedApp() === 'exif_cleaner') {
             <app-map></app-map>
+          }
+
+          @if (store.selectedApp() === 'mrz_gen') {
+            @if (store.mrzGenResult(); as gen) {
+              <div class="forge-output">
+                @if (gen.MRP) {
+                  <div class="mrz-format-card">
+                    <div class="mf-header">
+                      <span class="mf-tag mono">MRP</span>
+                      <span class="mf-name mono">PASSPORT · TD3 · 2×44</span>
+                      <button class="btn-copy mono" (click)="copy(gen.MRP!.join('\n'))">COPY</button>
+                    </div>
+                    @for (line of gen.MRP; track $index) {
+                      <div class="mrz-line-wrap">
+                        <code class="mrz-line mono">{{ line }}</code>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (gen.MRV_A) {
+                  <div class="mrz-format-card visa">
+                    <div class="mf-header">
+                      <span class="mf-tag mono visa">MRV-A</span>
+                      <span class="mf-name mono">VISA · 2×44</span>
+                      <button class="btn-copy mono" (click)="copy(gen.MRV_A!.join('\n'))">COPY</button>
+                    </div>
+                    @for (line of gen.MRV_A; track $index) {
+                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
+                    }
+                  </div>
+                }
+                @if (gen.TD1) {
+                  <div class="mrz-format-card amber">
+                    <div class="mf-header">
+                      <span class="mf-tag mono amber">TD1</span>
+                      <span class="mf-name mono">ID CARD · 3×30</span>
+                      <button class="btn-copy amber mono" (click)="copy(gen.TD1!.join('\n'))">COPY</button>
+                    </div>
+                    @for (line of gen.TD1; track $index) {
+                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
+                    }
+                  </div>
+                }
+                @if (gen.TD2) {
+                  <div class="mrz-format-card amber">
+                    <div class="mf-header">
+                      <span class="mf-tag mono amber">TD2</span>
+                      <span class="mf-name mono">ID CARD · 2×36</span>
+                      <button class="btn-copy amber mono" (click)="copy(gen.TD2!.join('\n'))">COPY</button>
+                    </div>
+                    @for (line of gen.TD2; track $index) {
+                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
+                    }
+                  </div>
+                }
+                @if (gen.EDL) {
+                  <div class="mrz-format-card edl">
+                    <div class="mf-header">
+                      <span class="mf-tag mono edl">eDL</span>
+                      <span class="mf-name mono">DRIVER LICENSE · 1 LINE</span>
+                      <button class="btn-copy edl mono" (click)="copy(gen.EDL![0])">COPY</button>
+                    </div>
+                    <div class="mrz-line-wrap"><code class="mrz-line mono">{{ gen.EDL[0] }}</code></div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="forge-empty">
+                <span class="mono empty-label">FILL_FIELDS → MRZ_UPDATES_LIVE</span>
+              </div>
+            }
           }
 
           @if (store.hasPreview()) {
@@ -545,6 +616,47 @@ import { lastValueFrom } from 'rxjs';
     .safe { color: var(--green); }
     .danger { color: var(--red); }
 
+    /* MRZ Forge */
+    .forge-output { display: flex; flex-direction: column; gap: 12px; }
+    .forge-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      border: 1px dashed var(--border); border-radius: var(--radius-sm); min-height: 120px;
+    }
+    .mrz-format-card {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--border-green);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .mrz-format-card.amber { border-color: rgba(255,149,0,0.3); }
+    .mrz-format-card.visa  { border-color: rgba(0,122,255,0.3); }
+    .mrz-format-card.edl   { border-color: rgba(168,85,247,0.3); }
+    .mf-header { display: flex; align-items: center; gap: 10px; }
+    .mf-tag {
+      font-size: 0.5rem; font-weight: 800; letter-spacing: 1px;
+      padding: 3px 8px; border-radius: 4px;
+      background: var(--green-dim); color: var(--green); border: 1px solid var(--border-green);
+      flex-shrink: 0;
+    }
+    .mf-tag.amber { background: rgba(255,149,0,0.1); color: var(--amber); border-color: rgba(255,149,0,0.3); }
+    .mf-tag.visa  { background: rgba(0,122,255,0.1); color: var(--blue); border-color: rgba(0,122,255,0.3); }
+    .mf-tag.edl   { background: rgba(168,85,247,0.1); color: var(--purple); border-color: rgba(168,85,247,0.3); }
+    .mf-name { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 2px; flex: 1; }
+    .mrz-line-wrap {
+      background: rgba(0,0,0,0.4); border-radius: 4px;
+      padding: 8px 12px; overflow-x: auto;
+    }
+    .mrz-line {
+      font-size: 0.65rem; letter-spacing: 2.5px; color: var(--green);
+      white-space: nowrap; display: block;
+    }
+    .mrz-format-card.amber .mrz-line { color: var(--amber); }
+    .mrz-format-card.visa  .mrz-line { color: var(--blue); }
+    .mrz-format-card.edl   .mrz-line { color: var(--purple); }
+    .btn-copy.edl { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--purple); }
+    .btn-copy.visa { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--blue); }
+
     /* mobile */
     @media (max-width: 767px) {
       .shell-body { flex-direction: column; overflow: visible; }
@@ -610,9 +722,17 @@ export class TerminalComponent implements OnInit {
   }
 
   onInput() {
-    if (['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '')) {
-      const fd = new FormData(); fd.append('type', this.store.selectedApp()!); fd.append('lines', JSON.stringify(this.store.lines()));
+    const app = this.store.selectedApp() || '';
+    if (['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(app)) {
+      const fd = new FormData();
+      fd.append('type', app);
+      fd.append('lines', JSON.stringify(this.store.lines()));
       this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
+    } else if (app === 'mrz_gen') {
+      const fd = new FormData();
+      fd.append('type', 'mrz_gen');
+      fd.append('lines', JSON.stringify(this.store.lines()));
+      this.store.executeJson<import('../store').MrzGenResult>(fd).subscribe(res => this.store.mrzGenResult.set(res));
     } else if (this.store.hasPreview() && this.store.selectedFile()) {
       this.reqPreview();
     }

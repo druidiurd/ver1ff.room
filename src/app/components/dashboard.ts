@@ -14,18 +14,21 @@ const NAV: NavItem[] = [
   { id: 'face_cut',    group: 'TOOLS'       },
   { id: 'ai_bypass',   group: 'TOOLS'       },
   { id: 'revolut',     group: 'GLOBAL'      },
+  { id: 'mrz_gen',    group: 'GLOBAL'      },
 ];
 
 const ICONS: Record<string, string> = {
   energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
   nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
   exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
+  mrz_gen: '🔏',
 };
 
 const COLORS: Record<string, string> = {
   energia: '#00ff41', ndls_mrz: '#007aff', revolut: '#7c3aed',
   nld_mrz: '#ff9500', fra_mrz: '#007aff',
   exif_cleaner: '#ff9500', face_cut: '#ff3b30', ai_bypass: '#a855f7',
+  mrz_gen: '#00ff41',
 };
 
 @Component({
