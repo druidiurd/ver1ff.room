@@ -92,26 +92,26 @@ class RevolutEngine:
 
             # Y = bbox_top (from original) + measured ascender per size
             # 12.38pt ascender=10.16, 8.25pt ascender=6.84, 4.50pt ascender=4.71
-            ins(39.7,  154.0, name,     13.38, b, "Roboto-Bold")
-            ins(39.7,  175.6, addr1,    9.25,  b, "Roboto-Bold")
-            ins(39.7,  188.0, zip_code, 9.25,  b, "Roboto-Bold")
-            ins(39.7,  200.4, city,     9.25,  b, "Roboto-Bold")
-            ins(39.7,  212.8, region,   9.25,  b, "Roboto-Bold")
+            ins(39.7,  154.5, name,     12.38, b, "Roboto-Bold")
+            ins(39.7,  176.1, addr1,    8.25,  b, "Roboto-Bold")
+            ins(39.7,  188.5, zip_code, 8.25,  b, "Roboto-Bold")
+            ins(39.7,  200.9, city,     8.25,  b, "Roboto-Bold")
+            ins(39.7,  213.3, region,   8.25,  b, "Roboto-Bold")
 
-            ins(376.1, 145.6, iban,       8.25)
-            ins(376.1, 158.0, "REVOLT21", 8.25)
+            ins(376.1, 146.1, iban,       8.25)
+            ins(376.1, 158.5, "REVOLT21", 8.25)
 
-            ins(446.1, 103.8, gen_date, 8.25)
+            ins(446.1, 104.3, gen_date, 8.25)
 
-            ins(42.7,  299.7, tx_date,  8.25)
-            ins(155.1, 299.7, merchant, 8.25)
+            ins(42.7,  300.2, tx_date,  8.25)
+            ins(155.1, 300.2, merchant, 8.25)
 
             f_obj = fitz.Font(fontfile=r)
             tw = f_obj.text_length(eur_str, fontsize=8.25)
-            ins(555.6 - tw, 299.7, eur_str, 8.25)
+            ins(555.6 - tw, 300.2, eur_str, 8.25)
 
-            ins(155.1, 311.2, f"To: {merchant_city}", 4.50)
-            ins(155.1, 316.5, f"Card: {tx_card}",     4.50)
+            ins(155.1, 306.2, f"To: {merchant_city}", 4.50)
+            ins(155.1, 311.5, f"Card: {tx_card}",     4.50)
 
             doc.set_metadata({
                 "producer": "Revolut Bank UAB",
