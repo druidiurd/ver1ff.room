@@ -39,6 +39,7 @@ import { lastValueFrom } from 'rxjs';
       <div class="shell-body">
         <!-- LEFT: form -->
         <div class="panel-form">
+          @if (store.selectedApp() !== 'mrz_gen') {
           <div class="fields">
             @for (field of store.schema(); track field.id) {
               <div class="field">
@@ -114,6 +115,7 @@ import { lastValueFrom } from 'rxjs';
                 }
               }
             </div>
+          }
           }
         </div>
 

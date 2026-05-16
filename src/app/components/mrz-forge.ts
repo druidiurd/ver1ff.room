@@ -216,6 +216,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().lastname"
                 (ngModelChange)="patch('lastname', $event)"
+                (blur)="trigger()"
                 placeholder="SMITH" autocomplete="off" spellcheck="false">
             </div>
             <div class="fg-field">
@@ -223,6 +224,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().firstname"
                 (ngModelChange)="patch('firstname', $event)"
+                (blur)="trigger()"
                 placeholder="JOHN" autocomplete="off" spellcheck="false">
             </div>
             <div class="fg-field">
@@ -230,13 +232,14 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().birthDate"
                 (ngModelChange)="patch('birthDate', $event)"
+                (blur)="trigger()"
                 placeholder="DD-MM-YYYY" autocomplete="off">
             </div>
             <div class="fg-field">
               <label class="mono fg-label">SEX</label>
               <div class="sex-group">
                 @for (s of ['M','F','U']; track s) {
-                  <button type="button" class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex', s)">{{ s }}</button>
+                  <button type="button" class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex', s); trigger()">{{ s }}</button>
                 }
               </div>
             </div>
@@ -245,6 +248,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().docNum"
                 (ngModelChange)="patch('docNum', $event)"
+                (blur)="trigger()"
                 placeholder="PA1234567" autocomplete="off">
             </div>
             <div class="fg-field">
@@ -252,6 +256,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().expiryDate"
                 (ngModelChange)="patch('expiryDate', $event)"
+                (blur)="trigger()"
                 placeholder="DD-MM-YYYY" autocomplete="off">
             </div>
             <div class="fg-field">
@@ -259,6 +264,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().subType"
                 (ngModelChange)="patch('subType', $event)"
+                (blur)="trigger()"
                 placeholder="e.g. A" maxlength="1" autocomplete="off">
             </div>
             <div class="fg-field">
@@ -266,6 +272,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().persNum"
                 (ngModelChange)="patch('persNum', $event)"
+                (blur)="trigger()"
                 placeholder="Optional" autocomplete="off">
             </div>
             <div class="fg-field fg-full">
@@ -273,6 +280,7 @@ interface ForgeFields {
               <input class="mono fg-input"
                 [ngModel]="fields().optional"
                 (ngModelChange)="patch('optional', $event)"
+                (blur)="trigger()"
                 placeholder="Optional" autocomplete="off">
             </div>
           </div>
@@ -289,16 +297,19 @@ interface ForgeFields {
       <!-- MRZ Output -->
       @if (store.mrzGenResult(); as gen) {
         <div class="forge-output">
+          <div class="output-header mono">MRZ_OUTPUT</div>
           @if (gen.MRP) {
             <div class="mrz-format-card">
               <div class="mf-header">
                 <span class="mf-tag mono">MRP</span>
                 <span class="mf-name mono">PASSPORT · TD3 · 2×44</span>
-                <button type="button" class="btn-copy mono" (click)="copy(gen.MRP!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy mono" [class.copied]="copiedKey === 'MRP'" (click)="copy(gen.MRP!.join('\n'), 'MRP')">{{ copiedKey === 'MRP' ? '✓ OK' : 'COPY' }}</button>
               </div>
-              @for (line of gen.MRP; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
-              }
+              <div class="mrz-block">
+                @for (line of gen.MRP; track $index) {
+                  <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
+                }
+              </div>
             </div>
           }
           @if (gen.MRV_A) {
@@ -306,11 +317,13 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono visa">MRV-A</span>
                 <span class="mf-name mono">VISA · 2×44</span>
-                <button type="button" class="btn-copy visa mono" (click)="copy(gen.MRV_A!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy visa mono" [class.copied]="copiedKey === 'MRV_A'" (click)="copy(gen.MRV_A!.join('\n'), 'MRV_A')">{{ copiedKey === 'MRV_A' ? '✓ OK' : 'COPY' }}</button>
               </div>
-              @for (line of gen.MRV_A; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line visa mono">{{ line }}</code></div>
-              }
+              <div class="mrz-block">
+                @for (line of gen.MRV_A; track $index) {
+                  <div class="mrz-line-wrap visa"><code class="mrz-line visa mono">{{ line }}</code></div>
+                }
+              </div>
             </div>
           }
           @if (gen.TD1) {
@@ -318,11 +331,13 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD1</span>
                 <span class="mf-name mono">ID CARD · 3×30</span>
-                <button type="button" class="btn-copy amber mono" (click)="copy(gen.TD1!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey === 'TD1'" (click)="copy(gen.TD1!.join('\n'), 'TD1')">{{ copiedKey === 'TD1' ? '✓ OK' : 'COPY' }}</button>
               </div>
-              @for (line of gen.TD1; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line amber mono">{{ line }}</code></div>
-              }
+              <div class="mrz-block">
+                @for (line of gen.TD1; track $index) {
+                  <div class="mrz-line-wrap amber"><code class="mrz-line amber mono">{{ line }}</code></div>
+                }
+              </div>
             </div>
           }
           @if (gen.TD2) {
@@ -330,11 +345,13 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD2</span>
                 <span class="mf-name mono">ID CARD · 2×36</span>
-                <button type="button" class="btn-copy amber mono" (click)="copy(gen.TD2!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy amber mono" [class.copied]="copiedKey === 'TD2'" (click)="copy(gen.TD2!.join('\n'), 'TD2')">{{ copiedKey === 'TD2' ? '✓ OK' : 'COPY' }}</button>
               </div>
-              @for (line of gen.TD2; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line amber mono">{{ line }}</code></div>
-              }
+              <div class="mrz-block">
+                @for (line of gen.TD2; track $index) {
+                  <div class="mrz-line-wrap amber"><code class="mrz-line amber mono">{{ line }}</code></div>
+                }
+              </div>
             </div>
           }
           @if (gen.EDL) {
@@ -342,9 +359,11 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono edl">eDL</span>
                 <span class="mf-name mono">DRIVER LICENSE · 1 LINE</span>
-                <button type="button" class="btn-copy edl mono" (click)="copy(gen.EDL![0])">COPY</button>
+                <button type="button" class="btn-copy edl mono" [class.copied]="copiedKey === 'EDL'" (click)="copy(gen.EDL![0], 'EDL')">{{ copiedKey === 'EDL' ? '✓ OK' : 'COPY' }}</button>
               </div>
-              <div class="mrz-line-wrap"><code class="mrz-line edl mono">{{ gen.EDL[0] }}</code></div>
+              <div class="mrz-block">
+                <div class="mrz-line-wrap edl"><code class="mrz-line edl mono">{{ gen.EDL[0] }}</code></div>
+              </div>
             </div>
           }
         </div>
@@ -512,39 +531,74 @@ interface ForgeFields {
     .chip-lbl { color: var(--text-dim); font-size: 0.45rem; margin-right: 4px; }
 
     /* MRZ output */
-    .forge-output { display: flex; flex-direction: column; gap: 10px; }
-    .mrz-format-card {
-      background: rgba(0,0,0,0.5); border: 1px solid var(--border-green);
-      border-radius: var(--radius-sm); padding: 12px 14px;
-      display: flex; flex-direction: column; gap: 8px;
+    .forge-output { display: flex; flex-direction: column; gap: 12px; }
+    .output-header {
+      font-size: 0.5rem; font-weight: 700; color: var(--text-dim);
+      letter-spacing: 3px; padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
     }
-    .mrz-format-card.amber { border-color: rgba(255,149,0,0.3); }
-    .mrz-format-card.visa  { border-color: rgba(0,122,255,0.3); }
-    .mrz-format-card.edl   { border-color: rgba(168,85,247,0.3); }
-    .mf-header { display: flex; align-items: center; gap: 8px; }
+    .mrz-format-card {
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--border-green);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      box-shadow: 0 0 20px rgba(0,255,65,0.04), inset 0 1px 0 rgba(0,255,65,0.06);
+    }
+    .mrz-format-card.amber { border-color: rgba(255,149,0,0.35); box-shadow: 0 0 20px rgba(255,149,0,0.04), inset 0 1px 0 rgba(255,149,0,0.06); }
+    .mrz-format-card.visa  { border-color: rgba(0,122,255,0.35); box-shadow: 0 0 20px rgba(0,122,255,0.04), inset 0 1px 0 rgba(0,122,255,0.06); }
+    .mrz-format-card.edl   { border-color: rgba(168,85,247,0.35); box-shadow: 0 0 20px rgba(168,85,247,0.04), inset 0 1px 0 rgba(168,85,247,0.06); }
+    .mf-header { display: flex; align-items: center; gap: 10px; }
     .mf-tag {
-      font-size: 0.5rem; font-weight: 800; letter-spacing: 1px;
-      padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+      font-size: 0.5rem; font-weight: 800; letter-spacing: 1.5px;
+      padding: 3px 8px; border-radius: 4px; flex-shrink: 0;
       background: var(--green-dim); color: var(--green); border: 1px solid var(--border-green);
     }
-    .mf-tag.amber { background: rgba(255,149,0,0.1); color: #ff9500; border-color: rgba(255,149,0,0.3); }
-    .mf-tag.visa  { background: rgba(0,122,255,0.1); color: #007aff; border-color: rgba(0,122,255,0.3); }
-    .mf-tag.edl   { background: rgba(168,85,247,0.1); color: #a855f7; border-color: rgba(168,85,247,0.3); }
+    .mf-tag.amber { background: rgba(255,149,0,0.12); color: #ff9500; border-color: rgba(255,149,0,0.4); }
+    .mf-tag.visa  { background: rgba(0,122,255,0.12); color: #007aff; border-color: rgba(0,122,255,0.4); }
+    .mf-tag.edl   { background: rgba(168,85,247,0.12); color: #a855f7; border-color: rgba(168,85,247,0.4); }
     .mf-name { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 1.5px; flex: 1; }
-    .mrz-line-wrap { background: rgba(0,0,0,0.4); border-radius: 4px; padding: 7px 10px; overflow-x: auto; }
-    .mrz-line { font-size: 0.6rem; letter-spacing: 2px; color: var(--green); white-space: nowrap; display: block; }
-    .mrz-line.amber { color: #ff9500; }
-    .mrz-line.visa  { color: #007aff; }
-    .mrz-line.edl   { color: #a855f7; }
+    .mrz-block { display: flex; flex-direction: column; gap: 4px; }
+    .mrz-line-wrap {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(0,255,65,0.08);
+      border-radius: 4px; padding: 10px 14px; overflow-x: auto;
+      position: relative;
+    }
+    .mrz-line-wrap::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,65,0.015) 2px, rgba(0,255,65,0.015) 4px);
+      pointer-events: none; border-radius: 4px;
+    }
+    .mrz-line-wrap.amber { border-color: rgba(255,149,0,0.1); }
+    .mrz-line-wrap.amber::before { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,149,0,0.015) 2px, rgba(255,149,0,0.015) 4px); }
+    .mrz-line-wrap.visa  { border-color: rgba(0,122,255,0.1); }
+    .mrz-line-wrap.visa::before  { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,122,255,0.015) 2px, rgba(0,122,255,0.015) 4px); }
+    .mrz-line-wrap.edl   { border-color: rgba(168,85,247,0.1); }
+    .mrz-line-wrap.edl::before   { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(168,85,247,0.015) 2px, rgba(168,85,247,0.015) 4px); }
+    .mrz-line {
+      font-size: 0.75rem; letter-spacing: 3px; color: var(--green);
+      white-space: nowrap; display: block; font-weight: 700;
+      text-shadow: 0 0 8px rgba(0,255,65,0.5);
+    }
+    .mrz-line.amber { color: #ff9500; text-shadow: 0 0 8px rgba(255,149,0,0.4); }
+    .mrz-line.visa  { color: #007aff; text-shadow: 0 0 8px rgba(0,122,255,0.4); }
+    .mrz-line.edl   { color: #a855f7; text-shadow: 0 0 8px rgba(168,85,247,0.4); }
     .btn-copy {
       background: var(--green-dim); border: 1px solid var(--border-green);
       color: var(--green); font-size: 0.5rem; font-weight: 700;
-      padding: 3px 8px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
       white-space: nowrap; flex-shrink: 0; font-family: inherit;
+      transition: 0.15s; min-width: 48px; text-align: center;
     }
+    .btn-copy.copied { background: var(--green); color: #000; border-color: var(--green); }
     .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: #ff9500; }
+    .btn-copy.amber.copied { background: #ff9500; color: #000; }
     .btn-copy.visa  { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: #007aff; }
+    .btn-copy.visa.copied  { background: #007aff; color: #fff; }
     .btn-copy.edl   { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: #a855f7; }
+    .btn-copy.edl.copied   { background: #a855f7; color: #fff; }
 
     @media (max-width: 767px) {
       .doc-grid { grid-template-columns: 1fr 1fr; }
@@ -634,5 +688,11 @@ export class MrzForgeComponent {
       .subscribe(res => this.store.mrzGenResult.set(res));
   }
 
-  copy(t: string) { navigator.clipboard.writeText(t); }
+  copiedKey: string | null = null;
+
+  copy(t: string, key: string) {
+    navigator.clipboard.writeText(t);
+    this.copiedKey = key;
+    setTimeout(() => this.copiedKey = null, 1500);
+  }
 }
