@@ -90,26 +90,28 @@ class RevolutEngine:
                 page.insert_text((x, y), text, fontname=fontname,
                                  fontfile=(fontfile or r), fontsize=size)
 
-            ins(39.7, 155.0, name,     12.4, b, "Roboto-Bold")
-            ins(39.7, 178.0, addr1,    8.2)
-            ins(39.7, 190.4, zip_code, 8.2)
-            ins(39.7, 202.8, city,     8.2)
-            ins(39.7, 215.2, region,   8.2)
+            # Y = bbox_top (from original) + measured ascender per size
+            # 12.38pt ascender=10.16, 8.25pt ascender=6.84, 4.50pt ascender=4.71
+            ins(39.7,  157.0, name,     12.38, b, "Roboto-Bold")  # 144.0 + 12.92
+            ins(39.7,  178.6, addr1,    8.25)                      # 170.0 + 8.68
+            ins(39.7,  191.0, zip_code, 8.25)                      # 182.4 + 8.68
+            ins(39.7,  203.4, city,     8.25)                      # 194.8 + 8.68
+            ins(39.7,  215.8, region,   8.25)                      # 207.2 + 8.68
 
-            ins(376.1, 147.8, iban,       8.2)
-            ins(376.1, 160.2, "REVOLT21", 8.2)
+            ins(376.1, 148.6, iban,       8.25)                    # 140.0 + 8.68
+            ins(376.1, 161.0, "REVOLT21", 8.25)                    # 152.4 + 8.68
 
-            ins(446.1, 106.0, gen_date, 8.2)
+            ins(446.1, 106.8, gen_date, 8.25)                      # 98.2  + 8.68
 
-            ins(42.7,  302.0, tx_date,  8.2)
-            ins(155.1, 302.0, merchant, 8.2)
+            ins(42.7,  302.7, tx_date,  8.25)                      # 294.1 + 8.68
+            ins(155.1, 302.7, merchant, 8.25)
 
             f_obj = fitz.Font(fontfile=r)
-            tw = f_obj.text_length(eur_str, fontsize=8.2)
-            ins(555.6 - tw, 302.0, eur_str, 8.2)
+            tw = f_obj.text_length(eur_str, fontsize=8.25)
+            ins(555.6 - tw, 302.7, eur_str, 8.25)
 
-            ins(155.1, 317.0, f"To: {merchant_city}", 4.5)
-            ins(155.1, 322.3, f"Card: {tx_card}",     4.5)
+            ins(155.1, 314.2, f"To: {merchant_city}", 4.50)        # 309.5 + 4.71
+            ins(155.1, 319.5, f"Card: {tx_card}",     4.50)        # 314.8 + 4.71
 
             doc.set_metadata({
                 "producer": "Revolut Bank UAB",
