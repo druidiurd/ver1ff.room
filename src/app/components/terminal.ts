@@ -75,31 +75,31 @@ import { lastValueFrom } from 'rxjs';
             <span *ngIf="!store.previewUrl()" class="pv-empty">AWAITING_SOURCE...</span>
           </div>
 
-          <div class="mrz-box" *ngIf="store.selectedApp() === 'ndls_mrz' && store.mrzData()">
-            <div class="m-row"><span class="tag">G2</span><code>{{ store.mrzData().GEN_2_ISO }}</code><button (click)="copy(store.mrzData().GEN_2_ISO)">CPY</button></div>
-            <div class="m-row"><span class="tag">G1</span><code>{{ store.mrzData().GEN_1_LEGACY }}</code></div>
+          <div class="mrz-box" *ngIf="store.selectedApp() === 'ndls_mrz' && store.mrzData() as mrz">
+            <div class="m-row"><span class="tag">G2</span><code>{{ mrz.GEN_2_ISO }}</code><button (click)="copy(mrz.GEN_2_ISO || '')">CPY</button></div>
+            <div class="m-row"><span class="tag">G1</span><code>{{ mrz.GEN_1_LEGACY }}</code></div>
           </div>
 
-          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'nld_mrz' && store.mrzData()">
+          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'nld_mrz' && store.mrzData() as mrz">
             <div class="m-row">
-              <span class="tag">L1</span><code>{{ store.mrzData().L1 }}</code>
-              <button class="multi-cpy" (click)="copy(store.mrzData().L1 + '\n' + store.mrzData().L2 + '\n' + store.mrzData().L3)">CPY_ALL</button>
+              <span class="tag">L1</span><code>{{ mrz.L1 }}</code>
+              <button class="multi-cpy" (click)="copy((mrz.L1 || '') + '\n' + (mrz.L2 || '') + '\n' + (mrz.L3 || ''))">CPY_ALL</button>
             </div>
-            <div class="m-row"><span class="tag">L2</span><code>{{ store.mrzData().L2 }}</code></div>
-            <div class="m-row"><span class="tag">L3</span><code>{{ store.mrzData().L3 }}</code></div>
+            <div class="m-row"><span class="tag">L2</span><code>{{ mrz.L2 }}</code></div>
+            <div class="m-row"><span class="tag">L3</span><code>{{ mrz.L3 }}</code></div>
           </div>
 
-          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'fra_mrz' && store.mrzData()">
-            <ng-container *ngIf="store.mrzData().STATUS === 'SYNC_OK'">
+          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'fra_mrz' && store.mrzData() as mrz">
+            <ng-container *ngIf="mrz.STATUS === 'SYNC_OK'">
               <div class="m-row">
-                <span class="tag">L1</span><code>{{ store.mrzData().L1 }}</code>
-                <button class="multi-cpy" (click)="copy(store.mrzData().L1 + '\n' + store.mrzData().L2)">CPY_ALL</button>
+                <span class="tag">L1</span><code>{{ mrz.L1 }}</code>
+                <button class="multi-cpy" (click)="copy((mrz.L1 || '') + '\n' + (mrz.L2 || ''))">CPY_ALL</button>
               </div>
-              <div class="m-row"><span class="tag">L2</span><code>{{ store.mrzData().L2 }}</code></div>
+              <div class="m-row"><span class="tag">L2</span><code>{{ mrz.L2 }}</code></div>
             </ng-container>
-            
-            <ng-container *ngIf="store.mrzData().STATUS === 'VALIDATION_ERR'">
-              <div class="m-row"><span class="tag err">ERR</span><code class="err">{{ store.mrzData().ERR_MSG }}</code></div>
+
+            <ng-container *ngIf="mrz.STATUS === 'VALIDATION_ERR'">
+              <div class="m-row"><span class="tag err">ERR</span><code class="err">{{ mrz.ERR_MSG }}</code></div>
             </ng-container>
           </div>
 
@@ -119,7 +119,7 @@ import { lastValueFrom } from 'rxjs';
                         {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
                       </span>
                       <span class="r-node">[{{ res.USED_PROFILE }}]</span>
-                      <button class="dl-btn" (click)="download(res.IMAGE_BASE64, f.name)">DL</button>
+                      <button class="dl-btn" (click)="download(res.IMAGE_BASE64 || '', f.name)">DL</button>
                     </div>
                   </ng-container>
                   <ng-container *ngIf="res.STATUS === 'ERROR' || res.STATUS === 'ALL_NODES_DEAD'">
