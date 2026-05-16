@@ -91,7 +91,7 @@ import { lastValueFrom } from 'rxjs';
           }
 
           @if (!['ndls_mrz','nld_mrz','fra_mrz'].includes(store.selectedApp() || '')) {
-            <div class="actions" [class.dual]="store.selectedApp() === 'ai_bypass'">
+            <div class="actions" [class.col]="store.selectedApp() === 'ai_bypass'">
               <button class="btn-exec mono"
                 [disabled]="store.loading() || !canExecute()"
                 (click)="execute(false)">
@@ -100,11 +100,17 @@ import { lastValueFrom } from 'rxjs';
                 @if (store.loading()) { <span class="btn-loader"></span> }
               </button>
               @if (store.selectedApp() === 'ai_bypass') {
-                <button class="btn-exec btn-purple mono"
+                <button class="btn-exec btn-auto mono"
                   [disabled]="store.loading() || !canExecute()"
                   (click)="execute(true)">
-                  <span class="btn-arrow">›</span>{{ i18n.t().autoCompress }}
+                  <span class="btn-arrow">⚡</span>{{ i18n.t().autoCompress }}
+                  @if (store.loading()) { <span class="btn-loader btn-loader-purple"></span> }
                 </button>
+                @if (store.bypassResults().some(r => r?.IMAGE_BASE64)) {
+                  <button class="btn-exec btn-dl-all mono" (click)="downloadAll()">
+                    ↓ DOWNLOAD_ALL
+                  </button>
+                }
               }
             </div>
           }
@@ -179,32 +185,64 @@ import { lastValueFrom } from 'rxjs';
 
           @if (store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0) {
             <div class="batch">
+              @if (store.batchProgress(); as prog) {
+                <div class="batch-progress">
+                  <div class="bp-bar">
+                    <div class="bp-fill" [style.width.%]="(prog.done / prog.total) * 100"></div>
+                  </div>
+                  <span class="mono bp-label">{{ prog.done }} / {{ prog.total }} PROCESSED</span>
+                </div>
+              }
+
               @for (f of store.batchFiles(); track f.name; let i = $index) {
                 <div class="batch-item">
                   <div class="batch-side">
                     <span class="mono side-tag">ORIGINAL</span>
+                    <span class="mono side-fname">{{ f.name }}</span>
                     <img [src]="store.batchUrls()[i]" class="side-img">
                   </div>
                   <div class="batch-side purple">
-                    <span class="mono side-tag purple">PROCESSED</span>
+                    <span class="mono side-tag purple">STEALTH</span>
                     @if (store.bypassResults()[i]; as res) {
                       @if (res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD') {
                         <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="side-img">
                         <div class="batch-stats">
-                          <span class="mono stat-score"
-                            [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
-                            {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
-                          </span>
+                          <div class="stat-main">
+                            <span class="mono stat-score" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
+                              {{ getScore(res) }}
+                            </span>
+                            <span class="mono stat-label">{{ isSafe(res) ? 'AI_SAFE' : 'DETECTED' }}</span>
+                          </div>
                           <span class="mono stat-node">{{ res.USED_PROFILE }}</span>
-                          <button class="btn-dl mono" (click)="download(res.IMAGE_BASE64||'', f.name)">DL</button>
+                          <button class="btn-dl mono" (click)="download(res.IMAGE_BASE64||'', f.name)">↓</button>
                         </div>
+                        @if (res.TYPE === 'ai_batch' && $any(res).RESULTS) {
+                          <div class="scan-table">
+                            @for (row of $any(res).RESULTS; track row.quality) {
+                              <div class="scan-row" [class.best]="row.quality === $any(res).BEST_Q">
+                                <span class="mono">Q{{ row.quality }}</span>
+                                <span class="mono" [class.safe]="row.score < 0.1" [class.danger]="row.score >= 0.1">
+                                  {{ (row.score * 100).toFixed(1) }}%
+                                </span>
+                                @if (row.quality === $any(res).BEST_Q) {
+                                  <span class="mono best-tag">BEST</span>
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
                       } @else {
                         <span class="mono empty-label err">{{ i18n.t().nodesDead }}</span>
                       }
                     } @else {
-                      <span class="mono empty-label">
-                        {{ store.loading() ? i18n.t().processing : i18n.t().pending }}
-                      </span>
+                      <div class="pending-slot">
+                        @if (store.loading()) {
+                          <div class="pending-spinner"></div>
+                          <span class="mono empty-label">{{ i18n.t().processing }}</span>
+                        } @else {
+                          <span class="mono empty-label">{{ i18n.t().pending }}</span>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
@@ -359,15 +397,26 @@ import { lastValueFrom } from 'rxjs';
     }
     .btn-exec:hover:not(:disabled) { filter: brightness(1.1); }
     .btn-exec:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-exec.btn-purple { background: transparent; border: 1px solid var(--purple); color: var(--purple); }
-    .btn-exec.btn-purple:hover:not(:disabled) { background: rgba(168,85,247,0.1); }
+    .btn-exec.btn-auto {
+      background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(168,85,247,0.05));
+      border: 1px solid var(--purple); color: var(--purple);
+    }
+    .btn-exec.btn-auto:hover:not(:disabled) { background: rgba(168,85,247,0.2); box-shadow: 0 0 16px rgba(168,85,247,0.2); }
+    .btn-exec.btn-dl-all {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.6rem;
+    }
+    .btn-exec.btn-dl-all:hover { border-color: var(--border-green); color: var(--green); }
     .btn-arrow { font-size: 1rem; }
     .btn-loader {
       width: 12px; height: 12px;
       border: 2px solid transparent; border-top-color: #000;
       border-radius: 50%; animation: spin 0.6s linear infinite;
     }
+    .btn-loader-purple { border-top-color: var(--purple); }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .actions.col { grid-template-columns: 1fr; }
 
     /* visuals panel */
     .panel-visuals {
@@ -414,41 +463,87 @@ import { lastValueFrom } from 'rxjs';
     .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: var(--amber); }
 
     /* batch */
-    .batch { display: flex; flex-direction: column; gap: 12px; }
-    .batch-item { display: flex; gap: 10px; height: 160px; }
+    .batch { display: flex; flex-direction: column; gap: 16px; }
+
+    .batch-progress {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .bp-bar {
+      height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .bp-fill {
+      height: 100%; background: var(--purple);
+      box-shadow: 0 0 8px rgba(168,85,247,0.5);
+      transition: width 0.3s ease;
+    }
+    .bp-label { font-size: 0.55rem; color: var(--purple); letter-spacing: 2px; }
+
+    .batch-item { display: flex; gap: 10px; min-height: 220px; }
     .batch-side {
       flex: 1; border-radius: var(--radius-sm);
       position: relative; overflow: hidden;
       background: rgba(0,0,0,0.4);
       border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .batch-side.purple { border-color: rgba(168,85,247,0.3); }
+    .batch-side.purple { border-color: rgba(168,85,247,0.2); }
     .side-tag {
       position: absolute; top: 8px; left: 8px;
       font-size: 0.45rem; font-weight: 700;
-      background: rgba(0,0,0,0.8); padding: 3px 6px;
-      border-radius: 3px; color: var(--text-dim); z-index: 2;
+      background: rgba(0,0,0,0.85); padding: 3px 8px;
+      border-radius: 3px; color: var(--text-dim); z-index: 2; letter-spacing: 1px;
     }
     .side-tag.purple { color: var(--purple); }
+    .side-fname {
+      position: absolute; top: 8px; right: 8px;
+      font-size: 0.4rem; color: var(--text-dim);
+      background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 3px;
+      z-index: 2; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .side-img { width: 100%; height: 100%; object-fit: contain; }
+
     .batch-stats {
-      position: absolute; bottom: 8px; left: 8px; right: 8px;
+      position: absolute; bottom: 0; left: 0; right: 0;
       display: flex; align-items: center; justify-content: space-between;
-      background: rgba(0,0,0,0.85); padding: 4px 8px;
-      border-radius: 4px; z-index: 2;
-      border: 1px solid rgba(168,85,247,0.2);
+      background: linear-gradient(transparent, rgba(0,0,0,0.95) 30%);
+      padding: 20px 10px 8px; z-index: 2;
     }
-    .stat-score { font-size: 0.85rem; font-weight: 700; }
-    .stat-score.safe { color: var(--green); }
-    .stat-score.danger { color: var(--red); }
-    .stat-node { font-size: 0.5rem; color: var(--purple); }
+    .stat-main { display: flex; flex-direction: column; gap: 2px; }
+    .stat-score { font-size: 1rem; font-weight: 800; }
+    .stat-score.safe { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+    .stat-score.danger { color: var(--red); text-shadow: 0 0 10px rgba(255,59,48,0.4); }
+    .stat-label { font-size: 0.45rem; letter-spacing: 2px; color: var(--text-dim); }
+    .stat-node { font-size: 0.45rem; color: var(--purple); letter-spacing: 1px; }
     .btn-dl {
-      background: var(--purple); color: #fff;
-      border: none; padding: 3px 10px;
-      border-radius: 3px; font-size: 0.55rem;
-      font-weight: 700; cursor: pointer;
+      background: rgba(168,85,247,0.2); color: var(--purple);
+      border: 1px solid rgba(168,85,247,0.4);
+      padding: 5px 12px; border-radius: 4px; font-size: 0.6rem;
+      font-weight: 700; cursor: pointer; transition: 0.15s; flex-shrink: 0;
     }
+    .btn-dl:hover { background: rgba(168,85,247,0.35); }
+
+    .pending-slot {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .pending-spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border); border-top-color: var(--purple);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+
+    .scan-table {
+      position: absolute; top: 8px; right: 8px;
+      display: flex; flex-direction: column; gap: 2px; z-index: 3;
+    }
+    .scan-row {
+      display: flex; gap: 6px; align-items: center;
+      background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 3px;
+      font-size: 0.45rem; color: var(--text-dim); border: 1px solid transparent;
+    }
+    .scan-row.best { border-color: var(--green); color: var(--text); }
+    .best-tag { color: var(--green); font-weight: 700; }
+    .safe { color: var(--green); }
+    .danger { color: var(--red); }
 
     /* mobile */
     @media (max-width: 767px) {
@@ -535,8 +630,9 @@ export class TerminalComponent implements OnInit {
     if (this.store.selectedApp() === 'ai_bypass') {
       this.store.loading.set(true);
       const files = this.store.batchFiles();
-      const results = new Array(files.length).fill(null);
+      const results: (import('../store').BypassResult | null)[] = new Array(files.length).fill(null);
       this.store.bypassResults.set([...results]);
+      this.store.batchProgress.set({ done: 0, total: files.length });
 
       for (let i = 0; i < files.length; i++) {
         const fd = new FormData();
@@ -552,8 +648,10 @@ export class TerminalComponent implements OnInit {
           results[i] = { STATUS: 'ERROR' };
         }
         this.store.bypassResults.set([...results]);
+        this.store.batchProgress.set({ done: i + 1, total: files.length });
       }
       this.store.loading.set(false);
+      this.store.batchProgress.set(null);
       return;
     }
 
@@ -596,4 +694,18 @@ export class TerminalComponent implements OnInit {
   }
 
   copy(t: string) { navigator.clipboard.writeText(t); }
+
+  downloadAll() {
+    const results = this.store.bypassResults();
+    const files = this.store.batchFiles();
+    results.forEach((res, i) => {
+      if (res?.IMAGE_BASE64) {
+        setTimeout(() => this.download(res.IMAGE_BASE64!, files[i]?.name ?? `img_${i}.jpg`), i * 200);
+      }
+    });
+  }
+
+  getScore(res: import('../store').BypassResult): string {
+    return res.TYPE === 'ai_batch' ? (res.BEST_SCORE ?? '—') : (res.AI_PROBABILITY ?? '—');
+  }
 }

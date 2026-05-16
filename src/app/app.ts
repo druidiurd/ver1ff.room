@@ -2,7 +2,7 @@ import { Component, inject, AfterViewInit, ElementRef, ViewChild, signal, OnInit
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AppStore } from './store';
-import { I18nService, Lang } from './services/i18n';
+import { I18nService } from './services/i18n';
 
 interface NavItem { id: string; group: string; }
 
@@ -64,16 +64,7 @@ const NAV: NavItem[] = [
           }
         </div>
 
-        <!-- Lang switcher -->
-        <div class="lang-switcher">
-          @for (l of langs; track l) {
-            <button class="lang-btn mono" [class.active]="i18n.lang() === l" (click)="i18n.setLang(l)">
-              {{ l.toUpperCase() }}
-            </button>
-          }
-        </div>
-
-        <div class="sidebar-footer mono">
+<div class="sidebar-footer mono">
           <span class="led"></span>{{ i18n.t().sysOnline }}
         </div>
       </nav>
@@ -196,25 +187,7 @@ const NAV: NavItem[] = [
       box-shadow: 0 0 8px var(--green-glow);
     }
 
-    /* ── LANG SWITCHER ── */
-    .lang-switcher {
-      display: flex; gap: 4px;
-      padding: 12px 20px;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .lang-btn {
-      flex: 1; padding: 6px 4px;
-      background: none; border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text-dim); font-size: 0.55rem; font-weight: 700;
-      letter-spacing: 1px; cursor: pointer;
-      transition: 0.15s;
-    }
-    .lang-btn:hover { border-color: var(--border-green); color: var(--text); }
-    .lang-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-
-    .sidebar-footer {
+.sidebar-footer {
       padding: 12px 20px;
       border-top: 1px solid var(--border);
       font-size: 0.6rem; color: var(--text-dim);
@@ -284,9 +257,7 @@ export class App implements AfterViewInit, OnInit {
 
   ram = 210;
   drawerOpen = signal(false);
-  langs: Lang[] = ['en', 'ru', 'ua'];
-
-  @ViewChild('mc') canvasRef!: ElementRef<HTMLCanvasElement>;
+@ViewChild('mc') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   groups = [...new Set(NAV.map(n => n.group))];
   byGroup = (g: string) => NAV.filter(n => n.group === g);
@@ -314,8 +285,6 @@ export class App implements AfterViewInit, OnInit {
   }
 
   ngOnInit() {
-    this.i18n.init();
-
     // Sync selectedApp signal from router URL (read-only, no side effects)
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       const segments = this.router.url.split('/');

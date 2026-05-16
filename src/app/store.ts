@@ -50,6 +50,7 @@ export class AppStore {
   batchFiles = signal<File[]>([]);
   batchUrls = signal<string[]>([]);
   bypassResults = signal<(BypassResult | null)[]>([]);
+  batchProgress = signal<{ done: number; total: number } | null>(null);
 
   isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_bypass'].includes(this.selectedApp() || ''));
   hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || ''));
@@ -69,6 +70,7 @@ export class AppStore {
     this.mrzData.set(null);
     this.bypassResults.set([]);
     this.batchFiles.set([]);
+    this.batchProgress.set(null);
     
     if (this.previewUrl()) URL.revokeObjectURL(this.previewUrl()!);
     this.previewUrl.set(null);
