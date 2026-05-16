@@ -1,7 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AppStore } from '../store';
-import { I18nService } from '../services/i18n';
 
 interface Country { code: string; name: string; }
 
@@ -133,14 +132,14 @@ interface ForgeFields {
         <div class="step-body fade-in">
           <div class="doc-grid">
             @for (dt of docTypes; track dt.id) {
-              <button class="doc-card" [class.selected]="fields().docType === dt.id" (click)="selectDocType(dt.id)">
+              <button type="button" class="doc-card" [class.selected]="fields().docType === dt.id" (click)="selectDocType(dt.id)">
                 <span class="doc-icon">{{ dt.icon }}</span>
                 <span class="mono doc-name">{{ dt.name }}</span>
                 <span class="mono doc-fmt">{{ dt.fmt }}</span>
               </button>
             }
           </div>
-          <button class="btn-next mono" [disabled]="!fields().docType" (click)="step.set(2)">
+          <button type="button" class="btn-next mono" [disabled]="!fields().docType" (click)="step.set(2)">
             NEXT → SELECT COUNTRY
           </button>
         </div>
@@ -153,11 +152,15 @@ interface ForgeFields {
             <div class="country-col">
               <label class="col-label mono">NATIONALITY</label>
               <div class="search-wrap">
-                <input class="search-input mono" [(ngModel)]="natSearch" placeholder="Search country..." autocomplete="off">
+                <input class="search-input mono"
+                  [ngModel]="natSearch()"
+                  (ngModelChange)="natSearch.set($event)"
+                  placeholder="Search country..."
+                  autocomplete="off">
               </div>
               <div class="country-list">
                 @for (c of filteredNat(); track c.code) {
-                  <button class="country-item" [class.selected]="fields().nationality === c.code" (click)="setNat(c.code)">
+                  <button type="button" class="country-item" [class.selected]="fields().nationality === c.code" (click)="setNat(c.code)">
                     <span class="mono item-code">{{ c.code }}</span>
                     <span class="mono item-name">{{ c.name }}</span>
                   </button>
@@ -167,11 +170,15 @@ interface ForgeFields {
             <div class="country-col">
               <label class="col-label mono">ISSUING COUNTRY</label>
               <div class="search-wrap">
-                <input class="search-input mono" [(ngModel)]="issuerSearch" placeholder="Search country..." autocomplete="off">
+                <input class="search-input mono"
+                  [ngModel]="issuerSearch()"
+                  (ngModelChange)="issuerSearch.set($event)"
+                  placeholder="Search country..."
+                  autocomplete="off">
               </div>
               <div class="country-list">
                 @for (c of filteredIssuer(); track c.code) {
-                  <button class="country-item" [class.selected]="fields().issuer === c.code" (click)="setIssuer(c.code)">
+                  <button type="button" class="country-item" [class.selected]="fields().issuer === c.code" (click)="setIssuer(c.code)">
                     <span class="mono item-code">{{ c.code }}</span>
                     <span class="mono item-name">{{ c.name }}</span>
                   </button>
@@ -180,8 +187,8 @@ interface ForgeFields {
             </div>
           </div>
           <div class="step-actions">
-            <button class="btn-back mono" (click)="step.set(1)">← BACK</button>
-            <button class="btn-next mono" [disabled]="!fields().nationality || !fields().issuer" (click)="step.set(3)">
+            <button type="button" class="btn-back mono" (click)="step.set(1)">← BACK</button>
+            <button type="button" class="btn-next mono" [disabled]="!fields().nationality || !fields().issuer" (click)="step.set(3)">
               NEXT → FILL DATA
             </button>
           </div>
@@ -191,49 +198,6 @@ interface ForgeFields {
       <!-- STEP 3: Data fields -->
       @if (step() === 3) {
         <div class="step-body fade-in">
-          <div class="field-grid">
-            <div class="fg-field">
-              <label class="mono fg-label">LAST_NAME</label>
-              <input class="mono fg-input" [(ngModel)]="fields().lastname" (ngModelChange)="patch('lastname',$event); trigger()" placeholder="SMITH" autocomplete="off" spellcheck="false">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">FIRST_NAME</label>
-              <input class="mono fg-input" [(ngModel)]="fields().firstname" (ngModelChange)="patch('firstname',$event); trigger()" placeholder="JOHN" autocomplete="off" spellcheck="false">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">BIRTH_DATE</label>
-              <input class="mono fg-input" [(ngModel)]="fields().birthDate" (ngModelChange)="patch('birthDate',$event); trigger()" placeholder="DD-MM-YYYY" autocomplete="off">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">SEX</label>
-              <div class="sex-group">
-                @for (s of ['M','F','U']; track s) {
-                  <button class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex',s); trigger()">{{ s }}</button>
-                }
-              </div>
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">DOCUMENT_NUM</label>
-              <input class="mono fg-input" [(ngModel)]="fields().docNum" (ngModelChange)="patch('docNum',$event); trigger()" placeholder="PA1234567" autocomplete="off">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">EXPIRY_DATE</label>
-              <input class="mono fg-input" [(ngModel)]="fields().expiryDate" (ngModelChange)="patch('expiryDate',$event); trigger()" placeholder="DD-MM-YYYY" autocomplete="off">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">SUB_TYPE <span class="opt">opt</span></label>
-              <input class="mono fg-input" [(ngModel)]="fields().subType" (ngModelChange)="patch('subType',$event); trigger()" placeholder="e.g. A" maxlength="1" autocomplete="off">
-            </div>
-            <div class="fg-field">
-              <label class="mono fg-label">PERSONAL_NUM <span class="opt">opt</span></label>
-              <input class="mono fg-input" [(ngModel)]="fields().persNum" (ngModelChange)="patch('persNum',$event); trigger()" placeholder="Optional" autocomplete="off">
-            </div>
-            <div class="fg-field fg-full">
-              <label class="mono fg-label">OPTIONAL_FIELD <span class="opt">opt</span></label>
-              <input class="mono fg-input" [(ngModel)]="fields().optional" (ngModelChange)="patch('optional',$event); trigger()" placeholder="Optional" autocomplete="off">
-            </div>
-          </div>
-
           <div class="sel-row">
             <div class="sel-chip mono" (click)="step.set(2)">
               <span class="chip-lbl">NAT</span>{{ fields().nationality }}
@@ -246,11 +210,83 @@ interface ForgeFields {
             </div>
           </div>
 
-          <button class="btn-back mono" (click)="step.set(2)">← BACK</button>
+          <div class="field-grid">
+            <div class="fg-field">
+              <label class="mono fg-label">LAST_NAME</label>
+              <input class="mono fg-input"
+                [ngModel]="fields().lastname"
+                (ngModelChange)="patch('lastname', $event)"
+                placeholder="SMITH" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">FIRST_NAME</label>
+              <input class="mono fg-input"
+                [ngModel]="fields().firstname"
+                (ngModelChange)="patch('firstname', $event)"
+                placeholder="JOHN" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">BIRTH_DATE</label>
+              <input class="mono fg-input"
+                [ngModel]="fields().birthDate"
+                (ngModelChange)="patch('birthDate', $event)"
+                placeholder="DD-MM-YYYY" autocomplete="off">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">SEX</label>
+              <div class="sex-group">
+                @for (s of ['M','F','U']; track s) {
+                  <button type="button" class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex', s)">{{ s }}</button>
+                }
+              </div>
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">DOCUMENT_NUM</label>
+              <input class="mono fg-input"
+                [ngModel]="fields().docNum"
+                (ngModelChange)="patch('docNum', $event)"
+                placeholder="PA1234567" autocomplete="off">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">EXPIRY_DATE</label>
+              <input class="mono fg-input"
+                [ngModel]="fields().expiryDate"
+                (ngModelChange)="patch('expiryDate', $event)"
+                placeholder="DD-MM-YYYY" autocomplete="off">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">SUB_TYPE <span class="opt">opt</span></label>
+              <input class="mono fg-input"
+                [ngModel]="fields().subType"
+                (ngModelChange)="patch('subType', $event)"
+                placeholder="e.g. A" maxlength="1" autocomplete="off">
+            </div>
+            <div class="fg-field">
+              <label class="mono fg-label">PERSONAL_NUM <span class="opt">opt</span></label>
+              <input class="mono fg-input"
+                [ngModel]="fields().persNum"
+                (ngModelChange)="patch('persNum', $event)"
+                placeholder="Optional" autocomplete="off">
+            </div>
+            <div class="fg-field fg-full">
+              <label class="mono fg-label">OPTIONAL_FIELD <span class="opt">opt</span></label>
+              <input class="mono fg-input"
+                [ngModel]="fields().optional"
+                (ngModelChange)="patch('optional', $event)"
+                placeholder="Optional" autocomplete="off">
+            </div>
+          </div>
+
+          <button type="button" class="btn-gen mono" [disabled]="!canGenerate() || store.loading()" (click)="trigger()">
+            <span>›</span> GENERATE MRZ
+            @if (store.loading()) { <span class="btn-loader"></span> }
+          </button>
+
+          <button type="button" class="btn-back mono" (click)="step.set(2)">← BACK</button>
         </div>
       }
 
-      <!-- MRZ Output — always visible when data ready -->
+      <!-- MRZ Output -->
       @if (store.mrzGenResult(); as gen) {
         <div class="forge-output">
           @if (gen.MRP) {
@@ -258,7 +294,7 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono">MRP</span>
                 <span class="mf-name mono">PASSPORT · TD3 · 2×44</span>
-                <button class="btn-copy mono" (click)="copy(gen.MRP!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy mono" (click)="copy(gen.MRP!.join('\n'))">COPY</button>
               </div>
               @for (line of gen.MRP; track $index) {
                 <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
@@ -270,10 +306,10 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono visa">MRV-A</span>
                 <span class="mf-name mono">VISA · 2×44</span>
-                <button class="btn-copy mono visa" (click)="copy(gen.MRV_A!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy visa mono" (click)="copy(gen.MRV_A!.join('\n'))">COPY</button>
               </div>
               @for (line of gen.MRV_A; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line mono visa">{{ line }}</code></div>
+                <div class="mrz-line-wrap"><code class="mrz-line visa mono">{{ line }}</code></div>
               }
             </div>
           }
@@ -282,10 +318,10 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD1</span>
                 <span class="mf-name mono">ID CARD · 3×30</span>
-                <button class="btn-copy amber mono" (click)="copy(gen.TD1!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy amber mono" (click)="copy(gen.TD1!.join('\n'))">COPY</button>
               </div>
               @for (line of gen.TD1; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line mono amber">{{ line }}</code></div>
+                <div class="mrz-line-wrap"><code class="mrz-line amber mono">{{ line }}</code></div>
               }
             </div>
           }
@@ -294,10 +330,10 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono amber">TD2</span>
                 <span class="mf-name mono">ID CARD · 2×36</span>
-                <button class="btn-copy amber mono" (click)="copy(gen.TD2!.join('\n'))">COPY</button>
+                <button type="button" class="btn-copy amber mono" (click)="copy(gen.TD2!.join('\n'))">COPY</button>
               </div>
               @for (line of gen.TD2; track $index) {
-                <div class="mrz-line-wrap"><code class="mrz-line mono amber">{{ line }}</code></div>
+                <div class="mrz-line-wrap"><code class="mrz-line amber mono">{{ line }}</code></div>
               }
             </div>
           }
@@ -306,9 +342,9 @@ interface ForgeFields {
               <div class="mf-header">
                 <span class="mf-tag mono edl">eDL</span>
                 <span class="mf-name mono">DRIVER LICENSE · 1 LINE</span>
-                <button class="btn-copy edl mono" (click)="copy(gen.EDL![0])">COPY</button>
+                <button type="button" class="btn-copy edl mono" (click)="copy(gen.EDL![0])">COPY</button>
               </div>
-              <div class="mrz-line-wrap"><code class="mrz-line mono edl">{{ gen.EDL[0] }}</code></div>
+              <div class="mrz-line-wrap"><code class="mrz-line edl mono">{{ gen.EDL[0] }}</code></div>
             </div>
           }
         </div>
@@ -320,7 +356,7 @@ interface ForgeFields {
 
     /* Steps */
     .steps {
-      display: flex; align-items: center; gap: 0;
+      display: flex; align-items: center;
       padding: 0 4px;
     }
     .step {
@@ -363,7 +399,7 @@ interface ForgeFields {
 
     /* Country selection */
     .country-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .country-col { display: flex; flex-direction: column; gap: 8px; }
+    .country-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .col-label { font-size: 0.55rem; font-weight: 700; color: var(--text-dim); letter-spacing: 2px; }
     .search-wrap {
       background: rgba(0,0,0,0.4); border: 1px solid var(--border);
@@ -373,7 +409,7 @@ interface ForgeFields {
     .search-wrap:focus-within { border-color: var(--border-green); }
     .search-input {
       width: 100%; background: none; border: none; outline: none;
-      color: var(--green); font-size: 0.7rem;
+      color: var(--green); font-size: 0.7rem; box-sizing: border-box;
     }
     .search-input::placeholder { color: var(--text-dim); }
     .country-list {
@@ -386,7 +422,7 @@ interface ForgeFields {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 10px; border-radius: 6px;
       background: none; border: none; cursor: pointer;
-      text-align: left; transition: background 0.1s;
+      text-align: left; transition: background 0.1s; width: 100%;
     }
     .country-item:hover { background: rgba(255,255,255,0.04); }
     .country-item.selected { background: var(--green-dim); }
@@ -394,7 +430,7 @@ interface ForgeFields {
       font-size: 0.55rem; font-weight: 800; color: var(--green);
       width: 30px; flex-shrink: 0; letter-spacing: 1px;
     }
-    .item-name { font-size: 0.6rem; color: var(--text-mid); }
+    .item-name { font-size: 0.6rem; color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .country-item.selected .item-name { color: var(--text); }
 
     /* Step actions */
@@ -413,26 +449,22 @@ interface ForgeFields {
       background: none; border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text-dim);
       font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
-      cursor: pointer; transition: 0.15s;
+      cursor: pointer; transition: 0.15s; align-self: flex-start;
     }
     .btn-back:hover { border-color: var(--border-green); color: var(--text); }
 
     /* Fields grid */
-    .field-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    }
-    .fg-field { display: flex; flex-direction: column; gap: 5px; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .fg-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
     .fg-full { grid-column: 1 / -1; }
-    .fg-label {
-      font-size: 0.5rem; font-weight: 700; color: var(--text-dim);
-      letter-spacing: 1.5px;
-    }
+    .fg-label { font-size: 0.5rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; }
     .opt { font-weight: 400; opacity: 0.6; }
     .fg-input {
       background: rgba(0,0,0,0.4); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: 8px 10px;
       color: var(--green); font-size: 0.75rem; font-weight: 700;
       outline: none; transition: border-color 0.15s; width: 100%;
+      box-sizing: border-box;
     }
     .fg-input:focus { border-color: var(--border-green); }
     .sex-group { display: flex; gap: 6px; }
@@ -445,6 +477,27 @@ interface ForgeFields {
     }
     .sex-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
 
+    /* Generate button */
+    .btn-gen {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px;
+      background: var(--green); color: #000;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 2px;
+      cursor: pointer; transition: 0.15s; font-family: inherit;
+    }
+    .btn-gen:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-gen:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-loader {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* Selected chips */
     .sel-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .sel-chip {
@@ -456,7 +509,7 @@ interface ForgeFields {
       transition: 0.15s;
     }
     .sel-chip:hover { filter: brightness(1.2); }
-    .chip-lbl { color: var(--text-dim); font-size: 0.45rem; }
+    .chip-lbl { color: var(--text-dim); font-size: 0.45rem; margin-right: 4px; }
 
     /* MRZ output */
     .forge-output { display: flex; flex-direction: column; gap: 10px; }
@@ -474,39 +527,39 @@ interface ForgeFields {
       padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
       background: var(--green-dim); color: var(--green); border: 1px solid var(--border-green);
     }
-    .mf-tag.amber { background: rgba(255,149,0,0.1); color: var(--amber); border-color: rgba(255,149,0,0.3); }
-    .mf-tag.visa  { background: rgba(0,122,255,0.1); color: var(--blue); border-color: rgba(0,122,255,0.3); }
-    .mf-tag.edl   { background: rgba(168,85,247,0.1); color: var(--purple); border-color: rgba(168,85,247,0.3); }
+    .mf-tag.amber { background: rgba(255,149,0,0.1); color: #ff9500; border-color: rgba(255,149,0,0.3); }
+    .mf-tag.visa  { background: rgba(0,122,255,0.1); color: #007aff; border-color: rgba(0,122,255,0.3); }
+    .mf-tag.edl   { background: rgba(168,85,247,0.1); color: #a855f7; border-color: rgba(168,85,247,0.3); }
     .mf-name { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 1.5px; flex: 1; }
     .mrz-line-wrap { background: rgba(0,0,0,0.4); border-radius: 4px; padding: 7px 10px; overflow-x: auto; }
     .mrz-line { font-size: 0.6rem; letter-spacing: 2px; color: var(--green); white-space: nowrap; display: block; }
-    .mrz-line.amber { color: var(--amber); }
-    .mrz-line.visa  { color: var(--blue); }
-    .mrz-line.edl   { color: var(--purple); }
+    .mrz-line.amber { color: #ff9500; }
+    .mrz-line.visa  { color: #007aff; }
+    .mrz-line.edl   { color: #a855f7; }
     .btn-copy {
       background: var(--green-dim); border: 1px solid var(--border-green);
       color: var(--green); font-size: 0.5rem; font-weight: 700;
       padding: 3px 8px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
-      white-space: nowrap; flex-shrink: 0;
+      white-space: nowrap; flex-shrink: 0; font-family: inherit;
     }
-    .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: var(--amber); }
-    .btn-copy.visa  { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--blue); }
-    .btn-copy.edl   { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--purple); }
+    .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: #ff9500; }
+    .btn-copy.visa  { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: #007aff; }
+    .btn-copy.edl   { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: #a855f7; }
 
     @media (max-width: 767px) {
       .doc-grid { grid-template-columns: 1fr 1fr; }
       .country-grid { grid-template-columns: 1fr; }
       .field-grid { grid-template-columns: 1fr; }
+      .fg-full { grid-column: 1; }
     }
   `]
 })
 export class MrzForgeComponent {
   store = inject(AppStore);
-  i18n = inject(I18nService);
 
   step = signal(1);
-  natSearch = '';
-  issuerSearch = '';
+  natSearch = signal('');
+  issuerSearch = signal('');
 
   fields = signal<ForgeFields>({
     docType: '', nationality: '', issuer: '',
@@ -521,28 +574,33 @@ export class MrzForgeComponent {
     { id: 'Visa',     icon: '🛂', name: 'VISA',     fmt: 'MRV-A · 2×44' },
   ];
 
-  filteredNat = computed(() =>
-    COUNTRIES.filter(c =>
-      !this.natSearch ||
-      c.name.toLowerCase().includes(this.natSearch.toLowerCase()) ||
-      c.code.toLowerCase().includes(this.natSearch.toLowerCase())
-    )
-  );
+  filteredNat = computed(() => {
+    const q = this.natSearch().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(c =>
+      c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+    );
+  });
 
-  filteredIssuer = computed(() =>
-    COUNTRIES.filter(c =>
-      !this.issuerSearch ||
-      c.name.toLowerCase().includes(this.issuerSearch.toLowerCase()) ||
-      c.code.toLowerCase().includes(this.issuerSearch.toLowerCase())
-    )
-  );
+  filteredIssuer = computed(() => {
+    const q = this.issuerSearch().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(c =>
+      c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+    );
+  });
+
+  canGenerate() {
+    const f = this.fields();
+    return !!(f.docType && f.nationality && f.issuer && f.lastname && f.birthDate && f.docNum && f.expiryDate);
+  }
 
   stepLabel(s: number) {
     return ['DOC_TYPE', 'COUNTRY', 'DATA'][s - 1];
   }
 
   goStep(s: number) {
-    if (s < this.step()) this.step.set(s);
+    if (s <= this.step()) this.step.set(s);
   }
 
   selectDocType(id: string) {
@@ -552,12 +610,10 @@ export class MrzForgeComponent {
 
   setNat(code: string) {
     this.fields.update(f => ({ ...f, nationality: code }));
-    this.trigger();
   }
 
   setIssuer(code: string) {
     this.fields.update(f => ({ ...f, issuer: code }));
-    this.trigger();
   }
 
   patch(key: keyof ForgeFields, val: string) {
@@ -566,7 +622,6 @@ export class MrzForgeComponent {
 
   trigger() {
     const f = this.fields();
-    if (!f.nationality || !f.issuer || !f.docType) return;
     const lines = [
       f.docType, f.lastname, f.firstname, f.birthDate,
       f.nationality, f.sex, f.docNum, f.expiryDate,
