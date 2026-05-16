@@ -101,6 +101,17 @@ class MrzGenEngine:
         combined = f"{ln}<<{fn}"
         return self._clamp(combined, length)
 
+    # Countries that use non-standard MRZ codes (ICAO historical exceptions)
+    _MRZ_CODE: dict = {
+        'DEU': 'D',   # Germany uses 'D' not 'DEU' per ICAO Annex 9
+    }
+
+    def _mrz_country(self, code: str) -> str:
+        """Return 3-char MRZ country field, applying ICAO historical exceptions."""
+        code = self._clamp(self._clean(code or 'XXX'), 3)
+        mapped = self._MRZ_CODE.get(code, code)
+        return self._clamp(mapped, 3)
+
     @staticmethod
     def _norm_sex(s: str) -> str:
         """ICAO 9303: only M, F, < are valid in MRZ sex field."""
@@ -112,13 +123,13 @@ class MrzGenEngine:
     def _mrp(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'P'
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
-        issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
+        issuer    = self._mrz_country(f.get('issuer', 'XXX'))
         name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 39)
         line1     = self._clamp(f"{doc_type}{sub_type}{issuer}{name_fld}", 44)
 
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
-        nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
+        nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
         sex       = self._norm_sex(f.get('sex', ''))
@@ -143,7 +154,7 @@ class MrzGenEngine:
     def _td1(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'I'
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
-        issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
+        issuer    = self._mrz_country(f.get('issuer', 'XXX'))
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
         optional1 = self._clamp(self._clean(f.get('optional', '') or ''), 15)
@@ -155,7 +166,7 @@ class MrzGenEngine:
         sex       = self._norm_sex(f.get('sex', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
-        nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
+        nat       = self._mrz_country(f.get('nationality', 'XXX'))
         optional2 = self._clamp(self._clean(f.get('pers_num', '') or ''), 11)
         # Composite CD: line1[5:] (docnum+cd1+optional1) + bdate+cd2 + edate+cd3 + optional2
         composite = f"{doc_num}{cd1}{optional1}{bdate}{cd2}{edate}{cd3}{optional2}"
@@ -172,13 +183,13 @@ class MrzGenEngine:
     def _td2(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'I'
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
-        issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
+        issuer    = self._mrz_country(f.get('issuer', 'XXX'))
         name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 31)
         line1     = self._clamp(f"{doc_type}{sub_type}{issuer}{name_fld}", 36)
 
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
-        nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
+        nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
         sex       = self._norm_sex(f.get('sex', ''))
@@ -196,13 +207,13 @@ class MrzGenEngine:
 
     def _mrv_a(self, f: Dict[str, str]) -> List[str]:
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
-        issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
+        issuer    = self._mrz_country(f.get('issuer', 'XXX'))
         name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 39)
         line1     = self._clamp(f"V{sub_type}{issuer}{name_fld}", 44)
 
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
-        nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
+        nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
         sex       = self._norm_sex(f.get('sex', ''))
