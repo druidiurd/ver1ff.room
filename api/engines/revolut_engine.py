@@ -92,26 +92,26 @@ class RevolutEngine:
 
             # Y = bbox_top (from original) + measured ascender per size
             # 12.38pt ascender=10.16, 8.25pt ascender=6.84, 4.50pt ascender=4.71
-            ins(39.7,  157.0, name,     12.38, b, "Roboto-Bold")  # 144.0 + 12.92
-            ins(39.7,  178.6, addr1,    8.25)                      # 170.0 + 8.68
-            ins(39.7,  191.0, zip_code, 8.25)                      # 182.4 + 8.68
-            ins(39.7,  203.4, city,     8.25)                      # 194.8 + 8.68
-            ins(39.7,  215.8, region,   8.25)                      # 207.2 + 8.68
+            ins(39.7,  152.0, name,     12.38, b, "Roboto-Bold")
+            ins(39.7,  173.6, addr1,    8.25,  b, "Roboto-Bold")
+            ins(39.7,  186.0, zip_code, 8.25,  b, "Roboto-Bold")
+            ins(39.7,  198.4, city,     8.25,  b, "Roboto-Bold")
+            ins(39.7,  210.8, region,   8.25,  b, "Roboto-Bold")
 
-            ins(376.1, 148.6, iban,       8.25)                    # 140.0 + 8.68
-            ins(376.1, 161.0, "REVOLT21", 8.25)                    # 152.4 + 8.68
+            ins(376.1, 143.6, iban,       8.25)
+            ins(376.1, 156.0, "REVOLT21", 8.25)
 
-            ins(446.1, 106.8, gen_date, 8.25)                      # 98.2  + 8.68
+            ins(446.1, 101.8, gen_date, 8.25)
 
-            ins(42.7,  302.7, tx_date,  8.25)                      # 294.1 + 8.68
-            ins(155.1, 302.7, merchant, 8.25)
+            ins(42.7,  297.7, tx_date,  8.25)
+            ins(155.1, 297.7, merchant, 8.25)
 
             f_obj = fitz.Font(fontfile=r)
             tw = f_obj.text_length(eur_str, fontsize=8.25)
-            ins(555.6 - tw, 302.7, eur_str, 8.25)
+            ins(555.6 - tw, 297.7, eur_str, 8.25)
 
-            ins(155.1, 314.2, f"To: {merchant_city}", 4.50)        # 309.5 + 4.71
-            ins(155.1, 319.5, f"Card: {tx_card}",     4.50)        # 314.8 + 4.71
+            ins(155.1, 309.2, f"To: {merchant_city}", 4.50)
+            ins(155.1, 314.5, f"Card: {tx_card}",     4.50)
 
             doc.set_metadata({
                 "producer": "Revolut Bank UAB",
