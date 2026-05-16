@@ -15,7 +15,7 @@ import { lastValueFrom } from 'rxjs';
         <button (click)="store.closeApp()" class="esc-btn">‹ EXIT_TO_ROOT</button>
         <div class="t-module">NODE::{{ getAppTitle() }}</div>
         <div class="t-tools">
-          <label class="scan-ui" *ngIf="store.selectedApp() === 'energia'">
+          <label class="scan-ui" *ngIf="store.selectedApp() === 'energia' || store.selectedApp() === 'revolut'">
             <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
             <span class="slider" [class.on]="store.scanMode()"></span><span class="txt">ARTIFACTS</span>
           </label>
@@ -347,10 +347,22 @@ export class TerminalComponent {
     } else {
       this.store.executeBlob(fd).subscribe(res => {
         const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
-        a.download = `V_OUT_${Date.now()}.${this.store.isMediaApp() ? 'jpg' : 'pdf'}`;
+        a.download = this.getFileName();
         a.click(); URL.revokeObjectURL(url);
       });
     }
+  }
+
+  getFileName(): string {
+    const app = this.store.selectedApp() || '';
+    const ext = this.store.isMediaApp() ? 'jpg' : 'pdf';
+    if (app === 'revolut') {
+      const now = new Date();
+      const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const rnd = Math.floor(Math.random() * 90000 + 10000);
+      return `transaction_statement_${ts}_${rnd}.pdf`;
+    }
+    return `V_OUT_${Date.now()}.${ext}`;
   }
 
   download(base64Data: string, originalName: string) {

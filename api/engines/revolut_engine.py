@@ -2,9 +2,11 @@ import fitz
 import io
 import os
 import random
+import numpy as np
 from datetime import datetime, timedelta
 from typing import List
 from pathlib import Path
+from PIL import Image, ImageFilter
 
 
 _REDACT_ZONES = [
@@ -92,7 +94,7 @@ class RevolutEngine:
 
             # Y = bbox_top (from original) + measured ascender per size
             # 12.38pt ascender=10.16, 8.25pt ascender=6.84, 4.50pt ascender=4.71
-            ins(39.7,  154.5, name,     12.58, b, "Roboto-Bold")
+            ins(39.7,  152.5, name,     12.78, b, "Roboto-Bold")
             ins(39.7,  176.1, addr1,    8.25,  b, "Roboto-Bold")
             ins(39.7,  188.5, zip_code, 8.25,  b, "Roboto-Bold")
             ins(39.7,  200.9, city,     8.25,  b, "Roboto-Bold")
@@ -113,13 +115,52 @@ class RevolutEngine:
             ins(155.1, 308.2, f"To: {merchant_city}", 4.50)
             ins(155.1, 313.5, f"Card: {tx_card}",     4.50)
 
+            # Keep metadata identical to original (all empty)
             doc.set_metadata({
-                "producer": "Revolut Bank UAB",
-                "creator":  "Revolut",
-                "title":    "EUR Statement",
+                "producer": "", "creator": "", "title": "",
+                "author": "", "subject": "", "keywords": "",
+                "creationDate": "", "modDate": "",
             })
 
             out = io.BytesIO()
             doc.save(out, garbage=4, deflate=True, clean=True)
             out.seek(0)
-            return out
+
+            # Fix /ID: make both hashes identical (original doc signature)
+            # Modified PDFs have [origID newID] — we restore [origID origID]
+            patched = self._patch_id(out.read())
+            result = io.BytesIO(patched)
+            return self._apply_scan(result) if scan else result
+
+    def _patch_id(self, data: bytes) -> bytes:
+        import re
+        # Find /ID [ <hash1> <hash2> ] and replace hash2 with hash1
+        def replacer(m):
+            h1 = m.group(1)
+            return m.group(0).replace(m.group(2), h1)
+        patched = re.sub(
+            rb'/ID\s*\[\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*\]',
+            replacer, data
+        )
+        return patched
+
+    def _apply_scan(self, pdf_bytes: io.BytesIO) -> io.BytesIO:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
+        img = Image.open(io.BytesIO(pix.tobytes()))
+        # slight random rotation like a real scan
+        img = img.rotate(random.uniform(-0.8, 0.8), resample=Image.BICUBIC,
+                         expand=True, fillcolor=(245, 245, 245))
+        arr = np.array(img)
+        # paper texture noise
+        noise = np.random.normal(0, 4.0, arr.shape).astype('int16')
+        arr = np.clip(arr.astype('int16') + noise, 0, 255).astype('uint8')
+        # slight yellowing of white areas (scanner warmth)
+        mask = arr.mean(axis=2) > 220
+        arr[mask, 0] = np.clip(arr[mask, 0].astype('int16') - 3, 0, 255).astype('uint8')
+        arr[mask, 2] = np.clip(arr[mask, 2].astype('int16') - 8, 0, 255).astype('uint8')
+        img = Image.fromarray(arr).filter(ImageFilter.GaussianBlur(radius=0.4))
+        out = io.BytesIO()
+        img.save(out, format="PDF", resolution=200.0, quality=78)
+        out.seek(0)
+        return out
