@@ -1,36 +1,36 @@
-import { Component, inject, AfterViewInit, ElementRef, ViewChild, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, AfterViewInit, ElementRef, ViewChild, signal, OnInit } from '@angular/core';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { AppStore } from './store';
-import { DashboardComponent } from './components/dashboard';
-import { TerminalComponent } from './components/terminal';
+import { I18nService, Lang } from './services/i18n';
 
-interface NavItem { id: string; icon: string; label: string; group: string; }
+interface NavItem { id: string; group: string; }
 
 const NAV: NavItem[] = [
-  { id: 'energia',    icon: '⚡', label: 'IE-Bill',     group: 'IRELAND'  },
-  { id: 'ndls_mrz',  icon: '🆔', label: 'IE-MRZ',      group: 'IRELAND'  },
-  { id: 'revolut',   icon: '💳', label: 'Revolut',     group: 'IRELAND'  },
-  { id: 'nld_mrz',   icon: '🇳🇱', label: 'NL-MRZ',      group: 'NETHERLANDS' },
-  { id: 'fra_mrz',   icon: '🇫🇷', label: 'FR-MRZ',      group: 'FRANCE'   },
-  { id: 'exif_cleaner', icon: '📸', label: 'EXIF',      group: 'TOOLS'    },
-  { id: 'face_cut',  icon: '👤', label: 'Face-Cut',    group: 'TOOLS'    },
-  { id: 'ai_bypass', icon: '🥷', label: 'AI-Stealth',  group: 'TOOLS'    },
+  { id: 'energia',      group: 'IRELAND'     },
+  { id: 'ndls_mrz',    group: 'IRELAND'     },
+  { id: 'nld_mrz',     group: 'NETHERLANDS' },
+  { id: 'fra_mrz',     group: 'FRANCE'      },
+  { id: 'exif_cleaner',group: 'TOOLS'       },
+  { id: 'face_cut',    group: 'TOOLS'       },
+  { id: 'ai_bypass',   group: 'TOOLS'       },
+  { id: 'revolut',     group: 'GLOBAL'      },
 ];
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, TerminalComponent],
+  imports: [RouterOutlet],
   template: `
     <canvas #mc id="matrix-bg"></canvas>
 
     <!-- Mobile topbar -->
     <header class="topbar">
-      <button class="burger" (click)="drawerOpen.set(!drawerOpen())">
+      <button class="burger" (click)="drawerOpen.set(!drawerOpen())" aria-label="menu">
         <span></span><span></span><span></span>
       </button>
       <div class="topbar-brand mono">
-        <span class="brand-dot"></span>VER1FF_ROOM
+        <span class="brand-dot"></span>{{ i18n.t().brand }}
       </div>
       <div class="topbar-hud mono">RAM:{{ ram }}MB</div>
     </header>
@@ -43,40 +43,45 @@ const NAV: NavItem[] = [
       <nav class="sidebar" [class.drawer-open]="drawerOpen()">
         <div class="sidebar-brand mono">
           <span class="brand-dot"></span>
-          <span>VER1FF_ROOM</span>
+          <span>{{ i18n.t().brand }}</span>
         </div>
 
         <div class="nav-scroll">
           @for (group of groups; track group) {
             <div class="nav-group">
-              <span class="nav-group-label mono">{{ group }}</span>
+              <span class="nav-group-label mono">{{ i18n.group(group) }}</span>
               @for (item of byGroup(group); track item.id) {
                 <button class="nav-item" [class.active]="store.selectedApp() === item.id"
                   (click)="open(item.id)">
-                  <span class="nav-icon">{{ item.icon }}</span>
-                  <span class="nav-label mono">{{ item.label }}</span>
+                  <span class="nav-icon">{{ getIcon(item.id) }}</span>
+                  <span class="nav-label mono">{{ i18n.module(item.id).nav }}</span>
                   @if (store.selectedApp() === item.id) {
-                  <span class="nav-active-bar"></span>
-                }
+                    <span class="nav-active-bar"></span>
+                  }
                 </button>
               }
             </div>
           }
         </div>
 
+        <!-- Lang switcher -->
+        <div class="lang-switcher">
+          @for (l of langs; track l) {
+            <button class="lang-btn mono" [class.active]="i18n.lang() === l" (click)="i18n.setLang(l)">
+              {{ l.toUpperCase() }}
+            </button>
+          }
+        </div>
+
         <div class="sidebar-footer mono">
-          <span class="led"></span>SYS_ONLINE
+          <span class="led"></span>{{ i18n.t().sysOnline }}
         </div>
       </nav>
 
       <!-- Workspace -->
       <main class="workspace">
-        <div class="workspace-inner fade-in">
-          @if (!store.selectedApp()) {
-            <app-dashboard></app-dashboard>
-          } @else {
-            <app-terminal></app-terminal>
-          }
+        <div class="workspace-inner">
+          <router-outlet></router-outlet>
         </div>
       </main>
     </div>
@@ -155,6 +160,7 @@ const NAV: NavItem[] = [
       color: var(--green); letter-spacing: 3px;
       display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
     .nav-scroll {
       flex: 1; overflow-y: auto; padding: 12px 0;
@@ -184,12 +190,32 @@ const NAV: NavItem[] = [
       border-radius: 2px 0 0 2px;
       box-shadow: 0 0 8px var(--green-glow);
     }
+
+    /* ── LANG SWITCHER ── */
+    .lang-switcher {
+      display: flex; gap: 4px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .lang-btn {
+      flex: 1; padding: 6px 4px;
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-dim); font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 1px; cursor: pointer;
+      transition: 0.15s;
+    }
+    .lang-btn:hover { border-color: var(--border-green); color: var(--text); }
+    .lang-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
     .sidebar-footer {
-      padding: 16px 20px;
+      padding: 12px 20px;
       border-top: 1px solid var(--border);
       font-size: 0.6rem; color: var(--text-dim);
       letter-spacing: 2px;
       display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
     }
 
     /* ── WORKSPACE ── */
@@ -246,19 +272,54 @@ const NAV: NavItem[] = [
     }
   `]
 })
-export class App implements AfterViewInit {
+export class App implements AfterViewInit, OnInit {
   store = inject(AppStore);
+  i18n = inject(I18nService);
+  router = inject(Router);
+
   ram = 210;
   drawerOpen = signal(false);
+  langs: Lang[] = ['en', 'ru', 'ua'];
 
   @ViewChild('mc') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   groups = [...new Set(NAV.map(n => n.group))];
   byGroup = (g: string) => NAV.filter(n => n.group === g);
 
+  getIcon(id: string): string {
+    const icons: Record<string, string> = {
+      energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
+      nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
+      exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
+    };
+    return icons[id] ?? '⬡';
+  }
+
   open(id: string) {
-    this.store.openApp(id);
+    this.store.closeApp();
+    this.store.selectedApp.set(id);
+    this.router.navigate(['/tool', id]);
     this.drawerOpen.set(false);
+  }
+
+  ngOnInit() {
+    this.i18n.init();
+
+    // Sync selectedApp from router on direct URL load or navigation
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      const segments = this.router.url.split('/');
+      const toolIdx = segments.indexOf('tool');
+      const id = toolIdx >= 0 ? segments[toolIdx + 1] : null;
+      if (id && NAV.some(n => n.id === id)) {
+        if (this.store.selectedApp() !== id) {
+          this.store.selectedApp.set(id);
+          this.store.closeApp();
+          this.store.selectedApp.set(id);
+        }
+      } else {
+        this.store.selectedApp.set(null);
+      }
+    });
   }
 
   ngAfterViewInit() {

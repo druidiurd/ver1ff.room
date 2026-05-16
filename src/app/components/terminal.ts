@@ -1,7 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { AppStore } from '../store';
+import { I18nService } from '../services/i18n';
 import { MapComponent } from './map';
 import { lastValueFrom } from 'rxjs';
 
@@ -19,12 +22,13 @@ import { lastValueFrom } from 'rxjs';
         </div>
         <div class="shell-meta mono">{{ getGuideText() }}</div>
         @if (store.selectedApp() === 'energia' || store.selectedApp() === 'revolut') {
-          <label class="toggle">
+          <label class="toggle" [class.scan-active]="store.scanMode()">
             <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
+            <span class="scan-icon">📷</span>
             <span class="toggle-track" [class.on]="store.scanMode()">
               <span class="toggle-thumb"></span>
             </span>
-            <span class="mono toggle-label">SCAN</span>
+            <span class="mono toggle-label">{{ i18n.t().scan }}</span>
           </label>
         }
       </div>
@@ -71,14 +75,14 @@ import { lastValueFrom } from 'rxjs';
                   {{ store.selectedFile() ? '✓' : '↑' }}
                 </div>
                 <div class="mono dz-label">
-                  {{ store.selectedFile() ? 'FILE_LOCKED' : 'DROP_OR_CLICK' }}
+                  {{ store.selectedFile() ? i18n.t().fileLocked : i18n.t().dropOrClick }}
                 </div>
               } @else {
                 <div class="dz-icon" [class.ok]="store.batchFiles().length > 0">
                   {{ store.batchFiles().length > 0 ? '✓' : '⊞' }}
                 </div>
                 <div class="mono dz-label">
-                  {{ store.batchFiles().length > 0 ? store.batchFiles().length + '_FILES' : 'DROP_UP_TO_5' }}
+                  {{ store.batchFiles().length > 0 ? store.batchFiles().length + '_FILES' : i18n.t().dropUpTo5 }}
                 </div>
               }
             </div>
@@ -90,14 +94,14 @@ import { lastValueFrom } from 'rxjs';
                 [disabled]="store.loading() || !canExecute()"
                 (click)="execute(false)">
                 <span class="btn-arrow">›</span>
-                {{ store.selectedApp() === 'ai_bypass' ? 'TEST_QUALITY' : 'EXECUTE' }}
+                {{ store.selectedApp() === 'ai_bypass' ? i18n.t().testQuality : i18n.t().execute }}
                 @if (store.loading()) { <span class="btn-loader"></span> }
               </button>
               @if (store.selectedApp() === 'ai_bypass') {
                 <button class="btn-exec btn-purple mono"
                   [disabled]="store.loading() || !canExecute()"
                   (click)="execute(true)">
-                  <span class="btn-arrow">›</span>AUTO_COMPRESS
+                  <span class="btn-arrow">›</span>{{ i18n.t().autoCompress }}
                 </button>
               }
             </div>
@@ -115,7 +119,7 @@ import { lastValueFrom } from 'rxjs';
               @if (store.previewUrl()) {
                 <img [src]="store.previewUrl()" class="preview-img">
               } @else {
-                <span class="mono empty-label">AWAITING_SOURCE</span>
+                <span class="mono empty-label">{{ i18n.t().awaitingSource }}</span>
               }
             </div>
           }
@@ -193,11 +197,11 @@ import { lastValueFrom } from 'rxjs';
                           <button class="btn-dl mono" (click)="download(res.IMAGE_BASE64||'', f.name)">DL</button>
                         </div>
                       } @else {
-                        <span class="mono empty-label err">NODES_DEAD</span>
+                        <span class="mono empty-label err">{{ i18n.t().nodesDead }}</span>
                       }
                     } @else {
                       <span class="mono empty-label">
-                        {{ store.loading() ? 'PROCESSING...' : 'PENDING' }}
+                        {{ store.loading() ? i18n.t().processing : i18n.t().pending }}
                       </span>
                     }
                   </div>
@@ -235,9 +239,27 @@ import { lastValueFrom } from 'rxjs';
     .shell-name { font-size: 0.75rem; font-weight: 700; color: var(--green); letter-spacing: 3px; }
     .shell-meta { flex: 1; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 1px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* toggle */
-    .toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; }
+    /* toggle / scan */
+    .toggle {
+      display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .toggle:hover { border-color: var(--border-green); }
+    .toggle.scan-active {
+      border-color: var(--green);
+      background: var(--green-dim);
+      box-shadow: 0 0 12px rgba(0,255,65,0.15);
+      animation: scan-pulse 2s infinite;
+    }
+    @keyframes scan-pulse {
+      0%,100% { box-shadow: 0 0 8px rgba(0,255,65,0.1); }
+      50%      { box-shadow: 0 0 20px rgba(0,255,65,0.3); }
+    }
     .toggle input { display: none; }
+    .scan-icon { font-size: 0.85rem; }
     .toggle-track {
       width: 34px; height: 18px; background: var(--surface2);
       border: 1px solid var(--border); border-radius: 20px;
@@ -249,8 +271,9 @@ import { lastValueFrom } from 'rxjs';
       width: 12px; height: 12px; border-radius: 50%;
       background: var(--text-dim); transition: 0.2s;
     }
-    .toggle-track.on .toggle-thumb { left: 18px; background: var(--green); }
+    .toggle-track.on .toggle-thumb { left: 18px; background: var(--green); box-shadow: 0 0 6px var(--green); }
     .toggle-label { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 2px; }
+    .scan-active .toggle-label { color: var(--green); font-weight: 700; }
 
     /* body */
     .shell-body {
@@ -426,35 +449,29 @@ import { lastValueFrom } from 'rxjs';
     }
   `]
 })
-export class TerminalComponent {
+export class TerminalComponent implements OnInit {
   store = inject(AppStore);
+  i18n = inject(I18nService);
+  route = inject(ActivatedRoute);
+  titleSvc = inject(Title);
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id') ?? '';
+    if (id && this.store.selectedApp() !== id) {
+      this.store.openApp(id);
+    }
+    const mod = this.i18n.module(id);
+    this.titleSvc.setTitle(`${mod.nav} — Ver1ff Room`);
+  }
 
   getAppTitle(): string {
-    const map: Record<string, string> = {
-      'energia': 'IE_BILL_GEN_V57_PRO', 
-      'ndls_mrz': 'IE_MRZ_SYNC_NODE', 
-      'nld_mrz': 'NL_MRZ_SYNC_NODE',
-      'fra_mrz': 'FR_CNI_SYNC_NODE',
-      'exif_cleaner': 'EXIF_SNIPER_HW', 
-      'face_cut': 'FACE_VISION_V12',
-      'ai_bypass': 'AI_STEALTH_V3',
-      'revolut':   'REVOLUT_STMT_GEN'
-    };
-    return map[this.store.selectedApp() || ''] || 'CORE_SYSTEM_DASH';
+    const id = this.store.selectedApp() || '';
+    return this.i18n.module(id).label || 'CORE_SYSTEM_DASH';
   }
 
   getGuideText(): string {
-    const map: Record<string, string> = {
-      'energia': 'Professional Irish Utility Bill Generator. Auto-right-alignment. Scan mode injects Gaussian noise and biometric artifacts.',
-      'ndls_mrz': 'Real-time dual-core MRZ generator. Synchronized checksums for GEN1 and GEN2 standards. Reactive input sink.',
-      'nld_mrz': 'Netherlands ID MRZ Generator (TD1). Vectorized ICAO-9303 math.',
-      'fra_mrz': 'France CNI MRZ Generator. Validates Department Code and CIN synchronously.',
-      'exif_cleaner': 'Metadata Hardware Injector for OnePlus 6. Select target coordinates on map to spoof hardware location.',
-      'face_cut': 'AI Biometric Extractor. 3x4 aspect ratio. Adjust Zoom and Vertical Sink manually for live preview results.',
-      'ai_bypass': 'Forensic Evader. Applies Chromatic Aberrations, Noise, and iPhone EXIF to bypass AI Detection APIs. Auto-routes between 10 API nodes.',
-      'revolut':   'Revolut EUR Statement Generator. Fill account holder data, IBAN, BIC, and one transaction row. Output is a ready PDF.'
-    };
-    return map[this.store.selectedApp() || ''] || 'System operational. Ready...';
+    const id = this.store.selectedApp() || '';
+    return this.i18n.module(id).desc || 'System operational. Ready...';
   }
 
   onFile(e: Event) { this.handleFiles((e.target as HTMLInputElement).files!); }

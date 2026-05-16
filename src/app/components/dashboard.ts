@@ -1,65 +1,58 @@
 import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { AppStore } from '../store';
+import { I18nService } from '../services/i18n';
 
-interface AppCard { id: string; icon: string; label: string; color: string; }
-interface Group { name: string; tag: string; apps: AppCard[]; }
+interface NavItem { id: string; group: string; }
 
-const GROUPS: Group[] = [
-  {
-    name: 'IRELAND', tag: 'IE',
-    apps: [
-      { id: 'energia',   icon: '⚡', label: 'IE-BILL-GEN',  color: '#00ff41' },
-      { id: 'ndls_mrz',  icon: '🆔', label: 'IE-NDLS-MRZ',  color: '#007aff' },
-      { id: 'revolut',   icon: '💳', label: 'REVOLUT-STMT', color: '#7c3aed' },
-    ]
-  },
-  {
-    name: 'NETHERLANDS', tag: 'NL',
-    apps: [
-      { id: 'nld_mrz', icon: '🇳🇱', label: 'NL-ID-MRZ', color: '#ff9500' },
-    ]
-  },
-  {
-    name: 'FRANCE', tag: 'FR',
-    apps: [
-      { id: 'fra_mrz', icon: '🇫🇷', label: 'FR-CNI-MRZ', color: '#007aff' },
-    ]
-  },
-  {
-    name: 'GLOBAL TOOLS', tag: 'SYS',
-    apps: [
-      { id: 'exif_cleaner', icon: '📸', label: 'EXIF-SNIPER',  color: '#ff9500' },
-      { id: 'face_cut',     icon: '👤', label: 'FACE-VISION',  color: '#ff3b30' },
-      { id: 'ai_bypass',    icon: '🥷', label: 'AI-STEALTH',   color: '#a855f7' },
-    ]
-  },
+const NAV: NavItem[] = [
+  { id: 'energia',      group: 'IRELAND'     },
+  { id: 'ndls_mrz',    group: 'IRELAND'     },
+  { id: 'nld_mrz',     group: 'NETHERLANDS' },
+  { id: 'fra_mrz',     group: 'FRANCE'      },
+  { id: 'exif_cleaner',group: 'TOOLS'       },
+  { id: 'face_cut',    group: 'TOOLS'       },
+  { id: 'ai_bypass',   group: 'TOOLS'       },
+  { id: 'revolut',     group: 'GLOBAL'      },
 ];
+
+const ICONS: Record<string, string> = {
+  energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
+  nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
+  exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
+};
+
+const COLORS: Record<string, string> = {
+  energia: '#00ff41', ndls_mrz: '#007aff', revolut: '#7c3aed',
+  nld_mrz: '#ff9500', fra_mrz: '#007aff',
+  exif_cleaner: '#ff9500', face_cut: '#ff3b30', ai_bypass: '#a855f7',
+};
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   template: `
-    <div class="dash">
+    <div class="dash fade-in">
       <div class="dash-header">
-        <h1 class="dash-title mono">VER1FF_ROOM</h1>
-        <p class="dash-sub mono">SELECT_MODULE // {{ total }} NODES ONLINE</p>
+        <h1 class="dash-title mono">{{ i18n.t().brand }}</h1>
+        <p class="dash-sub mono">{{ i18n.t().selectModule }} // {{ total }} {{ i18n.t().nodesOnline(total) }}</p>
       </div>
 
       <div class="groups">
-        @for (group of groups; track group.name) {
+        @for (group of groups; track group) {
           <div class="group">
             <div class="group-header">
-              <span class="group-tag mono">{{ group.tag }}</span>
-              <span class="group-name mono">{{ group.name }}</span>
+              <span class="group-tag mono">{{ group }}</span>
+              <span class="group-name mono">{{ i18n.group(group) }}</span>
               <div class="group-line"></div>
             </div>
             <div class="cards">
-              @for (app of group.apps; track app.id) {
-                <button class="card" (click)="store.openApp(app.id)"
-                  [style.--accent]="app.color">
+              @for (item of byGroup(group); track item.id) {
+                <button class="card" (click)="open(item.id)" [style.--accent]="getColor(item.id)">
                   <div class="card-glow"></div>
-                  <div class="card-icon">{{ app.icon }}</div>
-                  <div class="card-label mono">{{ app.label }}</div>
+                  <div class="card-icon">{{ getIcon(item.id) }}</div>
+                  <div class="card-label mono">{{ i18n.module(item.id).label }}</div>
+                  <div class="card-desc mono">{{ i18n.module(item.id).desc }}</div>
                   <div class="card-arrow mono">→</div>
                 </button>
               }
@@ -108,7 +101,7 @@ const GROUPS: Group[] = [
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
     }
 
@@ -120,15 +113,13 @@ const GROUPS: Group[] = [
       padding: 20px 18px;
       cursor: pointer; text-align: left;
       transition: border-color 0.2s, transform 0.15s;
-      display: flex; flex-direction: column; gap: 10px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .card:hover {
       border-color: var(--accent);
       transform: translateY(-2px);
     }
-    .card:hover .card-glow {
-      opacity: 1;
-    }
+    .card:hover .card-glow { opacity: 1; }
     .card:hover .card-arrow { color: var(--accent); }
 
     .card-glow {
@@ -142,6 +133,10 @@ const GROUPS: Group[] = [
     .card-label {
       font-size: 0.6rem; font-weight: 700;
       color: var(--text); letter-spacing: 2px;
+    }
+    .card-desc {
+      font-size: 0.55rem; color: var(--text-dim);
+      letter-spacing: 0.5px; line-height: 1.5;
       flex: 1;
     }
     .card-arrow {
@@ -151,13 +146,27 @@ const GROUPS: Group[] = [
     }
 
     @media (max-width: 767px) {
-      .cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+      .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
       .dash-header { margin-bottom: 32px; }
+      .card-desc { display: none; }
     }
   `]
 })
 export class DashboardComponent {
   store = inject(AppStore);
-  groups = GROUPS;
-  total = GROUPS.reduce((s, g) => s + g.apps.length, 0);
+  i18n = inject(I18nService);
+  router = inject(Router);
+
+  groups = [...new Set(NAV.map(n => n.group))];
+  byGroup = (g: string) => NAV.filter(n => n.group === g);
+  total = NAV.length;
+
+  getIcon(id: string) { return ICONS[id] ?? '⬡'; }
+  getColor(id: string) { return COLORS[id] ?? '#00ff41'; }
+
+  open(id: string) {
+    this.store.closeApp();
+    this.store.selectedApp.set(id);
+    this.router.navigate(['/tool', id]);
+  }
 }
