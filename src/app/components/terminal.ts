@@ -6,12 +6,13 @@ import { Title } from '@angular/platform-browser';
 import { AppStore } from '../store';
 import { I18nService } from '../services/i18n';
 import { MapComponent } from './map';
+import { MrzForgeComponent } from './mrz-forge';
 import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-terminal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MapComponent],
+  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent],
   template: `
     <div class="shell fade-in">
 
@@ -123,74 +124,7 @@ import { lastValueFrom } from 'rxjs';
           }
 
           @if (store.selectedApp() === 'mrz_gen') {
-            @if (store.mrzGenResult(); as gen) {
-              <div class="forge-output">
-                @if (gen.MRP) {
-                  <div class="mrz-format-card">
-                    <div class="mf-header">
-                      <span class="mf-tag mono">MRP</span>
-                      <span class="mf-name mono">PASSPORT · TD3 · 2×44</span>
-                      <button class="btn-copy mono" (click)="copy(gen.MRP!.join('\n'))">COPY</button>
-                    </div>
-                    @for (line of gen.MRP; track $index) {
-                      <div class="mrz-line-wrap">
-                        <code class="mrz-line mono">{{ line }}</code>
-                      </div>
-                    }
-                  </div>
-                }
-                @if (gen.MRV_A) {
-                  <div class="mrz-format-card visa">
-                    <div class="mf-header">
-                      <span class="mf-tag mono visa">MRV-A</span>
-                      <span class="mf-name mono">VISA · 2×44</span>
-                      <button class="btn-copy mono" (click)="copy(gen.MRV_A!.join('\n'))">COPY</button>
-                    </div>
-                    @for (line of gen.MRV_A; track $index) {
-                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
-                    }
-                  </div>
-                }
-                @if (gen.TD1) {
-                  <div class="mrz-format-card amber">
-                    <div class="mf-header">
-                      <span class="mf-tag mono amber">TD1</span>
-                      <span class="mf-name mono">ID CARD · 3×30</span>
-                      <button class="btn-copy amber mono" (click)="copy(gen.TD1!.join('\n'))">COPY</button>
-                    </div>
-                    @for (line of gen.TD1; track $index) {
-                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
-                    }
-                  </div>
-                }
-                @if (gen.TD2) {
-                  <div class="mrz-format-card amber">
-                    <div class="mf-header">
-                      <span class="mf-tag mono amber">TD2</span>
-                      <span class="mf-name mono">ID CARD · 2×36</span>
-                      <button class="btn-copy amber mono" (click)="copy(gen.TD2!.join('\n'))">COPY</button>
-                    </div>
-                    @for (line of gen.TD2; track $index) {
-                      <div class="mrz-line-wrap"><code class="mrz-line mono">{{ line }}</code></div>
-                    }
-                  </div>
-                }
-                @if (gen.EDL) {
-                  <div class="mrz-format-card edl">
-                    <div class="mf-header">
-                      <span class="mf-tag mono edl">eDL</span>
-                      <span class="mf-name mono">DRIVER LICENSE · 1 LINE</span>
-                      <button class="btn-copy edl mono" (click)="copy(gen.EDL![0])">COPY</button>
-                    </div>
-                    <div class="mrz-line-wrap"><code class="mrz-line mono">{{ gen.EDL[0] }}</code></div>
-                  </div>
-                }
-              </div>
-            } @else {
-              <div class="forge-empty">
-                <span class="mono empty-label">FILL_FIELDS → MRZ_UPDATES_LIVE</span>
-              </div>
-            }
+            <app-mrz-forge></app-mrz-forge>
           }
 
           @if (store.hasPreview()) {
