@@ -296,26 +296,22 @@ export class App implements AfterViewInit, OnInit {
   }
 
   open(id: string) {
-    this.store.closeApp();
-    this.store.selectedApp.set(id);
+    this.store.closeApp();   // clears old file/mrz/batch data, sets selectedApp=null
     this.router.navigate(['/tool', id]);
     this.drawerOpen.set(false);
+    // selectedApp will be set by NavigationEnd handler above
   }
 
   ngOnInit() {
     this.i18n.init();
 
-    // Sync selectedApp from router on direct URL load or navigation
+    // Sync selectedApp signal from router URL (read-only, no side effects)
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       const segments = this.router.url.split('/');
       const toolIdx = segments.indexOf('tool');
       const id = toolIdx >= 0 ? segments[toolIdx + 1] : null;
       if (id && NAV.some(n => n.id === id)) {
-        if (this.store.selectedApp() !== id) {
-          this.store.selectedApp.set(id);
-          this.store.closeApp();
-          this.store.selectedApp.set(id);
-        }
+        this.store.selectedApp.set(id);
       } else {
         this.store.selectedApp.set(null);
       }

@@ -457,11 +457,10 @@ export class TerminalComponent implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    if (id && this.store.selectedApp() !== id) {
+    if (id) {
       this.store.openApp(id);
     }
-    const mod = this.i18n.module(id);
-    this.titleSvc.setTitle(`${mod.nav} — Ver1ff Room`);
+    this.titleSvc.setTitle(`${this.i18n.module(id).nav} — Ver1ff Room`);
   }
 
   getAppTitle(): string {
