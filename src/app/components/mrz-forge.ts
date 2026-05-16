@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AppStore } from '../store';
 
 interface Country { code: string; name: string; }
@@ -8,10 +9,10 @@ const COUNTRIES: Country[] = [
   { code: 'AFG', name: 'Afghanistan' }, { code: 'ALB', name: 'Albania' },
   { code: 'DZA', name: 'Algeria' }, { code: 'AND', name: 'Andorra' },
   { code: 'AGO', name: 'Angola' }, { code: 'ARG', name: 'Argentina' },
-  { code: 'ARM', name: 'Armenia' }, { code: 'AUS', name: 'Australia' },
-  { code: 'AUT', name: 'Austria' }, { code: 'AZE', name: 'Azerbaijan' },
+  { code: 'AUS', name: 'Australia' },
+  { code: 'AUT', name: 'Austria' },
   { code: 'BHS', name: 'Bahamas' }, { code: 'BHR', name: 'Bahrain' },
-  { code: 'BGD', name: 'Bangladesh' }, { code: 'BLR', name: 'Belarus' },
+  { code: 'BGD', name: 'Bangladesh' },
   { code: 'BEL', name: 'Belgium' }, { code: 'BLZ', name: 'Belize' },
   { code: 'BEN', name: 'Benin' }, { code: 'BTN', name: 'Bhutan' },
   { code: 'BOL', name: 'Bolivia' }, { code: 'BIH', name: 'Bosnia & Herz.' },
@@ -35,7 +36,7 @@ const COUNTRIES: Country[] = [
   { code: 'ETH', name: 'Ethiopia' }, { code: 'FJI', name: 'Fiji' },
   { code: 'FIN', name: 'Finland' }, { code: 'FRA', name: 'France' },
   { code: 'GAB', name: 'Gabon' }, { code: 'GMB', name: 'Gambia' },
-  { code: 'GEO', name: 'Georgia' }, { code: 'DEU', name: 'Germany' },
+  { code: 'DEU', name: 'Germany' },
   { code: 'GHA', name: 'Ghana' }, { code: 'GRC', name: 'Greece' },
   { code: 'GTM', name: 'Guatemala' }, { code: 'GIN', name: 'Guinea' },
   { code: 'GNB', name: 'Guinea-Bissau' }, { code: 'GUY', name: 'Guyana' },
@@ -46,10 +47,10 @@ const COUNTRIES: Country[] = [
   { code: 'IRL', name: 'Ireland' }, { code: 'ISR', name: 'Israel' },
   { code: 'ITA', name: 'Italy' }, { code: 'JAM', name: 'Jamaica' },
   { code: 'JPN', name: 'Japan' }, { code: 'JOR', name: 'Jordan' },
-  { code: 'KAZ', name: 'Kazakhstan' }, { code: 'KEN', name: 'Kenya' },
+  { code: 'KEN', name: 'Kenya' },
   { code: 'PRK', name: 'Korea (North)' }, { code: 'KOR', name: 'Korea (South)' },
   { code: 'XKX', name: 'Kosovo' }, { code: 'KWT', name: 'Kuwait' },
-  { code: 'KGZ', name: 'Kyrgyzstan' }, { code: 'LAO', name: 'Laos' },
+  { code: 'LAO', name: 'Laos' },
   { code: 'LVA', name: 'Latvia' }, { code: 'LBN', name: 'Lebanon' },
   { code: 'LSO', name: 'Lesotho' }, { code: 'LBR', name: 'Liberia' },
   { code: 'LBY', name: 'Libya' }, { code: 'LIE', name: 'Liechtenstein' },
@@ -58,7 +59,7 @@ const COUNTRIES: Country[] = [
   { code: 'MYS', name: 'Malaysia' }, { code: 'MDV', name: 'Maldives' },
   { code: 'MLI', name: 'Mali' }, { code: 'MLT', name: 'Malta' },
   { code: 'MRT', name: 'Mauritania' }, { code: 'MUS', name: 'Mauritius' },
-  { code: 'MEX', name: 'Mexico' }, { code: 'MDA', name: 'Moldova' },
+  { code: 'MEX', name: 'Mexico' },
   { code: 'MCO', name: 'Monaco' }, { code: 'MNG', name: 'Mongolia' },
   { code: 'MNE', name: 'Montenegro' }, { code: 'MAR', name: 'Morocco' },
   { code: 'MOZ', name: 'Mozambique' }, { code: 'MMR', name: 'Myanmar' },
@@ -72,7 +73,7 @@ const COUNTRIES: Country[] = [
   { code: 'PER', name: 'Peru' }, { code: 'PHL', name: 'Philippines' },
   { code: 'POL', name: 'Poland' }, { code: 'PRT', name: 'Portugal' },
   { code: 'QAT', name: 'Qatar' }, { code: 'ROU', name: 'Romania' },
-  { code: 'RUS', name: 'Russia' }, { code: 'RWA', name: 'Rwanda' },
+  { code: 'RWA', name: 'Rwanda' },
   { code: 'SAU', name: 'Saudi Arabia' }, { code: 'SEN', name: 'Senegal' },
   { code: 'SRB', name: 'Serbia' }, { code: 'SLE', name: 'Sierra Leone' },
   { code: 'SGP', name: 'Singapore' }, { code: 'SVK', name: 'Slovakia' },
@@ -82,14 +83,14 @@ const COUNTRIES: Country[] = [
   { code: 'SDN', name: 'Sudan' }, { code: 'SUR', name: 'Suriname' },
   { code: 'SWE', name: 'Sweden' }, { code: 'CHE', name: 'Switzerland' },
   { code: 'SYR', name: 'Syria' }, { code: 'TWN', name: 'Taiwan' },
-  { code: 'TJK', name: 'Tajikistan' }, { code: 'TZA', name: 'Tanzania' },
+  { code: 'TZA', name: 'Tanzania' },
   { code: 'THA', name: 'Thailand' }, { code: 'TLS', name: 'Timor-Leste' },
   { code: 'TGO', name: 'Togo' }, { code: 'TTO', name: 'Trinidad & Tobago' },
   { code: 'TUN', name: 'Tunisia' }, { code: 'TUR', name: 'Turkey' },
-  { code: 'TKM', name: 'Turkmenistan' }, { code: 'UGA', name: 'Uganda' },
-  { code: 'UKR', name: 'Ukraine' }, { code: 'ARE', name: 'UAE' },
+  { code: 'UGA', name: 'Uganda' },
+  { code: 'ARE', name: 'UAE' },
   { code: 'GBR', name: 'United Kingdom' }, { code: 'USA', name: 'United States' },
-  { code: 'URY', name: 'Uruguay' }, { code: 'UZB', name: 'Uzbekistan' },
+  { code: 'URY', name: 'Uruguay' },
   { code: 'VEN', name: 'Venezuela' }, { code: 'VNM', name: 'Vietnam' },
   { code: 'YEM', name: 'Yemen' }, { code: 'ZMB', name: 'Zambia' },
   { code: 'ZWE', name: 'Zimbabwe' },
@@ -110,11 +111,11 @@ interface ForgeFields {
   optional: string;
 }
 
-interface Preset { label: string; docType: string; nat: string; issuer: string; custom?: boolean; }
+interface Preset { label: string; docType: string; nat: string; issuer: string; subType?: string; custom?: boolean; }
 
 const DEFAULT_PRESETS: Preset[] = [
   { label: 'US Passport', docType: 'Passport', nat: 'USA', issuer: 'USA' },
-  { label: 'DE ID Card',  docType: 'ID Card',  nat: 'DEU', issuer: 'DEU' },
+  { label: 'DE ID Card',  docType: 'ID Card',  nat: 'DEU', issuer: 'DEU', subType: 'D' },
 ];
 
 @Component({
@@ -686,8 +687,10 @@ const DEFAULT_PRESETS: Preset[] = [
     }
   `]
 })
-export class MrzForgeComponent {
+export class MrzForgeComponent implements OnInit {
   store = inject(AppStore);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   step = signal(1);
   natSearch = signal('');
@@ -722,6 +725,34 @@ export class MrzForgeComponent {
     );
   });
 
+  ngOnInit() {
+    const p = this.route.snapshot.queryParamMap;
+    const doc = p.get('doc');
+    const nat = p.get('nat');
+    const iss = p.get('iss');
+    const sub = p.get('sub');
+    if (doc && nat && iss) {
+      this.fields.update(f => ({
+        ...f,
+        docType: doc,
+        nationality: nat,
+        issuer: iss,
+        subType: sub ?? f.subType,
+      }));
+      this.step.set(3);
+    }
+  }
+
+  private syncUrl() {
+    const f = this.fields();
+    const queryParams: Record<string, string> = {};
+    if (f.docType)    queryParams['doc'] = f.docType;
+    if (f.nationality) queryParams['nat'] = f.nationality;
+    if (f.issuer)     queryParams['iss'] = f.issuer;
+    if (f.subType)    queryParams['sub'] = f.subType;
+    this.router.navigate([], { queryParams, replaceUrl: true });
+  }
+
   canGenerate() {
     const f = this.fields();
     return !!(f.docType && f.nationality && f.issuer && f.lastname && f.birthDate && f.docNum && f.expiryDate);
@@ -738,14 +769,17 @@ export class MrzForgeComponent {
   selectDocType(id: string) {
     this.fields.update(f => ({ ...f, docType: id }));
     this.store.mrzGenResult.set(null);
+    this.syncUrl();
   }
 
   setNat(code: string) {
     this.fields.update(f => ({ ...f, nationality: code }));
+    this.syncUrl();
   }
 
   setIssuer(code: string) {
     this.fields.update(f => ({ ...f, issuer: code }));
+    this.syncUrl();
   }
 
   patch(key: keyof ForgeFields, val: string) {
@@ -777,9 +811,10 @@ export class MrzForgeComponent {
   }
 
   applyPreset(p: Preset) {
-    this.fields.update(f => ({ ...f, docType: p.docType, nationality: p.nat, issuer: p.issuer }));
+    this.fields.update(f => ({ ...f, docType: p.docType, nationality: p.nat, issuer: p.issuer, subType: p.subType ?? f.subType }));
     this.store.mrzGenResult.set(null);
     this.step.set(3);
+    this.syncUrl();
   }
 
   canSavePreset() {

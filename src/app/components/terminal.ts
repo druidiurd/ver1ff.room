@@ -36,7 +36,7 @@ import { lastValueFrom } from 'rxjs';
         <div class="shell-desc mono">{{ getGuideText() }}</div>
       </div>
 
-      <div class="shell-body">
+      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen'">
         <!-- LEFT: form -->
         <div class="panel-form">
           @if (store.selectedApp() !== 'mrz_gen') {
@@ -336,6 +336,8 @@ import { lastValueFrom } from 'rxjs';
       display: flex; flex: 1; gap: 0;
       overflow: hidden;
     }
+    .shell-body.forge-mode .panel-form { display: none; }
+    .shell-body.forge-mode .panel-visuals { width: 100%; max-width: 100%; }
 
     /* form panel */
     .panel-form {

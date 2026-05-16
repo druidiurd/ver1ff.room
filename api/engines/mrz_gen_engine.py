@@ -80,88 +80,116 @@ class MrzGenEngine:
         combined = f"{ln}<<{fn}"
         return self._clamp(combined, length)
 
+    @staticmethod
+    def _norm_sex(s: str) -> str:
+        """ICAO 9303: only M, F, < are valid in MRZ sex field."""
+        v = (s or '').strip().upper()[:1]
+        return v if v in ('M', 'F') else '<'
+
     # ── MRP — Passport (TD3), 2×44 ───────────────────────────────────────────
 
     def _mrp(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'P'
-        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or '<'), 1) or '<'
+        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
         issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
         name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 39)
-
-        line1 = f"{doc_type}{sub_type}{issuer}{name_fld}"
+        line1     = self._clamp(f"{doc_type}{sub_type}{issuer}{name_fld}", 44)
 
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
         nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = f.get('sex', 'U')[0].upper() if f.get('sex') else 'U'
+        sex       = self._norm_sex(f.get('sex', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         pers      = self._clamp(self._clean(f.get('pers_num', '') or ''), 14)
         cd4       = self._check_digit(pers)
-        final_src = f"{doc_num}{cd1}{bdate}{cd2}{edate}{cd3}{pers}{cd4}"
-        cd5       = self._check_digit(final_src)
+        # Composite CD covers: doc_num+cd1 + bdate+cd2 + edate+cd3 + pers+cd4
+        composite = f"{doc_num}{cd1}{bdate}{cd2}{edate}{cd3}{pers}{cd4}"
+        cd5       = self._check_digit(composite)
+        line2     = self._clamp(f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{pers}{cd4}{cd5}", 44)
 
-        line2 = f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{pers}{cd4}{cd5}"
         return [line1, line2]
 
     # ── TD1 — ID Card, 3×30 ──────────────────────────────────────────────────
+    # ICAO 9303-5: Line1[1]=doc, [2]=sub, [3-5]=issuer, [6-14]=docnum, [15]=cd1,
+    #              [16-30]=optional data (no separate CD in line1)
+    # Line2[1-6]=bdate,[7]=cd_bdate,[8]=sex,[9-14]=edate,[15]=cd_edate,
+    #             [16-18]=nat,[19-29]=optional2,[30]=cd_composite
+    # Composite CD: line1[6-30] + line2[1-7] + line2[9-15] + line2[19-29]
 
     def _td1(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'I'
-        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or '<'), 1) or '<'
+        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
         issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
-        optional  = self._clamp(self._clean(f.get('optional', '') or ''), 15)
-        cd_opt    = self._check_digit(optional)
-
-        line1 = f"{doc_type}{sub_type}{issuer}{doc_num}{cd1}{optional}{cd_opt}"
-        # line1 must be 30
-        line1 = self._clamp(line1, 30)
+        optional1 = self._clamp(self._clean(f.get('optional', '') or ''), 15)
+        # Line1: I + sub(1) + issuer(3) + docnum(9) + cd1(1) + optional1(15) = 30
+        line1     = self._clamp(f"{doc_type}{sub_type}{issuer}{doc_num}{cd1}{optional1}", 30)
 
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = f.get('sex', 'U')[0].upper() if f.get('sex') else 'U'
+        sex       = self._norm_sex(f.get('sex', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
-        pers      = self._clamp(self._clean(f.get('pers_num', '') or ''), 11)
-        final_src = (f"{doc_num}{cd1}{optional}{cd_opt}"
-                     f"{bdate}{cd2}{edate}{cd3}{pers}")
-        cd4       = self._check_digit(final_src)
+        optional2 = self._clamp(self._clean(f.get('pers_num', '') or ''), 11)
+        # Composite CD: line1[5:] (docnum+cd1+optional1) + bdate+cd2 + edate+cd3 + optional2
+        composite = f"{doc_num}{cd1}{optional1}{bdate}{cd2}{edate}{cd3}{optional2}"
+        cd4       = self._check_digit(composite)
+        # Line2: bdate(6)+cd2(1)+sex(1)+edate(6)+cd3(1)+nat(3)+optional2(11)+cd4(1) = 30
+        line2     = self._clamp(f"{bdate}{cd2}{sex}{edate}{cd3}{nat}{optional2}{cd4}", 30)
 
-        line2 = f"{bdate}{cd2}{sex}{edate}{cd3}{nat}{pers}{cd4}"
-        line2 = self._clamp(line2, 30)
-
-        line3 = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 30)
+        line3     = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 30)
 
         return [line1, line2, line3]
 
-    # ── TD2 — 2×36 / 2×35 ───────────────────────────────────────────────────
+    # ── TD2 — 2×36 ───────────────────────────────────────────────────────────
 
     def _td2(self, f: Dict[str, str]) -> List[str]:
         doc_type  = 'I'
-        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or '<'), 1) or '<'
+        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
         issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
         name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 31)
-
-        line1 = f"{doc_type}{sub_type}{issuer}{name_fld}"   # 36 chars
+        line1     = self._clamp(f"{doc_type}{sub_type}{issuer}{name_fld}", 36)
 
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
         nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = f.get('sex', 'U')[0].upper() if f.get('sex') else 'U'
+        sex       = self._norm_sex(f.get('sex', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         optional  = self._clamp(self._clean(f.get('optional', '') or ''), 7)
-        final_src = f"{doc_num}{cd1}{bdate}{cd2}{edate}{cd3}{optional}"
-        cd4       = self._check_digit(final_src)
+        composite = f"{doc_num}{cd1}{bdate}{cd2}{edate}{cd3}{optional}"
+        cd4       = self._check_digit(composite)
+        line2     = self._clamp(f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{optional}{cd4}", 36)
 
-        line2 = f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{optional}{cd4}"  # 36
+        return [line1, line2]
+
+    # ── MRV-A — Visa, 2×44 ───────────────────────────────────────────────────
+    # MRV-A: same layout as MRP but type=V, no personal number CD in composite
+
+    def _mrv_a(self, f: Dict[str, str]) -> List[str]:
+        sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
+        issuer    = self._clamp(self._clean(f.get('issuer', 'XXX')), 3)
+        name_fld  = self._build_name_field(f.get('lastname', ''), f.get('firstname', ''), 39)
+        line1     = self._clamp(f"V{sub_type}{issuer}{name_fld}", 44)
+
+        doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
+        cd1       = self._check_digit(doc_num)
+        nat       = self._clamp(self._clean(f.get('nationality', 'XXX')), 3)
+        bdate     = self._date_to_mrz(f.get('birth_date', ''))
+        cd2       = self._check_digit(bdate)
+        sex       = self._norm_sex(f.get('sex', ''))
+        edate     = self._date_to_mrz(f.get('expiry_date', ''))
+        cd3       = self._check_digit(edate)
+        # MRV-A: no personal number field, positions 29-44 = optional (no composite CD)
+        optional  = self._clamp(self._clean(f.get('optional', '') or ''), 16)
+        line2     = self._clamp(f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{optional}", 44)
 
         return [line1, line2]
 
@@ -170,7 +198,6 @@ class MrzGenEngine:
     def _edl(self, f: Dict[str, str]) -> List[str]:
         doc_num = self._clamp(self._clean(f.get('doc_num', '')), 9, '0')
         cd1     = self._check_digit(doc_num)
-        # 13 random alphanumeric chars for padding
         rand13  = ''.join(random.choices(string.ascii_uppercase + string.digits, k=13))
         prefix  = 'D1NLD2'
         body    = f"{doc_num}{cd1}{rand13}"
@@ -194,23 +221,14 @@ class MrzGenEngine:
         }
 
         if doc_type == 'Passport':
-            lines_mrp = self._mrp(f)
-            result['MRP'] = lines_mrp
+            result['MRP'] = self._mrp(f)
         elif doc_type == 'ID Card':
-            lines_td1 = self._td1(f)
-            lines_td2 = self._td2(f)
-            result['TD1'] = lines_td1
-            result['TD2'] = lines_td2
+            result['TD1'] = self._td1(f)
+            result['TD2'] = self._td2(f)
         elif doc_type == 'Visa':
-            # Visa uses MRV-A (2×44 like MRP but type=V) or MRV-B (2×36)
-            # We generate MRV-A as primary
-            f_visa = dict(f)
-            visa_lines = self._mrp(f_visa)
-            visa_lines[0] = 'V' + visa_lines[0][1:]  # replace P with V
-            result['MRV_A'] = visa_lines
+            result['MRV_A'] = self._mrv_a(f)
         else:
-            lines_mrp = self._mrp(f)
-            result['MRP'] = lines_mrp
+            result['MRP'] = self._mrp(f)
 
         # Always include eDL
         result['EDL'] = self._edl(f)
