@@ -92,7 +92,7 @@ class RevolutEngine:
 
             # Y = bbox_top (from original) + measured ascender per size
             # 12.38pt ascender=10.16, 8.25pt ascender=6.84, 4.50pt ascender=4.71
-            ins(39.7,  154.5, name,     12.38, b, "Roboto-Bold")
+            ins(39.7,  154.5, name,     12.58, b, "Roboto-Bold")
             ins(39.7,  176.1, addr1,    8.25,  b, "Roboto-Bold")
             ins(39.7,  188.5, zip_code, 8.25,  b, "Roboto-Bold")
             ins(39.7,  200.9, city,     8.25,  b, "Roboto-Bold")
@@ -110,8 +110,8 @@ class RevolutEngine:
             tw = f_obj.text_length(eur_str, fontsize=8.25)
             ins(555.6 - tw, 300.2, eur_str, 8.25)
 
-            ins(155.1, 306.2, f"To: {merchant_city}", 4.50)
-            ins(155.1, 311.5, f"Card: {tx_card}",     4.50)
+            ins(155.1, 308.2, f"To: {merchant_city}", 4.50)
+            ins(155.1, 313.5, f"Card: {tx_card}",     4.50)
 
             doc.set_metadata({
                 "producer": "Revolut Bank UAB",
