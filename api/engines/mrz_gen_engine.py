@@ -112,11 +112,20 @@ class MrzGenEngine:
         mapped = self._MRZ_CODE.get(code, code)
         return self._clamp(mapped, 3)
 
-    @staticmethod
-    def _norm_sex(s: str) -> str:
-        """ICAO 9303: only M, F, < are valid in MRZ sex field."""
+    # Countries that mandate '<' for non-binary/unspecified sex in MRZ
+    _SEX_FORCE_NEUTRAL = {'DEU', 'AUT', 'CHE'}
+
+    def _norm_sex(self, s: str, issuer: str = '', nationality: str = '') -> str:
+        """ICAO 9303: only M, F, < are valid. Some countries always use < for non-binary."""
         v = (s or '').strip().upper()[:1]
-        return v if v in ('M', 'F') else '<'
+        if v not in ('M', 'F'):
+            return '<'
+        # Germany, Austria, Switzerland use < for 'diverse' identity category
+        raw_issuer = (issuer or '').strip().upper()
+        raw_nat    = (nationality or '').strip().upper()
+        if raw_issuer in self._SEX_FORCE_NEUTRAL or raw_nat in self._SEX_FORCE_NEUTRAL:
+            return v  # M and F still valid, only X/diverse → <
+        return v
 
     # ── MRP — Passport (TD3), 2×44 ───────────────────────────────────────────
 
@@ -132,7 +141,7 @@ class MrzGenEngine:
         nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = self._norm_sex(f.get('sex', ''))
+        sex       = self._norm_sex(f.get('sex', ''), f.get('issuer', ''), f.get('nationality', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         pers      = self._clamp(self._clean(f.get('pers_num', '') or ''), 14)
@@ -163,7 +172,7 @@ class MrzGenEngine:
 
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = self._norm_sex(f.get('sex', ''))
+        sex       = self._norm_sex(f.get('sex', ''), f.get('issuer', ''), f.get('nationality', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         nat       = self._mrz_country(f.get('nationality', 'XXX'))
@@ -192,7 +201,7 @@ class MrzGenEngine:
         nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = self._norm_sex(f.get('sex', ''))
+        sex       = self._norm_sex(f.get('sex', ''), f.get('issuer', ''), f.get('nationality', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         optional  = self._clamp(self._clean(f.get('optional', '') or ''), 7)
@@ -216,7 +225,7 @@ class MrzGenEngine:
         nat       = self._mrz_country(f.get('nationality', 'XXX'))
         bdate     = self._date_to_mrz(f.get('birth_date', ''))
         cd2       = self._check_digit(bdate)
-        sex       = self._norm_sex(f.get('sex', ''))
+        sex       = self._norm_sex(f.get('sex', ''), f.get('issuer', ''), f.get('nationality', ''))
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         # MRV-A: no personal number field, positions 29-44 = optional (no composite CD)

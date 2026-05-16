@@ -275,7 +275,9 @@ const DEFAULT_PRESETS: Preset[] = [
               <label class="mono fg-label">SEX</label>
               <div class="sex-group">
                 @for (s of ['M','F','U']; track s) {
-                  <button type="button" class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex', s); trigger()">{{ s }}</button>
+                  <button type="button" class="sex-btn mono" [class.active]="fields().sex === s" (click)="patch('sex', s); trigger()">
+                    {{ s === 'U' && isNeutralSex() ? '<' : s }}
+                  </button>
                 }
               </div>
             </div>
@@ -331,7 +333,10 @@ const DEFAULT_PRESETS: Preset[] = [
             @if (store.loading()) { <span class="btn-loader"></span> }
           </button>
 
-          <button type="button" class="btn-back mono" (click)="step.set(2)">← BACK</button>
+          <div class="step3-actions">
+            <button type="button" class="btn-back mono" (click)="step.set(2)">← BACK</button>
+            <button type="button" class="btn-reset mono" (click)="reset()">↺ RESET</button>
+          </div>
         </div>
       }
 
@@ -548,6 +553,17 @@ const DEFAULT_PRESETS: Preset[] = [
     }
     .btn-gen:hover:not(:disabled) { filter: brightness(1.1); }
     .btn-gen:disabled { opacity: 0.35; cursor: not-allowed; }
+    .step3-actions {
+      display: flex; gap: 8px; margin-top: 4px;
+    }
+    .btn-reset {
+      padding: 12px 16px;
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: 0.15s;
+    }
+    .btn-reset:hover { border-color: #ff4444; color: #ff4444; }
     .btn-loader {
       width: 12px; height: 12px;
       border: 2px solid rgba(0,0,0,0.3);
@@ -896,6 +912,11 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
     return f.nationality === 'USA' || f.issuer === 'USA';
   }
 
+  isNeutralSex() {
+    const f = this.fields();
+    return ['DEU', 'AUT', 'CHE'].some(c => f.nationality === c || f.issuer === c);
+  }
+
   genICN() {
     const icn = this.randDigits(9);
     const batch = this.randDigits(4);
@@ -936,5 +957,15 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
     navigator.clipboard.writeText(window.location.href);
     this.linkCopied.set(true);
     setTimeout(() => this.linkCopied.set(false), 1500);
+  }
+
+  reset() {
+    this.fields.set({ docType:'', nationality:'', issuer:'', lastname:'', firstname:'',
+      birthDate:'', sex:'M', docNum:'', expiryDate:'', subType:'', persNum:'', optional:'' });
+    this.step.set(1);
+    this.natSearch.set('');
+    this.issuerSearch.set('');
+    this.store.mrzGenResult.set(null);
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 }
