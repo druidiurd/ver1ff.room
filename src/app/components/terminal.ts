@@ -10,227 +10,420 @@ import { lastValueFrom } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, MapComponent],
   template: `
-    <main class="terminal-shell fade-in">
-      <header class="t-header">
-        <button (click)="store.closeApp()" class="esc-btn">‹ EXIT_TO_ROOT</button>
-        <div class="t-module">NODE::{{ getAppTitle() }}</div>
-        <div class="t-tools">
-          <label class="scan-ui" *ngIf="store.selectedApp() === 'energia' || store.selectedApp() === 'revolut'">
-            <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
-            <span class="slider" [class.on]="store.scanMode()"></span><span class="txt">ARTIFACTS</span>
-          </label>
-        </div>
-      </header>
+    <div class="shell fade-in">
 
-      <div class="mini-guide-bar glass-inset">
-        <span class="guide-prefix">SYSTEM_MANUAL:</span>
-        <span class="guide-text">{{ getGuideText() }}</span>
+      <div class="shell-header">
+        <div class="shell-title">
+          <span class="shell-dot"></span>
+          <span class="mono shell-name">{{ getAppTitle() }}</span>
+        </div>
+        <div class="shell-meta mono">{{ getGuideText() }}</div>
+        @if (store.selectedApp() === 'energia' || store.selectedApp() === 'revolut') {
+          <label class="toggle">
+            <input type="checkbox" [ngModel]="store.scanMode()" (ngModelChange)="store.scanMode.set($event)">
+            <span class="toggle-track" [class.on]="store.scanMode()">
+              <span class="toggle-thumb"></span>
+            </span>
+            <span class="mono toggle-label">SCAN</span>
+          </label>
+        }
       </div>
 
-      <div class="t-layout">
-        <div class="col-form">
-          <div class="form-grid">
+      <div class="shell-body">
+        <!-- LEFT: form -->
+        <div class="panel-form">
+          <div class="fields">
             @for (field of store.schema(); track field.id) {
-              <div class="field-box">
-                <label>{{ field.label }}</label>
-                <div class="input-bg" [class.range-bg]="field.type === 'range'">
-                  <ng-container *ngIf="!field.type || field.type === 'text'">
-                    <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [placeholder]="field.p" autocomplete="off" spellcheck="false">
-                  </ng-container>
-                  <ng-container *ngIf="field.type === 'select'">
-                    <select class="custom-select" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
+              <div class="field">
+                <label class="mono field-label">{{ field.label }}</label>
+                @if (!field.type || field.type === 'text') {
+                  <div class="field-input">
+                    <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()"
+                      [placeholder]="field.p" autocomplete="off" spellcheck="false" class="mono">
+                  </div>
+                }
+                @if (field.type === 'select') {
+                  <div class="field-input">
+                    <select class="mono" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
                       <option value="" disabled>{{ field.p }}</option>
-                      <option *ngFor="let opt of field.opts" [value]="opt">{{ opt }}</option>
+                      @for (opt of field.opts; track opt) {
+                        <option [value]="opt">{{ opt }}</option>
+                      }
                     </select>
-                  </ng-container>
-                  <ng-container *ngIf="field.type === 'range'">
-                    <div class="range-wrap">
-                      <input type="range" class="custom-range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()" [min]="field.min" [max]="field.max">
-                      <span class="range-val">{{ store.lines()[$index] || field.p }}</span>
-                    </div>
-                  </ng-container>
-                </div>
+                  </div>
+                }
+                @if (field.type === 'range') {
+                  <div class="field-input field-range">
+                    <input type="range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()"
+                      [min]="field.min" [max]="field.max">
+                    <span class="mono range-val">{{ store.lines()[$index] || field.p }}</span>
+                  </div>
+                }
               </div>
             }
           </div>
 
-          <div class="drop-zone" *ngIf="store.isMediaApp()" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
-            <input type="file" #fi (change)="onFile($event)" [multiple]="store.selectedApp() === 'ai_bypass'" hidden>
-            <ng-container *ngIf="store.selectedApp() !== 'ai_bypass'">
-              <div class="d-icon" [class.locked]="store.selectedFile()">{{ store.selectedFile() ? '✅' : '📤' }}</div>
-              <div class="d-text">{{ store.selectedFile() ? 'BUFFER_LOCKED' : 'DROP_SOURCE_MEDIA' }}</div>
-            </ng-container>
-            <ng-container *ngIf="store.selectedApp() === 'ai_bypass'">
-              <div class="d-icon" [class.locked]="store.batchFiles().length > 0">{{ store.batchFiles().length > 0 ? '✅' : '📦' }}</div>
-              <div class="d-text">{{ store.batchFiles().length > 0 ? store.batchFiles().length + ' FILES_BUFFERED' : 'DROP_UP_TO_5_FILES' }}</div>
-            </ng-container>
-          </div>
+          @if (store.isMediaApp()) {
+            <div class="dropzone" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
+              <input type="file" #fi (change)="onFile($event)" [multiple]="store.selectedApp() === 'ai_bypass'" hidden>
+              @if (store.selectedApp() !== 'ai_bypass') {
+                <div class="dz-icon" [class.ok]="store.selectedFile()">
+                  {{ store.selectedFile() ? '✓' : '↑' }}
+                </div>
+                <div class="mono dz-label">
+                  {{ store.selectedFile() ? 'FILE_LOCKED' : 'DROP_OR_CLICK' }}
+                </div>
+              } @else {
+                <div class="dz-icon" [class.ok]="store.batchFiles().length > 0">
+                  {{ store.batchFiles().length > 0 ? '✓' : '⊞' }}
+                </div>
+                <div class="mono dz-label">
+                  {{ store.batchFiles().length > 0 ? store.batchFiles().length + '_FILES' : 'DROP_UP_TO_5' }}
+                </div>
+              }
+            </div>
+          }
+
+          @if (!['ndls_mrz','nld_mrz','fra_mrz'].includes(store.selectedApp() || '')) {
+            <div class="actions" [class.dual]="store.selectedApp() === 'ai_bypass'">
+              <button class="btn-exec mono"
+                [disabled]="store.loading() || !canExecute()"
+                (click)="execute(false)">
+                <span class="btn-arrow">›</span>
+                {{ store.selectedApp() === 'ai_bypass' ? 'TEST_QUALITY' : 'EXECUTE' }}
+                @if (store.loading()) { <span class="btn-loader"></span> }
+              </button>
+              @if (store.selectedApp() === 'ai_bypass') {
+                <button class="btn-exec btn-purple mono"
+                  [disabled]="store.loading() || !canExecute()"
+                  (click)="execute(true)">
+                  <span class="btn-arrow">›</span>AUTO_COMPRESS
+                </button>
+              }
+            </div>
+          }
         </div>
 
-        <div class="col-visuals">
-          <app-map *ngIf="store.selectedApp() === 'exif_cleaner'"></app-map>
+        <!-- RIGHT: visuals -->
+        <div class="panel-visuals">
+          @if (store.selectedApp() === 'exif_cleaner') {
+            <app-map></app-map>
+          }
 
-          <div class="preview-box" *ngIf="store.hasPreview()">
-            <img *ngIf="store.previewUrl()" [src]="store.previewUrl()" class="pv-img">
-            <span *ngIf="!store.previewUrl()" class="pv-empty">AWAITING_SOURCE...</span>
-          </div>
-
-          <div class="mrz-box" *ngIf="store.selectedApp() === 'ndls_mrz' && store.mrzData() as mrz">
-            <div class="m-row"><span class="tag">G2</span><code>{{ mrz.GEN_2_ISO }}</code><button (click)="copy(mrz.GEN_2_ISO || '')">CPY</button></div>
-            <div class="m-row"><span class="tag">G1</span><code>{{ mrz.GEN_1_LEGACY }}</code></div>
-          </div>
-
-          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'nld_mrz' && store.mrzData() as mrz">
-            <div class="m-row">
-              <span class="tag">L1</span><code>{{ mrz.L1 }}</code>
-              <button class="multi-cpy" (click)="copy((mrz.L1 || '') + '\n' + (mrz.L2 || '') + '\n' + (mrz.L3 || ''))">CPY_ALL</button>
+          @if (store.hasPreview()) {
+            <div class="preview">
+              @if (store.previewUrl()) {
+                <img [src]="store.previewUrl()" class="preview-img">
+              } @else {
+                <span class="mono empty-label">AWAITING_SOURCE</span>
+              }
             </div>
-            <div class="m-row"><span class="tag">L2</span><code>{{ mrz.L2 }}</code></div>
-            <div class="m-row"><span class="tag">L3</span><code>{{ mrz.L3 }}</code></div>
-          </div>
+          }
 
-          <div class="mrz-box td1-box" *ngIf="store.selectedApp() === 'fra_mrz' && store.mrzData() as mrz">
-            <ng-container *ngIf="mrz.STATUS === 'SYNC_OK'">
-              <div class="m-row">
-                <span class="tag">L1</span><code>{{ mrz.L1 }}</code>
-                <button class="multi-cpy" (click)="copy((mrz.L1 || '') + '\n' + (mrz.L2 || ''))">CPY_ALL</button>
+          @if (store.selectedApp() === 'ndls_mrz') {
+            @if (store.mrzData(); as mrz) {
+              <div class="mrz-card">
+                <div class="mrz-row">
+                  <span class="mrz-tag mono">G2</span>
+                  <code class="mono">{{ mrz.GEN_2_ISO }}</code>
+                  <button class="btn-copy mono" (click)="copy(mrz.GEN_2_ISO || '')">CPY</button>
+                </div>
+                <div class="mrz-row">
+                  <span class="mrz-tag mono">G1</span>
+                  <code class="mono">{{ mrz.GEN_1_LEGACY }}</code>
+                </div>
               </div>
-              <div class="m-row"><span class="tag">L2</span><code>{{ mrz.L2 }}</code></div>
-            </ng-container>
+            }
+          }
 
-            <ng-container *ngIf="mrz.STATUS === 'VALIDATION_ERR'">
-              <div class="m-row"><span class="tag err">ERR</span><code class="err">{{ mrz.ERR_MSG }}</code></div>
-            </ng-container>
-          </div>
-
-          <div class="batch-container" *ngIf="store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0">
-            <div class="batch-item" *ngFor="let f of store.batchFiles(); let i = index">
-              <div class="side orig-side glass-inset">
-                <span class="s-tag">ORIGINAL</span>
-                <img [src]="store.batchUrls()[i]" class="s-img">
+          @if (store.selectedApp() === 'nld_mrz') {
+            @if (store.mrzData(); as mrz) {
+              <div class="mrz-card amber">
+                <div class="mrz-row">
+                  <span class="mrz-tag mono">L1</span>
+                  <code class="mono">{{ mrz.L1 }}</code>
+                  <button class="btn-copy amber mono" (click)="copy((mrz.L1||'')+'\n'+(mrz.L2||'')+'\n'+(mrz.L3||''))">ALL</button>
+                </div>
+                <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ mrz.L2 }}</code></div>
+                <div class="mrz-row"><span class="mrz-tag mono">L3</span><code class="mono">{{ mrz.L3 }}</code></div>
               </div>
-              <div class="side res-side glass-dark">
-                <span class="s-tag">PROCESSED</span>
-                <ng-container *ngIf="store.bypassResults()[i] as res; else loadingTpl">
-                  <ng-container *ngIf="res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD'">
-                    <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="s-img">
-                    <div class="res-stats">
-                      <span class="r-prob" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
-                        {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
+            }
+          }
+
+          @if (store.selectedApp() === 'fra_mrz') {
+            @if (store.mrzData(); as mrz) {
+              <div class="mrz-card amber">
+                @if (mrz.STATUS === 'SYNC_OK') {
+                  <div class="mrz-row">
+                    <span class="mrz-tag mono">L1</span>
+                    <code class="mono">{{ mrz.L1 }}</code>
+                    <button class="btn-copy amber mono" (click)="copy((mrz.L1||'')+'\n'+(mrz.L2||''))">ALL</button>
+                  </div>
+                  <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ mrz.L2 }}</code></div>
+                }
+                @if (mrz.STATUS === 'VALIDATION_ERR') {
+                  <div class="mrz-row err">
+                    <span class="mrz-tag mono err">ERR</span>
+                    <code class="mono err">{{ mrz.ERR_MSG }}</code>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          @if (store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0) {
+            <div class="batch">
+              @for (f of store.batchFiles(); track f.name; let i = $index) {
+                <div class="batch-item">
+                  <div class="batch-side">
+                    <span class="mono side-tag">ORIGINAL</span>
+                    <img [src]="store.batchUrls()[i]" class="side-img">
+                  </div>
+                  <div class="batch-side purple">
+                    <span class="mono side-tag purple">PROCESSED</span>
+                    @if (store.bypassResults()[i]; as res) {
+                      @if (res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD') {
+                        <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="side-img">
+                        <div class="batch-stats">
+                          <span class="mono stat-score"
+                            [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
+                            {{ res.TYPE === 'ai_batch' ? res.BEST_SCORE : res.AI_PROBABILITY }}
+                          </span>
+                          <span class="mono stat-node">{{ res.USED_PROFILE }}</span>
+                          <button class="btn-dl mono" (click)="download(res.IMAGE_BASE64||'', f.name)">DL</button>
+                        </div>
+                      } @else {
+                        <span class="mono empty-label err">NODES_DEAD</span>
+                      }
+                    } @else {
+                      <span class="mono empty-label">
+                        {{ store.loading() ? 'PROCESSING...' : 'PENDING' }}
                       </span>
-                      <span class="r-node">[{{ res.USED_PROFILE }}]</span>
-                      <button class="dl-btn" (click)="download(res.IMAGE_BASE64 || '', f.name)">DL</button>
-                    </div>
-                  </ng-container>
-                  <ng-container *ngIf="res.STATUS === 'ERROR' || res.STATUS === 'ALL_NODES_DEAD'">
-                    <span class="pv-empty error">NODES_DEPLETED</span>
-                  </ng-container>
-                </ng-container>
-                <ng-template #loadingTpl>
-                  <span class="pv-empty" *ngIf="store.loading()">PROCESSING...</span>
-                  <span class="pv-empty" *ngIf="!store.loading()">AWAITING_CMD</span>
-                </ng-template>
-              </div>
+                    }
+                  </div>
+                </div>
+              }
             </div>
-          </div>
+          }
         </div>
       </div>
-
-      <footer *ngIf="!['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(store.selectedApp() || '')">
-        <div class="action-grid" [class.dual]="store.selectedApp() === 'ai_bypass'">
-          <button [disabled]="store.loading() || !canExecute()" (click)="execute(false)" class="exec-btn">
-            > {{ store.selectedApp() === 'ai_bypass' ? 'TEST_CURRENT_QUALITY' : 'INITIATE_CORE_SEQUENCE' }}
-            <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
-          </button>
-          <button *ngIf="store.selectedApp() === 'ai_bypass'" [disabled]="store.loading() || !canExecute()" (click)="execute(true)" class="exec-btn stealth-btn">
-            > AUTO-FIND_BEST_COMPRESSION
-            <div class="bar" [style.width.%]="store.loading() ? 100 : 0"></div>
-          </button>
-        </div>
-      </footer>
-    </main>
+    </div>
   `,
   styles: [`
-    .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-    .terminal-shell { background: rgba(10,10,10,0.95); backdrop-filter: blur(80px); border: 1px solid rgba(255,255,255,0.1); border-radius: 45px; padding: 50px; display: flex; flex-direction: column; width: 100%; max-width: 1300px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
-    
-    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .esc-btn { background: transparent; border: none; color: #666; font-weight: 900; cursor: pointer; transition: 0.2s; }
-    .esc-btn:hover { color: #00ff41; }
-    .t-module { color: #00ff41; font-size: 1.8rem; font-weight: 900; letter-spacing: 5px; text-shadow: 0 0 20px rgba(0,255,65,0.4); }
+    .shell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex; flex-direction: column;
+      width: 100%; max-width: 1200px; margin: 0 auto;
+      overflow: hidden;
+    }
 
-    .mini-guide-bar { padding: 18px 40px; font-size: 0.8rem; color: #888; margin-bottom: 40px; border-radius: 25px; background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 3px 20px #000; }
-    .guide-prefix { color: #00ff41; font-weight: 900; margin-right: 15px; }
+    /* header */
+    .shell-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 10px;
+    }
+    .shell-title { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .shell-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green);
+      animation: pulse-green 2s infinite;
+    }
+    .shell-name { font-size: 0.75rem; font-weight: 700; color: var(--green); letter-spacing: 3px; }
+    .shell-meta { flex: 1; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 1px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .t-layout { display: flex; gap: 50px; flex: 1; min-height: 0; }
-    .col-form { flex: 0.8; display: flex; flex-direction: column; gap: 30px; }
-    .col-visuals { flex: 1.2; display: flex; flex-direction: column; gap: 30px; min-height: 400px; overflow-y: auto; padding-right: 10px; }
-    .col-visuals::-webkit-scrollbar { width: 8px; } .col-visuals::-webkit-scrollbar-thumb { background: rgba(0,255,65,0.3); border-radius: 10px; }
-    
-    .form-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .field-box label { display: block; font-size: 0.65rem; font-weight: 900; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
-    .input-bg { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 20px; }
-    .range-bg { padding: 10px 20px; }
-    
-    input, .custom-select { width: 100%; background: transparent; border: none; color: #00ff41; font-family: 'JetBrains Mono'; font-size: 1.1rem; font-weight: 700; outline: none; appearance: none; }
-    .custom-select option { background: #111; color: #00ff41; }
-    
-    .range-wrap { display: flex; align-items: center; gap: 12px; }
-    .custom-range { flex: 1; cursor: pointer; accent-color: #00ff41; }
-    .range-val { color: #fff; font-weight: 900; font-family: 'JetBrains Mono'; width: 35px; text-align: right; font-size: 0.9rem; }
+    /* toggle */
+    .toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; }
+    .toggle input { display: none; }
+    .toggle-track {
+      width: 34px; height: 18px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 20px;
+      position: relative; transition: 0.2s;
+    }
+    .toggle-track.on { background: var(--green-dim); border-color: var(--green); }
+    .toggle-thumb {
+      position: absolute; left: 2px; top: 2px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--text-dim); transition: 0.2s;
+    }
+    .toggle-track.on .toggle-thumb { left: 18px; background: var(--green); }
+    .toggle-label { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 2px; }
 
-    .drop-zone { flex: 1; border: 3px dashed rgba(255,255,255,0.1); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; min-height: 120px; }
-    .drop-zone:hover { border-color: #00ff41; background: rgba(0,255,65,0.02); }
-    .d-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
-    .d-icon.locked { opacity: 1; text-shadow: 0 0 20px #00ff41; }
-    .d-text { font-weight: 900; color: #fff; letter-spacing: 2px; }
+    /* body */
+    .shell-body {
+      display: flex; flex: 1; gap: 0;
+      overflow: hidden;
+    }
 
-    .preview-box { flex: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .pv-img { max-width: 100%; max-height: 100%; border-radius: 15px; }
-    .pv-empty { font-weight: 900; color: #444; letter-spacing: 4px; font-size: 0.8rem; }
-    .pv-empty.error { color: #ff3b30; }
+    /* form panel */
+    .panel-form {
+      width: 320px; flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 0;
+      overflow-y: auto;
+    }
 
-    .mrz-box { background: #000; border: 1px solid #00ff41; padding: 30px 40px; border-radius: 30px; }
-    .td1-box { border-color: #ff9500; }
-    .td1-box .tag { color: #ff9500; }
-    .tag.err { color: #ff3b30; }
-    code.err { color: #ff3b30; }
-    .m-row { display: flex; align-items: center; gap: 30px; margin-bottom: 15px; font-family: 'JetBrains Mono'; font-size: 1.1rem; }
-    .tag { color: #00ff41; font-weight: 900; font-size: 0.8rem; width: 25px; }
-    code { color: #fff; flex: 1; letter-spacing: 4px; }
-    button { background: #00ff41; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 900; cursor: pointer; }
-    .multi-cpy { background: #ff9500; }
+    .fields { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
 
-    .batch-container { display: flex; flex-direction: column; gap: 20px; }
-    .batch-item { display: flex; gap: 15px; height: 180px; }
-    .side { flex: 1; border-radius: 20px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-    .glass-inset { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); }
-    .glass-dark { background: #000; border: 1px solid #a855f7; box-shadow: 0 0 20px rgba(168,85,247,0.1); }
-    .s-tag { position: absolute; top: 10px; left: 10px; font-size: 0.5rem; font-weight: 900; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 5px; color: #fff; z-index: 2; }
-    .glass-dark .s-tag { color: #a855f7; }
-    .s-img { width: 100%; height: 100%; object-fit: contain; z-index: 1; }
-    
-    .res-stats { position: absolute; bottom: 10px; width: 90%; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.85); padding: 5px 10px; border-radius: 10px; z-index: 2; border: 1px solid rgba(168,85,247,0.3); }
-    .r-prob { font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
-    .r-prob.safe { color: #00ff41; } .r-prob.danger { color: #ff3b30; }
-    .r-node { font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px; }
-    .dl-btn { background: #a855f7; color: #fff; padding: 5px 15px; font-size: 0.7rem; }
+    .field {}
+    .field-label {
+      display: block; font-size: 0.55rem; font-weight: 700;
+      color: var(--text-dim); letter-spacing: 2px; margin-bottom: 6px;
+    }
+    .field-input {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      transition: border-color 0.15s;
+    }
+    .field-input:focus-within { border-color: var(--border-green); }
+    .field-input input, .field-input select {
+      width: 100%; background: none; border: none; outline: none;
+      color: var(--green); font-size: 0.8rem; font-weight: 700;
+      appearance: none;
+    }
+    .field-input select option { background: #111; }
+    .field-range { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+    .field-range input[type=range] { flex: 1; accent-color: var(--green); cursor: pointer; }
+    .range-val { font-size: 0.75rem; color: var(--text); font-weight: 700; width: 28px; text-align: right; }
 
-    .action-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
-    .action-grid.dual { grid-template-columns: 1fr 1fr; }
-    .exec-btn { width: 100%; padding: 30px; background: #fff; color: #000; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; cursor: pointer; position: relative; overflow: hidden; }
-    .stealth-btn { background: transparent; border: 2px solid #a855f7; color: #a855f7; }
-    .stealth-btn:hover:not(:disabled) { background: rgba(168,85,247,0.1); }
-    .bar { position: absolute; bottom: 0; left: 0; height: 8px; background: #00ff41; transition: 2s; }
-    .stealth-btn .bar { background: #a855f7; }
+    .dropzone {
+      margin: 0 20px 20px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 24px 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      cursor: pointer; transition: 0.2s;
+    }
+    .dropzone:hover { border-color: var(--border-green); background: var(--green-dim); }
+    .dz-icon {
+      font-size: 1.4rem; font-weight: 900;
+      color: var(--text-dim); font-family: var(--mono);
+      transition: 0.2s;
+    }
+    .dz-icon.ok { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+    .dz-label { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 2px; }
 
-    .scan-ui { display: flex; align-items: center; gap: 15px; cursor: pointer; }
-    .scan-ui input { display: none; }
-    .slider { width: 40px; height: 22px; background: #222; border-radius: 20px; position: relative; transition: 0.3s; }
-    .slider::after { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
-    .slider.on { background: #00ff41; }
-    .slider.on::after { transform: translateX(18px); background: #000; }
-    .txt { font-weight: 900; color: #fff; letter-spacing: 2px; font-size: 0.8rem; }
+    .actions {
+      margin: 0 20px 20px;
+      display: grid; grid-template-columns: 1fr; gap: 8px;
+    }
+    .actions.dual { grid-template-columns: 1fr 1fr; }
+
+    .btn-exec {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      background: var(--green); color: #000;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 2px;
+      cursor: pointer; transition: 0.15s; position: relative;
+      justify-content: center;
+    }
+    .btn-exec:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-exec:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-exec.btn-purple { background: transparent; border: 1px solid var(--purple); color: var(--purple); }
+    .btn-exec.btn-purple:hover:not(:disabled) { background: rgba(168,85,247,0.1); }
+    .btn-arrow { font-size: 1rem; }
+    .btn-loader {
+      width: 12px; height: 12px;
+      border: 2px solid transparent; border-top-color: #000;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* visuals panel */
+    .panel-visuals {
+      flex: 1; overflow-y: auto;
+      padding: 20px; display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .preview {
+      flex: 1; min-height: 200px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    .empty-label { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 3px; }
+    .empty-label.err { color: var(--red); }
+
+    /* MRZ */
+    .mrz-card {
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--border-green);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+    }
+    .mrz-card.amber { border-color: rgba(255,149,0,0.3); }
+    .mrz-row {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 10px;
+    }
+    .mrz-row:last-child { margin-bottom: 0; }
+    .mrz-row.err code, .mrz-row.err .mrz-tag { color: var(--red); }
+    .mrz-tag { font-size: 0.55rem; font-weight: 700; color: var(--green); width: 20px; letter-spacing: 1px; }
+    .mrz-card.amber .mrz-tag { color: var(--amber); }
+    code { color: var(--text); font-size: 0.7rem; letter-spacing: 3px; flex: 1; word-break: break-all; }
+    .btn-copy {
+      background: var(--green-dim); border: 1px solid var(--border-green);
+      color: var(--green); font-size: 0.55rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: var(--amber); }
+
+    /* batch */
+    .batch { display: flex; flex-direction: column; gap: 12px; }
+    .batch-item { display: flex; gap: 10px; height: 160px; }
+    .batch-side {
+      flex: 1; border-radius: var(--radius-sm);
+      position: relative; overflow: hidden;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .batch-side.purple { border-color: rgba(168,85,247,0.3); }
+    .side-tag {
+      position: absolute; top: 8px; left: 8px;
+      font-size: 0.45rem; font-weight: 700;
+      background: rgba(0,0,0,0.8); padding: 3px 6px;
+      border-radius: 3px; color: var(--text-dim); z-index: 2;
+    }
+    .side-tag.purple { color: var(--purple); }
+    .side-img { width: 100%; height: 100%; object-fit: contain; }
+    .batch-stats {
+      position: absolute; bottom: 8px; left: 8px; right: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(0,0,0,0.85); padding: 4px 8px;
+      border-radius: 4px; z-index: 2;
+      border: 1px solid rgba(168,85,247,0.2);
+    }
+    .stat-score { font-size: 0.85rem; font-weight: 700; }
+    .stat-score.safe { color: var(--green); }
+    .stat-score.danger { color: var(--red); }
+    .stat-node { font-size: 0.5rem; color: var(--purple); }
+    .btn-dl {
+      background: var(--purple); color: #fff;
+      border: none; padding: 3px 10px;
+      border-radius: 3px; font-size: 0.55rem;
+      font-weight: 700; cursor: pointer;
+    }
+
+    /* mobile */
+    @media (max-width: 767px) {
+      .shell-body { flex-direction: column; overflow: visible; }
+      .panel-form { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+      .panel-visuals { min-height: 300px; }
+      .actions.dual { grid-template-columns: 1fr; }
+      .shell-meta { display: none; }
+    }
   `]
 })
 export class TerminalComponent {

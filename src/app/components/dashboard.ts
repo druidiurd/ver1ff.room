@@ -1,66 +1,163 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { AppStore } from '../store';
+
+interface AppCard { id: string; icon: string; label: string; color: string; }
+interface Group { name: string; tag: string; apps: AppCard[]; }
+
+const GROUPS: Group[] = [
+  {
+    name: 'IRELAND', tag: 'IE',
+    apps: [
+      { id: 'energia',   icon: '⚡', label: 'IE-BILL-GEN',  color: '#00ff41' },
+      { id: 'ndls_mrz',  icon: '🆔', label: 'IE-NDLS-MRZ',  color: '#007aff' },
+      { id: 'revolut',   icon: '💳', label: 'REVOLUT-STMT', color: '#7c3aed' },
+    ]
+  },
+  {
+    name: 'NETHERLANDS', tag: 'NL',
+    apps: [
+      { id: 'nld_mrz', icon: '🇳🇱', label: 'NL-ID-MRZ', color: '#ff9500' },
+    ]
+  },
+  {
+    name: 'FRANCE', tag: 'FR',
+    apps: [
+      { id: 'fra_mrz', icon: '🇫🇷', label: 'FR-CNI-MRZ', color: '#007aff' },
+    ]
+  },
+  {
+    name: 'GLOBAL TOOLS', tag: 'SYS',
+    apps: [
+      { id: 'exif_cleaner', icon: '📸', label: 'EXIF-SNIPER',  color: '#ff9500' },
+      { id: 'face_cut',     icon: '👤', label: 'FACE-VISION',  color: '#ff3b30' },
+      { id: 'ai_bypass',    icon: '🥷', label: 'AI-STEALTH',   color: '#a855f7' },
+    ]
+  },
+];
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
   template: `
-    <section class="springboard fade-in">
-      <div class="folder glass">
-        <div class="f-header"><span class="f-tag">SEC</span><h2 class="f-name">IRELAND_NODES</h2></div>
-        <div class="app-grid">
-          <div class="app-card" (click)="store.openApp('energia')"><div class="icon glass-inset neon-green">⚡</div><span class="label">IE-bill-gen</span></div>
-          <div class="app-card" (click)="store.openApp('ndls_mrz')"><div class="icon glass-inset neon-blue">🆔</div><span class="label">IE-NDLS-MRZ</span></div>
-          <div class="app-card" (click)="store.openApp('revolut')"><div class="icon glass-inset neon-violet">💳</div><span class="label">Revolut-Stmt</span></div>
-        </div>
+    <div class="dash">
+      <div class="dash-header">
+        <h1 class="dash-title mono">VER1FF_ROOM</h1>
+        <p class="dash-sub mono">SELECT_MODULE // {{ total }} NODES ONLINE</p>
       </div>
 
-      <div class="folder glass">
-        <div class="f-header"><span class="f-tag">SEC</span><h2 class="f-name">NETHERLANDS_NODES</h2></div>
-        <div class="app-grid">
-          <div class="app-card" (click)="store.openApp('nld_mrz')"><div class="icon glass-inset neon-amber">🇳🇱</div><span class="label">NL-ID-MRZ</span></div>
-        </div>
+      <div class="groups">
+        @for (group of groups; track group.name) {
+          <div class="group">
+            <div class="group-header">
+              <span class="group-tag mono">{{ group.tag }}</span>
+              <span class="group-name mono">{{ group.name }}</span>
+              <div class="group-line"></div>
+            </div>
+            <div class="cards">
+              @for (app of group.apps; track app.id) {
+                <button class="card" (click)="store.openApp(app.id)"
+                  [style.--accent]="app.color">
+                  <div class="card-glow"></div>
+                  <div class="card-icon">{{ app.icon }}</div>
+                  <div class="card-label mono">{{ app.label }}</div>
+                  <div class="card-arrow mono">→</div>
+                </button>
+              }
+            </div>
+          </div>
+        }
       </div>
-
-      <div class="folder glass">
-        <div class="f-header"><span class="f-tag">SEC</span><h2 class="f-name">FRANCE_NODES</h2></div>
-        <div class="app-grid">
-          <div class="app-card" (click)="store.openApp('fra_mrz')"><div class="icon glass-inset neon-blue">🇫🇷</div><span class="label">FR-CNI-MRZ</span></div>
-        </div>
-      </div>
-
-      <div class="folder glass">
-        <div class="f-header"><span class="f-tag">SYS</span><h2 class="f-name">GLOBAL_TOOLS</h2></div>
-        <div class="app-grid">
-          <div class="app-card" (click)="store.openApp('exif_cleaner')"><div class="icon glass-inset neon-amber">📸</div><span class="label">EXIF-Sniper</span></div>
-          <div class="app-card" (click)="store.openApp('face_cut')"><div class="icon glass-inset neon-red">👤</div><span class="label">Face-Cut</span></div>
-          <div class="app-card" (click)="store.openApp('ai_bypass')"><div class="icon glass-inset neon-purple">🥷</div><span class="label">AI-Stealth</span></div>
-        </div>
-      </div>
-    </section>
+    </div>
   `,
   styles: [`
-    .fade-in { animation: fIn 0.4s ease-out; } @keyframes fIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .springboard { width: 100%; max-width: 1200px; display: flex; gap: 40px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
-    .folder { flex: 1; min-width: 300px; padding: 45px; border-radius: 45px; background: rgba(10,10,10,0.9); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(40px); }
-    .f-header { display: flex; align-items: center; gap: 15px; margin-bottom: 40px; }
-    .f-tag { background: #00ff41; color: #000; font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; }
-    .f-name { font-size: 1.1rem; font-weight: 900; color: #fff; letter-spacing: 4px; }
-    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 35px; }
-    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; }
-    .app-card:hover { transform: scale(1.1) translateY(-5px); }
-    .icon { width: 80px; height: 80px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.05); }
-    .label { font-size: 0.7rem; font-weight: 800; color: #777; margin-top: 15px; text-transform: uppercase; text-align: center; }
-    .neon-green { color: #00ff41; text-shadow: 0 0 15px rgba(0,255,65,0.5); }
-    .neon-blue { color: #007aff; text-shadow: 0 0 15px rgba(0,122,255,0.5); }
-    .neon-amber { color: #ff9500; text-shadow: 0 0 15px rgba(255,149,0,0.5); }
-    .neon-red { color: #ff3b30; text-shadow: 0 0 15px rgba(255,59,48,0.5); }
-    .neon-purple { color: #a855f7; text-shadow: 0 0 15px rgba(168,85,247,0.5); }
-    .neon-violet { color: #7c3aed; text-shadow: 0 0 15px rgba(124,58,237,0.5); }
+    .dash { max-width: 900px; margin: 0 auto; }
+
+    .dash-header { margin-bottom: 48px; }
+    .dash-title {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800; color: var(--green);
+      letter-spacing: 6px;
+      text-shadow: 0 0 30px var(--green-glow);
+      margin-bottom: 8px;
+    }
+    .dash-sub {
+      font-size: 0.65rem; color: var(--text-dim);
+      letter-spacing: 3px;
+    }
+
+    .groups { display: flex; flex-direction: column; gap: 40px; }
+
+    .group-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 16px;
+    }
+    .group-tag {
+      font-size: 0.55rem; font-weight: 700;
+      background: var(--green); color: #000;
+      padding: 3px 8px; border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .group-name {
+      font-size: 0.65rem; font-weight: 700;
+      color: var(--text-dim); letter-spacing: 3px;
+    }
+    .group-line {
+      flex: 1; height: 1px;
+      background: linear-gradient(to right, var(--border-green), transparent);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      position: relative; overflow: hidden;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 18px;
+      cursor: pointer; text-align: left;
+      transition: border-color 0.2s, transform 0.15s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .card:hover .card-glow {
+      opacity: 1;
+    }
+    .card:hover .card-arrow { color: var(--accent); }
+
+    .card-glow {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .card-icon { font-size: 1.6rem; }
+    .card-label {
+      font-size: 0.6rem; font-weight: 700;
+      color: var(--text); letter-spacing: 2px;
+      flex: 1;
+    }
+    .card-arrow {
+      font-size: 0.75rem; color: var(--text-dim);
+      transition: color 0.2s;
+      align-self: flex-end;
+    }
+
+    @media (max-width: 767px) {
+      .cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+      .dash-header { margin-bottom: 32px; }
+    }
   `]
 })
 export class DashboardComponent {
   store = inject(AppStore);
+  groups = GROUPS;
+  total = GROUPS.reduce((s, g) => s + g.apps.length, 0);
 }

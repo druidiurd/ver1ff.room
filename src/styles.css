@@ -1,30 +1,72 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&family=Space+Grotesk:wght@400;500;700&display=swap');
 
 :root {
-  --matrix-green: #00ff41;
-  --matrix-glow: rgba(0, 255, 65, 0.4);
-  --bg-pure: #000000;
-  --glass-dark: rgba(10, 10, 10, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --text-primary: #ffffff;
-  --text-dim: #666666;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --green:       #00ff41;
+  --green-dim:   rgba(0,255,65,0.15);
+  --green-glow:  rgba(0,255,65,0.4);
+  --purple:      #a855f7;
+  --amber:       #ff9500;
+  --red:         #ff3b30;
+  --blue:        #007aff;
+
+  --bg:          #030303;
+  --surface:     rgba(8,8,8,0.92);
+  --surface2:    rgba(15,15,15,0.85);
+  --border:      rgba(255,255,255,0.06);
+  --border-green:rgba(0,255,65,0.2);
+
+  --text:        #e8e8e8;
+  --text-dim:    #444;
+  --text-mid:    #888;
+
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+
+  --sidebar-w: 220px;
+  --topbar-h:  56px;
+  --radius:    16px;
+  --radius-sm: 8px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body {
-  background: var(--bg-pure);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  height: 100vh; width: 100vw;
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
-  display: flex; justify-content: center; align-items: center;
 }
 
-/* Binary Rain Overlay  */
-canvas#matrix {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 1; opacity: 0.15; pointer-events: none;
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,255,65,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,255,65,0.4); }
+
+/* scanlines overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9000;
+}
+
+/* utility */
+.mono { font-family: var(--mono); }
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+@keyframes pulse-green {
+  0%,100% { box-shadow: 0 0 6px var(--green-glow); }
+  50%      { box-shadow: 0 0 18px var(--green-glow); }
 }
