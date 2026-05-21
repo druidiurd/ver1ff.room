@@ -47,3 +47,11 @@ Thumbs.db
 .env
 *.env
 api/.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local manuals (working materials, not part of deploy)
+manuals/
