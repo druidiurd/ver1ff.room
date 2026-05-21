@@ -1,0 +1,17 @@
+{
+  "name": "Ver1ff Room",
+  "short_name": "Ver1ff",
+  "description": "Ver1ff document toolkit",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030303",
+  "theme_color": "#00ff41",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -30,6 +30,16 @@ import { lastValueFrom } from 'rxjs';
                 <span class="toggle-thumb"></span>
               </span>
               <span class="mono toggle-label">{{ i18n.t().scan }}</span>
+            </label>
+          }
+          @if (store.selectedApp() === 'revolut') {
+            <label class="toggle" [class.scan-active]="customTx()">
+              <input type="checkbox" [ngModel]="customTx()" (ngModelChange)="customTx.set($event)">
+              <span class="scan-icon">✏️</span>
+              <span class="toggle-track" [class.on]="customTx()">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="mono toggle-label">CUSTOM_TX</span>
             </label>
           }
         </div>
@@ -70,6 +80,46 @@ import { lastValueFrom } from 'rxjs';
               </div>
             }
           </div>
+
+          @if (store.selectedApp() === 'revolut' && customTx()) {
+            <div class="custom-tx-fields fields">
+              <div class="field">
+                <label class="mono field-label">MERCHANT_NAME</label>
+                <div class="field-input">
+                  <input class="mono" [ngModel]="customMerchant()" (ngModelChange)="customMerchant.set($event)"
+                    placeholder="e.g. Tesco" autocomplete="off">
+                </div>
+              </div>
+              <div class="field">
+                <label class="mono field-label">TO_FIELD</label>
+                <div class="field-input">
+                  <input class="mono" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)"
+                    placeholder="e.g. Tesco, Dublin" autocomplete="off">
+                </div>
+              </div>
+              <div class="field">
+                <label class="mono field-label">CARD_FIELD</label>
+                <div class="field-input">
+                  <input class="mono" [ngModel]="customCard()" (ngModelChange)="customCard.set($event)"
+                    placeholder="e.g. 416598******1234" autocomplete="off">
+                </div>
+              </div>
+              <div class="field">
+                <label class="mono field-label">AMOUNT_EUR</label>
+                <div class="field-input">
+                  <input class="mono" [ngModel]="customAmount()" (ngModelChange)="customAmount.set($event)"
+                    placeholder="e.g. 42.50" autocomplete="off" type="number" min="0" step="0.01">
+                </div>
+              </div>
+              <div class="field">
+                <label class="mono field-label">TX_DATE <span style="color:var(--text-dim);font-weight:400">(opt)</span></label>
+                <div class="field-input">
+                  <input class="mono" [ngModel]="customDate()" (ngModelChange)="customDate.set($event)"
+                    type="date" autocomplete="off">
+                </div>
+              </div>
+            </div>
+          }
 
           @if (store.isMediaApp()) {
             <div class="dropzone" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
@@ -337,7 +387,14 @@ import { lastValueFrom } from 'rxjs';
       overflow: hidden;
     }
     .shell-body.forge-mode .panel-form { display: none; }
-    .shell-body.forge-mode .panel-visuals { width: 100%; max-width: 100%; }
+    .shell-body.forge-mode .panel-visuals {
+      width: 100%; max-width: 100%;
+      overflow: hidden;
+    }
+    .shell-body.forge-mode .panel-visuals app-mrz-forge {
+      display: flex; flex-direction: column;
+      height: 100%;
+    }
 
     /* form panel */
     .panel-form {
@@ -371,6 +428,11 @@ import { lastValueFrom } from 'rxjs';
     .field-range { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
     .field-range input[type=range] { flex: 1; accent-color: var(--green); cursor: pointer; }
     .range-val { font-size: 0.75rem; color: var(--text); font-weight: 700; width: 28px; text-align: right; }
+
+    .custom-tx-fields {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
 
     .dropzone {
       margin: 0 20px 20px;
@@ -611,6 +673,13 @@ export class TerminalComponent implements OnInit {
   route = inject(ActivatedRoute);
   titleSvc = inject(Title);
 
+  customTx = signal(false);
+  customMerchant = signal('');
+  customTo = signal('');
+  customCard = signal('');
+  customAmount = signal('');
+  customDate = signal('');
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id') ?? '';
@@ -713,11 +782,19 @@ export class TerminalComponent implements OnInit {
       return;
     }
 
-    const fd = new FormData(); 
-    fd.append('type', this.store.selectedApp()!); 
-    fd.append('lines', JSON.stringify(this.store.lines())); 
+    const fd = new FormData();
+    fd.append('type', this.store.selectedApp()!);
+    fd.append('lines', JSON.stringify(this.store.lines()));
     fd.append('scan_mode', this.store.scanMode().toString());
     if (this.store.selectedFile()) fd.append('file', this.store.selectedFile()!);
+    if (this.store.selectedApp() === 'revolut' && this.customTx()) {
+      fd.append('custom_tx', 'true');
+      fd.append('custom_merchant', this.customMerchant());
+      fd.append('custom_to', this.customTo());
+      fd.append('custom_card', this.customCard());
+      fd.append('custom_amount', this.customAmount());
+      fd.append('custom_date', this.customDate());
+    }
     
     const isJson = ['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '');
 

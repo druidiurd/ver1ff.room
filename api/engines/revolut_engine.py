@@ -54,24 +54,44 @@ class RevolutEngine:
             {"id": "region", "label": "REGION",          "p": "County Dublin"},
         ]
 
-    def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:
+    def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None,
+               custom_tx: bool = False, custom_merchant: str = '', custom_to: str = '',
+               custom_card: str = '', custom_amount: str = '', custom_date: str = '') -> io.BytesIO:
         l = (lines + [""] * 5)[:5]
         name, addr1, zip_code, city, region = l
 
         now = datetime.now()
         gen_date = f"Generated on the {now.day} {now.strftime('%b %Y')}"
 
-        # Random transaction date — last 30 days, not today
-        tx_offset = random.randint(1, 30)
-        tx_dt = now - timedelta(days=tx_offset)
-        tx_date = f"{tx_dt.day} {tx_dt.strftime('%b %Y')}"
+        # Transaction date
+        if custom_tx and custom_date:
+            try:
+                from datetime import date as _date
+                d = _date.fromisoformat(custom_date)
+                tx_date = f"{d.day} {d.strftime('%b %Y')}"
+            except ValueError:
+                tx_offset = random.randint(1, 30)
+                tx_dt = now - timedelta(days=tx_offset)
+                tx_date = f"{tx_dt.day} {tx_dt.strftime('%b %Y')}"
+        else:
+            tx_offset = random.randint(1, 30)
+            tx_dt = now - timedelta(days=tx_offset)
+            tx_date = f"{tx_dt.day} {tx_dt.strftime('%b %Y')}"
 
-        merchant, merchant_city = random.choice(_MERCHANTS)
-        tx_eur = round(random.uniform(4.5, 180.0), 2)
+        if custom_tx and custom_merchant:
+            merchant = custom_merchant
+            merchant_city = custom_to or custom_merchant
+            try:
+                tx_eur = float(custom_amount) if custom_amount else round(random.uniform(4.5, 180.0), 2)
+            except ValueError:
+                tx_eur = round(random.uniform(4.5, 180.0), 2)
+            tx_card = custom_card if custom_card else f"416598******{random.randint(1000, 9999)}"
+        else:
+            merchant, merchant_city = random.choice(_MERCHANTS)
+            tx_eur = round(random.uniform(4.5, 180.0), 2)
+            tx_card = f"416598******{random.randint(1000, 9999)}"
+
         eur_str = f"€{tx_eur:,.2f}"
-
-        card_suffix = random.randint(1000, 9999)
-        tx_card = f"416598******{card_suffix}"
 
         iban_suffix = str(random.randint(1000, 9999))
         iban = _IBAN_BASE + iban_suffix

@@ -1,0 +1,52 @@
+[
+  {
+    "version": "1.2.0",
+    "date": "2026-05-21",
+    "title": "MRZ Forge — Manual Intelligence",
+    "items": [
+      "Manual data integrated for 30+ countries — doc number formats, personal number formats, validity periods",
+      "Document number generator rewritten per country manuals (DE, FR, ES, BE, HU, FI, LV, CH, AU, IE, BG, RO, SE, EE and more)",
+      "📋 INFO overlay — shows doc number format, personal number spec and notes from the manual for selected country",
+      "🔤 FONTS overlay — lists exact fonts used in each country's document",
+      "✅ MANUAL_VALID badge — validates generated doc number against manual rules after each MRZ generation",
+      "📅 Expiry autofill — one-click fills expiry date based on country standard validity (5 or 10 years)",
+      "🟢 Manual coverage dots — green indicator in country selector for countries with manual data",
+      "Personal number generator expanded to 30+ countries: BSN, PESEL, CPF, NINo, TFN, personnummer, HETU, INSEE, Codice Fiscale, EGN, OIB, EMŠO, AMKA, PPS, Steuer-ID and more",
+      "PWA / Offline mode — service worker caches app shell and flag images for 30 days"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-05-21",
+    "title": "MRZ Forge & Revolut upgrades",
+    "items": [
+      "Country flags in nationality/issuer selector (flagcdn.com, cross-platform)",
+      "Two-column layout — input left, MRZ output + history right, no scroll needed",
+      "Generation history — last 5 results with one-click field restore",
+      "RANDOM and CLEAR buttons for quick data fill",
+      "Auto document number generator per country (Europe + USA/CAN/AUS/BRA)",
+      "Cyrillic input blocked, all name fields auto-uppercase",
+      "SubType warnings for country-specific document variants (DE, AT, CH, GB, US, CA, FR, NL, PL)",
+      "Date validation — birth date vs expiry date cross-check",
+      "Custom Transaction toggle in Revolut — set merchant, amount, date manually",
+      "📡 UPDATES news feed on dashboard",
+      "Fixed --text-dim color contrast"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-05-21",
+    "title": "Initial Release",
+    "items": [
+      "MRZ Forge — universal MRZ generator (TD1, TD2, TD3, MRV-A)",
+      "Revolut statement generator with scan mode",
+      "AI Bypass — image compression with quality scoring",
+      "EXIF Cleaner with GPS map preview",
+      "Face Cut tool",
+      "Irish NDLS MRZ, Dutch & French MRZ generators",
+      "Energia bill generator",
+      "Deep links for MRZ Forge",
+      "Quick presets & custom preset save in MRZ Forge"
+    ]
+  }
+]

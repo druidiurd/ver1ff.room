@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { AppStore } from '../store';
 import { I18nService } from '../services/i18n';
 
 interface NavItem { id: string; group: string; }
+interface ChangelogEntry { version: string; date: string; title: string; items: string[]; }
 
 const NAV: NavItem[] = [
   { id: 'energia',      group: 'IRELAND'     },
@@ -37,9 +39,47 @@ const COLORS: Record<string, string> = {
   template: `
     <div class="dash fade-in">
       <div class="dash-header">
-        <h1 class="dash-title mono">{{ i18n.t().brand }}</h1>
-        <p class="dash-sub mono">{{ i18n.t().selectModule }} // {{ total }} {{ i18n.t().nodesOnline(total) }}</p>
+        <div class="dash-header-row">
+          <div>
+            <h1 class="dash-title mono">{{ i18n.t().brand }}</h1>
+            <p class="dash-sub mono">{{ i18n.t().selectModule }} // {{ total }} {{ i18n.t().nodesOnline(total) }}</p>
+          </div>
+          <button class="news-btn mono" (click)="toggleNews()" [class.active]="showNews()">
+            <span class="news-icon">📡</span>
+            <span class="news-label">UPDATES</span>
+            @if (changelog().length > 0) {
+              <span class="news-badge">{{ changelog().length }}</span>
+            }
+          </button>
+        </div>
       </div>
+
+      <!-- Changelog modal -->
+      @if (showNews()) {
+        <div class="news-backdrop" (click)="showNews.set(false)"></div>
+        <div class="news-modal">
+          <div class="news-modal-header">
+            <span class="mono news-modal-title">// CHANGELOG</span>
+            <button class="news-close mono" (click)="showNews.set(false)">✕</button>
+          </div>
+          <div class="news-modal-body">
+            @for (entry of changelog(); track entry.version) {
+              <div class="cl-entry">
+                <div class="cl-meta">
+                  <span class="cl-version mono">v{{ entry.version }}</span>
+                  <span class="cl-date mono">{{ entry.date }}</span>
+                  <span class="cl-title mono">{{ entry.title }}</span>
+                </div>
+                <ul class="cl-items">
+                  @for (item of entry.items; track $index) {
+                    <li class="mono cl-item">{{ item }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </div>
+      }
 
       <div class="groups">
         @for (group of groups; track group) {
@@ -69,6 +109,10 @@ const COLORS: Record<string, string> = {
     .dash { max-width: 900px; margin: 0 auto; }
 
     .dash-header { margin-bottom: 48px; }
+    .dash-header-row {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 16px;
+    }
     .dash-title {
       font-size: clamp(1.6rem, 4vw, 2.4rem);
       font-weight: 800; color: var(--green);
@@ -79,6 +123,99 @@ const COLORS: Record<string, string> = {
     .dash-sub {
       font-size: 0.65rem; color: var(--text-dim);
       letter-spacing: 3px;
+    }
+
+    /* News button */
+    .news-btn {
+      position: relative;
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-dim);
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: 0.15s; flex-shrink: 0;
+    }
+    .news-btn:hover, .news-btn.active {
+      border-color: var(--green); color: var(--green);
+    }
+    .news-icon { font-size: 0.85rem; }
+    .news-badge {
+      background: var(--green); color: #000;
+      font-size: 0.5rem; font-weight: 800;
+      padding: 1px 5px; border-radius: 10px;
+    }
+
+    /* Backdrop */
+    .news-backdrop {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(0,0,0,0.5);
+    }
+
+    /* Modal */
+    .news-modal {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 401;
+      width: min(520px, 90vw);
+      max-height: 70vh;
+      background: var(--surface);
+      border: 1px solid var(--border-green);
+      border-radius: var(--radius);
+      display: flex; flex-direction: column;
+      box-shadow: 0 0 40px rgba(0,255,65,0.1);
+    }
+    .news-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .news-modal-title {
+      font-size: 0.65rem; font-weight: 700;
+      color: var(--green); letter-spacing: 3px;
+    }
+    .news-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 0.75rem;
+      padding: 4px 8px; border-radius: 4px;
+      transition: 0.15s;
+    }
+    .news-close:hover { color: var(--text); background: var(--surface2); }
+
+    .news-modal-body {
+      overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* Changelog entry */
+    .cl-entry { display: flex; flex-direction: column; gap: 10px; }
+    .cl-meta {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .cl-version {
+      font-size: 0.6rem; font-weight: 800;
+      background: var(--green); color: #000;
+      padding: 2px 8px; border-radius: 4px; letter-spacing: 1px;
+    }
+    .cl-date {
+      font-size: 0.55rem; color: var(--text-dim); letter-spacing: 1px;
+    }
+    .cl-title {
+      font-size: 0.6rem; color: var(--text); font-weight: 700; letter-spacing: 1px;
+    }
+    .cl-items {
+      margin: 0; padding: 0 0 0 0;
+      list-style: none;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .cl-item {
+      font-size: 0.6rem; color: var(--text-dim);
+      letter-spacing: 0.5px; line-height: 1.5;
+      padding-left: 14px; position: relative;
+    }
+    .cl-item::before {
+      content: '›'; position: absolute; left: 0;
+      color: var(--green);
     }
 
     .groups { display: flex; flex-direction: column; gap: 40px; }
@@ -152,17 +289,31 @@ const COLORS: Record<string, string> = {
       .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
       .dash-header { margin-bottom: 32px; }
       .card-desc { display: none; }
+      .news-label { display: none; }
     }
   `]
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   store = inject(AppStore);
   i18n = inject(I18nService);
   router = inject(Router);
+  http = inject(HttpClient);
 
   groups = [...new Set(NAV.map(n => n.group))];
   byGroup = (g: string) => NAV.filter(n => n.group === g);
   total = NAV.length;
+
+  showNews = signal(false);
+  changelog = signal<ChangelogEntry[]>([]);
+
+  ngOnInit() {
+    this.http.get<ChangelogEntry[]>('/changelog.json').subscribe({
+      next: data => this.changelog.set(data),
+      error: () => {}
+    });
+  }
+
+  toggleNews() { this.showNews.set(!this.showNews()); }
 
   getIcon(id: string) { return ICONS[id] ?? '⬡'; }
   getColor(id: string) { return COLORS[id] ?? '#00ff41'; }

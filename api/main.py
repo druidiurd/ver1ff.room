@@ -43,17 +43,31 @@ async def execute(
     type: str = Form(...),
     lines: str = Form("[]"),
     scan_mode: str = Form("false"),
-    file: Optional[UploadFile] = File(None)
+    file: Optional[UploadFile] = File(None),
+    custom_tx: str = Form("false"),
+    custom_merchant: str = Form(""),
+    custom_to: str = Form(""),
+    custom_card: str = Form(""),
+    custom_amount: str = Form(""),
+    custom_date: str = Form(""),
 ):
     if type not in registry: raise HTTPException(404, "UNKNOWN_TYPE")
-    
+
     try:
         p_lines = json.loads(lines)
         is_scan = scan_mode.lower() == "true"
         image_bytes = await file.read() if file else None
-        
+
         engine = registry[type]
-        if asyncio.iscoroutinefunction(engine.render):
+        if type == "revolut":
+            res = engine.render(p_lines, is_scan, image_bytes,
+                                custom_tx=custom_tx.lower() == "true",
+                                custom_merchant=custom_merchant,
+                                custom_to=custom_to,
+                                custom_card=custom_card,
+                                custom_amount=custom_amount,
+                                custom_date=custom_date)
+        elif asyncio.iscoroutinefunction(engine.render):
             res = await engine.render(p_lines, is_scan, image_bytes)
         else:
             res = engine.render(p_lines, is_scan, image_bytes)

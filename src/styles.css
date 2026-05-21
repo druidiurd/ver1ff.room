@@ -16,8 +16,8 @@
   --border-green:rgba(0,255,65,0.2);
 
   --text:        #e8e8e8;
-  --text-dim:    #444;
-  --text-mid:    #888;
+  --text-dim:    #888;
+  --text-mid:    #aaa;
 
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Space Grotesk', sans-serif;
