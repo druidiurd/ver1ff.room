@@ -18,11 +18,12 @@ export const T = {
   nodesDead: 'NODES_DEAD',
 
   groups: {
-    IRELAND:     'IRELAND',
-    NETHERLANDS: 'NETHERLANDS',
-    FRANCE:      'FRANCE',
-    TOOLS:       'TOOLS',
-    GLOBAL:      'GLOBAL',
+    IRELAND:          'IRELAND',
+    'UNITED KINGDOM': 'UNITED KINGDOM',
+    NETHERLANDS:      'NETHERLANDS',
+    FRANCE:           'FRANCE',
+    TOOLS:            'TOOLS',
+    GLOBAL:           'GLOBAL',
   } as Record<string, string>,
 
   modules: {
@@ -35,6 +36,7 @@ export const T = {
     face_cut:     { label: 'FACE-VISION',   nav: 'Face-Cut',    desc: 'AI biometric extractor. 3×4 ratio. Adjust zoom and vertical offset for live preview.' },
     ai_bypass:    { label: 'AI-STEALTH',    nav: 'AI-Stealth',  desc: 'Camera pipeline emulator. Radial chromatic aberration, PRNU sensor noise, double JPEG, frequency domain break. Physically plausible — passes forensic AI detectors.' },
     mrz_gen:      { label: 'MRZ-FORGE',    nav: 'MRZ Forge',   desc: 'Universal ICAO 9303 MRZ generator. Passport (MRP/TD3), ID Card (TD1, TD2), Visa (MRV-A), eDL. Weighted checksum engine. All 4 formats simultaneously.' },
+    uk_dl_gen:    { label: 'UK-DL-GEN',   nav: 'UK DL Gen',   desc: 'DVLA driving licence number generator. 16-char format + issue number. Encodes surname, DOB, sex, initials per official DVLA spec. Breakdown view.' },
   } as Record<string, { label: string; nav: string; desc: string }>,
 };
 

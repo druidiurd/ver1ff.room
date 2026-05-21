@@ -8,29 +8,30 @@ interface NavItem { id: string; group: string; }
 interface ChangelogEntry { version: string; date: string; title: string; items: string[]; }
 
 const NAV: NavItem[] = [
-  { id: 'energia',      group: 'IRELAND'     },
-  { id: 'ndls_mrz',    group: 'IRELAND'     },
-  { id: 'nld_mrz',     group: 'NETHERLANDS' },
-  { id: 'fra_mrz',     group: 'FRANCE'      },
-  { id: 'exif_cleaner',group: 'TOOLS'       },
-  { id: 'face_cut',    group: 'TOOLS'       },
-  { id: 'ai_bypass',   group: 'TOOLS'       },
-  { id: 'revolut',     group: 'GLOBAL'      },
-  { id: 'mrz_gen',    group: 'GLOBAL'      },
+  { id: 'energia',      group: 'IRELAND'         },
+  { id: 'ndls_mrz',    group: 'IRELAND'         },
+  { id: 'uk_dl_gen',   group: 'UNITED KINGDOM'  },
+  { id: 'nld_mrz',     group: 'NETHERLANDS'     },
+  { id: 'fra_mrz',     group: 'FRANCE'          },
+  { id: 'exif_cleaner',group: 'TOOLS'           },
+  { id: 'face_cut',    group: 'TOOLS'           },
+  { id: 'ai_bypass',   group: 'TOOLS'           },
+  { id: 'revolut',     group: 'GLOBAL'          },
+  { id: 'mrz_gen',    group: 'GLOBAL'          },
 ];
 
 const ICONS: Record<string, string> = {
   energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
   nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
   exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
-  mrz_gen: '🔏',
+  mrz_gen: '🔏', uk_dl_gen: '🪪',
 };
 
 const COLORS: Record<string, string> = {
   energia: '#00ff41', ndls_mrz: '#007aff', revolut: '#7c3aed',
   nld_mrz: '#ff9500', fra_mrz: '#007aff',
   exif_cleaner: '#ff9500', face_cut: '#ff3b30', ai_bypass: '#a855f7',
-  mrz_gen: '#00ff41',
+  mrz_gen: '#00ff41', uk_dl_gen: '#ff3b30',
 };
 
 @Component({

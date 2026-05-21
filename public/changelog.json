@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-05-22",
+    "title": "UK DL Gen — full document data & card preview",
+    "items": [
+      "Three card revisions: EU (2015–21) with EU circle + Welsh text, 2021–23 post-Brexit pink, 2023+ blue Royal Crest",
+      "Full document data block — issue/expiry dates, card serial (Luhn), categories, address (field 8)",
+      "Standard 10yr vs Group 2 HGV/Bus 5yr validity with correct date ranges per revision",
+      "Generation history — last 10 sessions saved to localStorage with one-click full restore",
+      "Random UK address generation from dedicated address pool (uk-dl-addresses.ts)",
+      "Fixed issue date ranges: EU cards capped at Jun 2021, 2021–23 cards Jul 2021–Sep 2023",
+      "SVG card preview fixed at 350px width — no layout jump on address change",
+      "Sidebar UNITED KINGDOM group added"
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "2026-05-21",
     "title": "MRZ Forge — Manual Intelligence",

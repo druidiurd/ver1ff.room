@@ -7,12 +7,13 @@ import { AppStore } from '../store';
 import { I18nService } from '../services/i18n';
 import { MapComponent } from './map';
 import { MrzForgeComponent } from './mrz-forge';
+import { UkDlGenComponent } from './uk-dl-gen';
 import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-terminal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent],
+  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent, UkDlGenComponent],
   template: `
     <div class="shell fade-in">
 
@@ -46,10 +47,10 @@ import { lastValueFrom } from 'rxjs';
         <div class="shell-desc mono">{{ getGuideText() }}</div>
       </div>
 
-      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen'">
+      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen'">
         <!-- LEFT: form -->
         <div class="panel-form">
-          @if (store.selectedApp() !== 'mrz_gen') {
+          @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen') {
           <div class="fields">
             @for (field of store.schema(); track field.id) {
               <div class="field">
@@ -142,7 +143,7 @@ import { lastValueFrom } from 'rxjs';
             </div>
           }
 
-          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen'].includes(store.selectedApp() || '')) {
+          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen','uk_dl_gen'].includes(store.selectedApp() || '')) {
             <div class="actions" [class.col]="store.selectedApp() === 'ai_bypass'">
               <button class="btn-exec mono"
                 [disabled]="store.loading() || !canExecute()"
@@ -177,6 +178,10 @@ import { lastValueFrom } from 'rxjs';
 
           @if (store.selectedApp() === 'mrz_gen') {
             <app-mrz-forge></app-mrz-forge>
+          }
+
+          @if (store.selectedApp() === 'uk_dl_gen') {
+            <app-uk-dl-gen></app-uk-dl-gen>
           }
 
           @if (store.hasPreview()) {
@@ -391,7 +396,8 @@ import { lastValueFrom } from 'rxjs';
       width: 100%; max-width: 100%;
       overflow: hidden;
     }
-    .shell-body.forge-mode .panel-visuals app-mrz-forge {
+    .shell-body.forge-mode .panel-visuals app-mrz-forge,
+    .shell-body.forge-mode .panel-visuals app-uk-dl-gen {
       display: flex; flex-direction: column;
       height: 100%;
     }
@@ -680,12 +686,19 @@ export class TerminalComponent implements OnInit {
   customAmount = signal('');
   customDate = signal('');
 
+  // Apps that are pure frontend — no backend schema/execute needed
+  private readonly FRONTEND_ONLY = new Set(['uk_dl_gen']);
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const id = params.get('id') ?? '';
       if (id) {
         this.store.closeApp();
-        this.store.openApp(id);
+        if (!this.FRONTEND_ONLY.has(id)) {
+          this.store.openApp(id);
+        } else {
+          this.store.selectedApp.set(id);
+        }
         this.titleSvc.setTitle(`${this.i18n.module(id).nav} — Ver1ff Room`);
       }
     });
