@@ -17,6 +17,8 @@ from engines.face_engine import FaceEngine
 from engines.ai_bypass_engine import AIBypassEngine
 from engines.revolut_engine import RevolutEngine
 from engines.mrz_gen_engine import MrzGenEngine
+from engines.ita_cf_engine import ItaCfEngine
+from engines.deu_tax_engine import DeuTaxEngine
 
 app = FastAPI()
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,8 @@ registry = {
     "ai_bypass":  AIBypassEngine(base_dir),
     "revolut":    RevolutEngine(base_dir),
     "mrz_gen":    MrzGenEngine(base_dir),
+    "ita_cf":     ItaCfEngine(base_dir),
+    "deu_tax":    DeuTaxEngine(base_dir),
 }
 
 @app.get("/api/schema/{module}")

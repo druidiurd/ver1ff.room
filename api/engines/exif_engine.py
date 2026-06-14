@@ -13,9 +13,9 @@ class ExifEngine:
         # Початкове значення дати в плейсхолдері - сьогодні
         today = datetime.now().strftime("%Y-%m-%d")
         return [
-            {"id": "lat", "label": "LATITUDE", "p": "53.3498"},
-            {"id": "lon", "label": "LONGITUDE", "p": "-6.2603"},
-            {"id": "date", "label": "TARGET_DATE", "p": today}
+            {"id": "lat",  "label": "LATITUDE",    "p": "53.3498", "desc": "GPS latitude in decimal degrees. Positive = North, negative = South. Example: 53.3498 = Dublin, Ireland."},
+            {"id": "lon",  "label": "LONGITUDE",   "p": "-6.2603", "desc": "GPS longitude in decimal degrees. Positive = East, negative = West. Example: -6.2603 = Dublin, Ireland."},
+            {"id": "date", "label": "TARGET_DATE", "p": today,     "desc": "Photo date to embed in EXIF metadata. Format: YYYY-MM-DD. Time is randomized between 09:00 and 20:00."}
         ]
 
     def _to_exif_rational(self, value: float) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:

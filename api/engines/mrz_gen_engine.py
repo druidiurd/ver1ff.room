@@ -15,18 +15,18 @@ class MrzGenEngine:
 
     def get_schema(self) -> List[Dict[str, Any]]:
         return [
-            {"id": "doc_type",    "label": "DOCUMENT_TYPE",    "p": "Passport",    "type": "select", "opts": ["Passport", "ID Card", "Visa"]},
-            {"id": "lastname",    "label": "LAST_NAME",         "p": "SMITH"},
-            {"id": "firstname",   "label": "FIRST_NAME",        "p": "JOHN"},
-            {"id": "birth_date",  "label": "BIRTH_DATE (DD-MM-YYYY)", "p": "01-01-1990"},
-            {"id": "nationality", "label": "NATIONALITY (3L)",  "p": "GBR"},
-            {"id": "sex",         "label": "SEX",               "p": "M",           "type": "select", "opts": ["M", "F", "U"]},
-            {"id": "doc_num",     "label": "DOCUMENT_NUMBER",   "p": "PA1234567"},
-            {"id": "expiry_date", "label": "EXPIRY_DATE (DD-MM-YYYY)", "p": "01-01-2030"},
-            {"id": "issuer",      "label": "ISSUER_CODE (3L)",  "p": "GBR"},
-            {"id": "sub_type",    "label": "SUB_TYPE (opt)",    "p": ""},
-            {"id": "pers_num",    "label": "PERSONAL_NUMBER (opt)", "p": ""},
-            {"id": "optional",    "label": "OPTIONAL_FIELD (opt)",  "p": ""},
+            {"id": "doc_type",    "label": "DOCUMENT_TYPE",         "p": "Passport",    "type": "select", "opts": ["Passport", "ID Card", "Visa"], "desc": "Document format to generate. Passport = TD3 (2-line MRP), ID Card = TD1 (3-line), Visa = MRV-A. Determines MRZ line count and field layout."},
+            {"id": "lastname",    "label": "LAST_NAME",              "p": "SMITH",       "desc": "Surname as it appears on the document. Diacritics are transliterated per ICAO 9303 (Ä→AE, ñ→N, etc.)."},
+            {"id": "firstname",   "label": "FIRST_NAME",             "p": "JOHN",        "desc": "Given name(s). Multiple names separated by spaces. Middle names are included if space allows in the MRZ."},
+            {"id": "birth_date",  "label": "BIRTH_DATE",             "p": "01-01-1990",  "desc": "Date of birth in DD-MM-YYYY format. Example: 15 March 1985 → 15-03-1985. Converted to YYMMDD in MRZ."},
+            {"id": "nationality", "label": "NATIONALITY",            "p": "GBR",         "desc": "3-letter ISO 3166-1 alpha-3 nationality code. GBR = United Kingdom, IRL = Ireland, DEU = Germany, etc."},
+            {"id": "sex",         "label": "SEX",                    "p": "M",           "type": "select", "opts": ["M", "F", "U"], "desc": "M — male, F — female, U — unspecified. Encoded as a single character in MRZ line 2."},
+            {"id": "doc_num",     "label": "DOCUMENT_NUMBER",        "p": "PA1234567",   "desc": "Document number as printed on the travel document. Up to 9 characters (letters and digits). Padded with < if shorter."},
+            {"id": "expiry_date", "label": "EXPIRY_DATE",            "p": "01-01-2030",  "desc": "Document expiry date in DD-MM-YYYY format. Example: 1 January 2030 → 01-01-2030. Converted to YYMMDD in MRZ."},
+            {"id": "issuer",      "label": "ISSUER_CODE",            "p": "GBR",         "desc": "3-letter ISO code of the issuing country or organization. Usually same as nationality but may differ (e.g. UN documents)."},
+            {"id": "sub_type",    "label": "SUB_TYPE (optional)",    "p": "",            "desc": "Document sub-type (1-2 chars). Optional field. Passport = P (or blank), diplomatic = D, etc. Leave blank if not needed."},
+            {"id": "pers_num",    "label": "PERSONAL_NUMBER (opt)",  "p": "",            "desc": "Personal number or national ID. Optional. Up to 14 chars in passport TD3 line 2 optional field. Leave blank if unknown."},
+            {"id": "optional",    "label": "OPTIONAL_FIELD (opt)",   "p": "",            "desc": "Additional optional data field. Used in some national document standards. Leave blank if not applicable."},
         ]
 
     # ── Core helpers ─────────────────────────────────────────────────────────
@@ -106,6 +106,12 @@ class MrzGenEngine:
         'DEU': 'D',   # Germany uses 'D' not 'DEU' per ICAO Annex 9
     }
 
+    # Countries that use a non-standard first character in TD1 line 1
+    # Italian CIE (Carta d'Identità Elettronica) uses 'C' per Ministero dell'Interno spec
+    _TD1_DOC_CHAR: dict = {
+        'ITA': 'C',
+    }
+
     def _mrz_country(self, code: str) -> str:
         """Return 3-char MRZ country field, applying ICAO historical exceptions."""
         code = self._clamp(self._clean(code or 'XXX'), 3)
@@ -161,9 +167,10 @@ class MrzGenEngine:
     # Composite CD: line1[6-30] + line2[1-7] + line2[9-15] + line2[19-29]
 
     def _td1(self, f: Dict[str, str]) -> List[str]:
-        doc_type  = 'I'
+        issuer_code = self._mrz_country(f.get('issuer', 'XXX'))
+        doc_type  = self._TD1_DOC_CHAR.get(issuer_code, 'I')
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
-        issuer    = self._mrz_country(f.get('issuer', 'XXX'))
+        issuer    = issuer_code
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
         cd1       = self._check_digit(doc_num)
         optional1 = self._clamp(self._clean(f.get('optional', '') or ''), 15)

@@ -10,14 +10,14 @@ class NldMrzEngine:
 
     def get_schema(self) -> List[Dict[str, str]]:
         return [
-            {"id": "doc", "label": "DOC_NUM (9)", "p": "SPECIIMEN"},
-            {"id": "bsn", "label": "BSN (14)", "p": "123456789"},
-            {"id": "dob", "label": "DOB (YYMMDD)", "p": "800101"},
-            {"id": "sex", "label": "SEX (M/F/X)", "p": "M"},
-            {"id": "exp", "label": "EXPIRY (YYMMDD)", "p": "300101"},
-            {"id": "nat", "label": "NATION (ISO)", "p": "NLD"},
-            {"id": "sur", "label": "SURNAME", "p": "DE VRIES"},
-            {"id": "nam", "label": "GIVEN NAMES", "p": "JAN"}
+            {"id": "doc", "label": "DOC_NUM (9)",  "p": "SPECIIMEN", "desc": "9-character document number printed on the ID card (field 5a). Letters and digits; pad with filler if shorter."},
+            {"id": "bsn", "label": "BSN",          "p": "123456789", "desc": "Burgerservicenummer — Dutch citizen ID number. Up to 9 digits, no dashes or spaces."},
+            {"id": "dob", "label": "DOB",          "p": "800101",    "desc": "Date of birth in YYMMDD format. Example: 15 March 1985 → 850315."},
+            {"id": "sex", "label": "SEX",          "p": "M",         "desc": "M — male, F — female, X — unspecified. Encoded directly in MRZ line 2."},
+            {"id": "exp", "label": "EXPIRY",       "p": "300101",    "desc": "Document expiry date in YYMMDD format. Example: 1 January 2030 → 300101."},
+            {"id": "nat", "label": "NATIONALITY",  "p": "NLD",       "desc": "3-letter ISO 3166-1 alpha-3 nationality code. NLD for Netherlands, BEL for Belgium, etc."},
+            {"id": "sur", "label": "SURNAME",      "p": "DE VRIES",  "desc": "Last name as printed on the card. Spaces and hyphens are allowed; accents are stripped automatically."},
+            {"id": "nam", "label": "GIVEN NAMES",  "p": "JAN",       "desc": "First and middle names separated by spaces. Only the first part fits on line 3."}
         ]
 
     def _chk(self, payload: str) -> str:

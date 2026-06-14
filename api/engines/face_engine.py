@@ -23,8 +23,8 @@ class FaceEngine:
 
     def get_schema(self):
         return [
-            {"id": "zoom", "label": "SCALE_MODIFIER (%)", "p": "100"},
-            {"id": "shift", "label": "VERTICAL_SINK", "p": "15"}
+            {"id": "zoom",  "label": "SCALE_MODIFIER (%)", "p": "100", "desc": "Crop zoom level as a percentage. 100 = default face crop. Lower values zoom out (more background), higher values zoom in tighter."},
+            {"id": "shift", "label": "VERTICAL_SINK",     "p": "15",  "desc": "Vertical shift of the crop center as percentage of face height. Positive = shift down (more chin). Default 15 centers the face slightly above midpoint."}
         ]
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> io.BytesIO:

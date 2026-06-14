@@ -35,12 +35,12 @@ class EnergiaEngine:
 
     def get_schema(self):
         return [
-            {"id": "n", "label": "IDENTITY_NAME", "p": "Mr Peter Browne"},
-            {"id": "s", "label": "STREET_LOCUS", "p": "114 STANNAWAY RD"},
-            {"id": "d1", "label": "DISTRICT_ZONE", "p": "KIMMAGE"},
-            {"id": "d2", "label": "CITY_DISTRICT", "p": "DUBLIN 12"},
-            {"id": "c", "label": "COUNTY_REGION", "p": "Co. Dublin 12"},
-            {"id": "z", "label": "ZIP_POSTCODE", "p": "D12 N4V9"}
+            {"id": "n",  "label": "IDENTITY_NAME", "p": "Mr Peter Browne",  "desc": "Full name of the account holder including title (Mr/Ms). Printed verbatim on the bill header."},
+            {"id": "s",  "label": "STREET_LOCUS",  "p": "114 STANNAWAY RD", "desc": "Street number and name. Use all-caps as it appears on official Irish utility correspondence."},
+            {"id": "d1", "label": "DISTRICT_ZONE", "p": "KIMMAGE",           "desc": "Locality or district name within the city. Typically a neighbourhood or townland (e.g. KIMMAGE, RATHMINES)."},
+            {"id": "d2", "label": "CITY_DISTRICT", "p": "DUBLIN 12",         "desc": "City name with district number if applicable. For Dublin addresses use 'DUBLIN' + postal district number."},
+            {"id": "c",  "label": "COUNTY_REGION", "p": "Co. Dublin 12",     "desc": "County name prefixed with 'Co.' as per Eircode addressing. Example: Co. Dublin, Co. Cork."},
+            {"id": "z",  "label": "ZIP_POSTCODE",  "p": "D12 N4V9",          "desc": "Irish Eircode — 7-character routing key. Format: A99 XXXX (routing key + unique identifier). Find yours at eircode.ie."}
         ]
 
     def _fmt(self, val: float) -> str:

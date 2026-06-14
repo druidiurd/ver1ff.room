@@ -95,12 +95,12 @@ class FraMrzEngine:
 
     def get_schema(self) -> List[Dict[str, str]]:
         return [
-            {"id": "sur", "label": "SURNAME", "p": "DUBOIS"},
-            {"id": "nam", "label": "GIVEN NAME", "p": "JEAN RENE"},
-            {"id": "cin", "label": "CIN (12 CHARS)", "p": "123456789012"},
-            {"id": "dob", "label": "DOB (YYYY-MM-DD)", "p": "1980-01-01"},
-            {"id": "sex", "label": "SEX (M/F/X)", "p": "M", "type": "select", "opts": ["M", "F", "<"]},
-            {"id": "dep", "label": "DEPT CODE (6 DIGITS)", "p": "075001"}
+            {"id": "sur", "label": "SURNAME",       "p": "DUBOIS",       "desc": "Last name as printed on the CNI. Accents are stripped; hyphens become spaces in MRZ."},
+            {"id": "nam", "label": "GIVEN NAME",    "p": "JEAN RENE",    "desc": "First and middle names. Multiple names separated by spaces. Truncated to fit MRZ line 2."},
+            {"id": "cin", "label": "CIN (12)",      "p": "123456789012", "desc": "Carte d'identité nationale number — exactly 12 alphanumeric characters printed on the card front."},
+            {"id": "dob", "label": "DOB",           "p": "1980-01-01",   "desc": "Date of birth in YYYY-MM-DD or YYMMDD format. Example: 1 January 1980 → 1980-01-01."},
+            {"id": "sex", "label": "SEX",           "p": "M",            "type": "select", "opts": ["M", "F", "<"], "desc": "M — male, F — female, < — unspecified. Encoded in MRZ line 2."},
+            {"id": "dep", "label": "DEPT CODE (6)", "p": "075001",       "desc": "6-digit French department code. First 2-3 digits = department number (e.g. 075 = Paris), last 3 = issuing office."}
         ]
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None) -> Dict[str, str]:

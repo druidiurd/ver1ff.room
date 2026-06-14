@@ -47,11 +47,11 @@ class RevolutEngine:
 
     def get_schema(self):
         return [
-            {"id": "name",   "label": "ACCOUNT_HOLDER", "p": "John Murphy"},
-            {"id": "addr1",  "label": "STREET_ADDRESS",  "p": "14 Grafton Street"},
-            {"id": "zip",    "label": "POSTAL_CODE",     "p": "D02 AB12"},
-            {"id": "city",   "label": "CITY",            "p": "Dublin"},
-            {"id": "region", "label": "REGION",          "p": "County Dublin"},
+            {"id": "name",   "label": "ACCOUNT_HOLDER", "p": "John Murphy",      "desc": "Full legal name of the Revolut account holder. Appears on the statement header and transaction lines."},
+            {"id": "addr1",  "label": "STREET_ADDRESS",  "p": "14 Grafton Street", "desc": "Street number and street name. This is line 1 of the billing address shown on the statement."},
+            {"id": "zip",    "label": "POSTAL_CODE",     "p": "D02 AB12",          "desc": "Eircode or postal code for the account address. Irish format: A99 XXXX (e.g. D02 AB12 for Dublin 2)."},
+            {"id": "city",   "label": "CITY",            "p": "Dublin",            "desc": "City name for the billing address. Typically Dublin, Cork, Galway, etc."},
+            {"id": "region", "label": "REGION",          "p": "County Dublin",     "desc": "County or region. Irish format: 'County Dublin', 'County Cork', etc."},
         ]
 
     def render(self, lines: List[str], scan: bool = False, image_bytes: bytes = None,

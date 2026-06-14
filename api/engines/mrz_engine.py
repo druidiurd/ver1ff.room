@@ -11,11 +11,11 @@ class MrzEngine:
 
     def get_schema(self):
         return [
-            {"id": "sn", "label": "ПРИЗВИЩЕ", "p": "BROWNE"},
-            {"id": "nt", "label": "КРАЇНА (ISO_3)", "p": "IRL"},
-            {"id": "lc", "label": "НОМЕР ПРАВ (9 ЦИФР)", "p": "123456789"},
-            {"id": "is", "label": "СЕРІЯ ВИДАЧІ", "p": "01"},
-            {"id": "dr", "label": "DRIVER_ID (PREFIX)", "p": "55123456"}
+            {"id": "sn", "label": "SURNAME", "p": "BROWNE", "desc": "Last name as printed on the licence. Hyphens and spaces are allowed."},
+            {"id": "nt", "label": "COUNTRY (ISO 3)", "p": "IRL", "desc": "3-letter ISO country code of the issuing state, e.g. IRL, GBR, DEU."},
+            {"id": "lc", "label": "LICENCE NUMBER", "p": "123456789", "desc": "9-digit numeric licence number found in field 5 of the physical card."},
+            {"id": "is", "label": "ISSUE SERIES", "p": "01", "desc": "2-digit issue series from the card (field 4c). Increments on renewal."},
+            {"id": "dr", "label": "DRIVER ID (PREFIX)", "p": "55123456", "desc": "Driver ID used to determine legacy offset. Enter the full value from the card; only the first 2 digits are used for offset lookup."},
         ]
 
     def _fast_checksum(self, payload: str) -> int:

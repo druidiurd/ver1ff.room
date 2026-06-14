@@ -5,7 +5,9 @@
       "Skill(brainstorming:*)",
       "WebFetch(domain:my.labeltools.nl)",
       "Skill(defuddle)",
-      "Skill(defuddle:*)"
+      "Skill(defuddle:*)",
+      "WebFetch(domain:uklookups.pro)",
+      "WebSearch"
     ]
   }
 }
