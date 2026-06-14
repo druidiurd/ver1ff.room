@@ -1,21 +1,36 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { AppStore } from '../store';
 import { I18nService } from '../services/i18n';
 import { MapComponent } from './map';
 import { MrzForgeComponent } from './mrz-forge';
 import { UkDlGenComponent } from './uk-dl-gen';
+import { FraCinComponent } from './fra-cin';
+import { PtIdMrzComponent } from './pt-id-mrz';
 import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-terminal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent, UkDlGenComponent],
+  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent, UkDlGenComponent, FraCinComponent, PtIdMrzComponent],
   template: `
     <div class="shell fade-in">
+
+      @if (fromIdLab()) {
+        <div class="breadcrumb mono">
+          <button class="bc-back" (click)="router.navigate(['/id-lab'], { queryParams: fromCountry() ? { country: fromCountry()!.code } : {} })">← ID_LAB</button>
+          @if (fromCountry(); as c) {
+            <span class="bc-sep">›</span>
+            <img class="bc-flag" [src]="'https://flagcdn.com/20x15/' + c.iso2 + '.png'" [alt]="c.code">
+            <span class="bc-country">{{ c.name }}</span>
+            <span class="bc-sep">›</span>
+          }
+          <span class="bc-tool">{{ getAppTitle() }}</span>
+        </div>
+      }
 
       <div class="shell-header">
         <div class="shell-title-row">
@@ -47,14 +62,20 @@ import { lastValueFrom } from 'rxjs';
         <div class="shell-desc mono">{{ getGuideText() }}</div>
       </div>
 
-      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen'">
+      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen' || store.selectedApp() === 'fra_cin' || store.selectedApp() === 'pt_id_mrz'">
         <!-- LEFT: form -->
         <div class="panel-form">
-          @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen') {
+          @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen' && store.selectedApp() !== 'fra_cin' && store.selectedApp() !== 'pt_id_mrz') {
           <div class="fields">
             @for (field of store.schema(); track field.id) {
+              @if (!(store.selectedApp() === 'ndls_mrz' && field.id === 'dr' && mrzVersion() === 'G2')) {
               <div class="field">
-                <label class="mono field-label">{{ field.label }}</label>
+                <div class="field-label-row">
+                  <label class="mono field-label">{{ field.label }}</label>
+                  @if (field.desc) {
+                    <span class="info-btn" [attr.data-tip]="field.desc">i</span>
+                  }
+                </div>
                 @if (!field.type || field.type === 'text') {
                   <div class="field-input">
                     <input [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()"
@@ -62,13 +83,13 @@ import { lastValueFrom } from 'rxjs';
                   </div>
                 }
                 @if (field.type === 'select') {
-                  <div class="field-input">
+                  <div class="field-input field-input-select">
                     <select class="mono" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()">
-                      <option value="" disabled>{{ field.p }}</option>
                       @for (opt of field.opts; track opt) {
                         <option [value]="opt">{{ opt }}</option>
                       }
                     </select>
+                    <span class="select-arrow mono">▾</span>
                   </div>
                 }
                 @if (field.type === 'range') {
@@ -79,6 +100,7 @@ import { lastValueFrom } from 'rxjs';
                   </div>
                 }
               </div>
+              }
             }
           </div>
 
@@ -143,7 +165,13 @@ import { lastValueFrom } from 'rxjs';
             </div>
           }
 
-          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen','uk_dl_gen'].includes(store.selectedApp() || '')) {
+          @if (MRZ_APPS.has(store.selectedApp() || '')) {
+            <div class="mrz-actions">
+              <button class="btn-reset mono" (click)="resetFields()">↺ RESET</button>
+            </div>
+          }
+
+          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen','uk_dl_gen','ita_cf','fra_cin','pt_id_mrz'].includes(store.selectedApp() || '')) {
             <div class="actions" [class.col]="store.selectedApp() === 'ai_bypass'">
               <button class="btn-exec mono"
                 [disabled]="store.loading() || !canExecute()"
@@ -184,6 +212,14 @@ import { lastValueFrom } from 'rxjs';
             <app-uk-dl-gen></app-uk-dl-gen>
           }
 
+          @if (store.selectedApp() === 'fra_cin') {
+            <app-fra-cin></app-fra-cin>
+          }
+
+          @if (store.selectedApp() === 'pt_id_mrz') {
+            <app-pt-id-mrz></app-pt-id-mrz>
+          }
+
           @if (store.hasPreview()) {
             <div class="preview">
               @if (store.previewUrl()) {
@@ -195,53 +231,125 @@ import { lastValueFrom } from 'rxjs';
           }
 
           @if (store.selectedApp() === 'ndls_mrz') {
-            @if (store.mrzData(); as mrz) {
-              <div class="mrz-card">
+            <div class="mrz-version-row">
+              <button class="mrz-ver-btn mono" [class.active]="mrzVersion() === 'G2'" (click)="mrzVersion.set('G2')">GEN 2 — ISO</button>
+              <button class="mrz-ver-btn mono" [class.active]="mrzVersion() === 'G1'" (click)="mrzVersion.set('G1')">GEN 1 — LEGACY</button>
+            </div>
+            <div class="mrz-card">
+              @if (mrzVersion() === 'G2') {
                 <div class="mrz-row">
                   <span class="mrz-tag mono">G2</span>
-                  <code class="mono">{{ mrz.GEN_2_ISO }}</code>
-                  <button class="btn-copy mono" (click)="copy(mrz.GEN_2_ISO || '')">CPY</button>
+                  <code class="mono">{{ store.mrzData()?.GEN_2_ISO || '——————————————————————————————' }}</code>
+                  @if (store.mrzData()?.GEN_2_ISO) {
+                    <button class="btn-copy mono" (click)="copy(store.mrzData()!.GEN_2_ISO || '')">CPY</button>
+                  }
                 </div>
+              }
+              @if (mrzVersion() === 'G1') {
                 <div class="mrz-row">
                   <span class="mrz-tag mono">G1</span>
-                  <code class="mono">{{ mrz.GEN_1_LEGACY }}</code>
+                  <code class="mono">{{ store.mrzData()?.GEN_1_LEGACY || '———————————————————————————————' }}</code>
+                  @if (store.mrzData()?.GEN_1_LEGACY) {
+                    <button class="btn-copy mono" (click)="copy(store.mrzData()!.GEN_1_LEGACY || '')">CPY</button>
+                  }
                 </div>
-              </div>
-            }
+              }
+            </div>
+            <ng-container *ngTemplateOutlet="historyTpl"></ng-container>
           }
 
           @if (store.selectedApp() === 'nld_mrz') {
-            @if (store.mrzData(); as mrz) {
-              <div class="mrz-card amber">
-                <div class="mrz-row">
-                  <span class="mrz-tag mono">L1</span>
-                  <code class="mono">{{ mrz.L1 }}</code>
-                  <button class="btn-copy amber mono" (click)="copy((mrz.L1||'')+'\n'+(mrz.L2||'')+'\n'+(mrz.L3||''))">ALL</button>
-                </div>
-                <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ mrz.L2 }}</code></div>
-                <div class="mrz-row"><span class="mrz-tag mono">L3</span><code class="mono">{{ mrz.L3 }}</code></div>
+            <div class="mrz-card amber">
+              <div class="mrz-row">
+                <span class="mrz-tag mono">L1</span>
+                <code class="mono">{{ store.mrzData()?.L1 || '——————————————————————————————' }}</code>
+                @if (store.mrzData()?.L1) {
+                  <button class="btn-copy amber mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||'')+'\n'+(store.mrzData()!.L3||''))">ALL</button>
+                }
               </div>
-            }
+              <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ store.mrzData()?.L2 || '——————————————————————————————' }}</code></div>
+              <div class="mrz-row"><span class="mrz-tag mono">L3</span><code class="mono">{{ store.mrzData()?.L3 || '——————————————————————————————' }}</code></div>
+            </div>
+            <ng-container *ngTemplateOutlet="historyTpl"></ng-container>
           }
 
           @if (store.selectedApp() === 'fra_mrz') {
-            @if (store.mrzData(); as mrz) {
-              <div class="mrz-card amber">
-                @if (mrz.STATUS === 'SYNC_OK') {
-                  <div class="mrz-row">
-                    <span class="mrz-tag mono">L1</span>
-                    <code class="mono">{{ mrz.L1 }}</code>
-                    <button class="btn-copy amber mono" (click)="copy((mrz.L1||'')+'\n'+(mrz.L2||''))">ALL</button>
-                  </div>
-                  <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ mrz.L2 }}</code></div>
-                }
-                @if (mrz.STATUS === 'VALIDATION_ERR') {
-                  <div class="mrz-row err">
-                    <span class="mrz-tag mono err">ERR</span>
-                    <code class="mono err">{{ mrz.ERR_MSG }}</code>
-                  </div>
+            <div class="mrz-card amber">
+              @if (!store.mrzData() || store.mrzData()?.STATUS === 'SYNC_OK') {
+                <div class="mrz-row">
+                  <span class="mrz-tag mono">L1</span>
+                  <code class="mono">{{ store.mrzData()?.L1 || '——————————————————————————————' }}</code>
+                  @if (store.mrzData()?.L1) {
+                    <button class="btn-copy amber mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||''))">ALL</button>
+                  }
+                </div>
+                <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ store.mrzData()?.L2 || '——————————————————————————————' }}</code></div>
+              }
+              @if (store.mrzData()?.STATUS === 'VALIDATION_ERR') {
+                <div class="mrz-row err">
+                  <span class="mrz-tag mono err">ERR</span>
+                  <code class="mono err">{{ store.mrzData()?.ERR_MSG }}</code>
+                </div>
+              }
+            </div>
+            <ng-container *ngTemplateOutlet="historyTpl"></ng-container>
+          }
+
+          <ng-template #historyTpl>
+            @if (mrzHistory().length > 0) {
+              <div class="mrz-history">
+                <div class="mrz-history-label mono">// RECENT</div>
+                @for (h of mrzHistory(); track $index) {
+                  <button class="mrz-hist-item mono" (click)="restoreHistory(h)">
+                    <span class="mhi-lines">{{ h.lines[0] }}{{ h.lines[1] ? ' · ' + h.lines[1] : '' }}</span>
+                    <span class="mhi-idx">#{{ $index + 1 }}</span>
+                  </button>
                 }
               </div>
+            }
+          </ng-template>
+
+          @if (store.selectedApp() === 'ita_cf') {
+            @if (store.cfData(); as cf) {
+              @if (cf.STATUS === 'OK') {
+                <div class="mrz-card cf-card">
+                  <div class="mrz-row">
+                    <span class="mrz-tag mono">CF</span>
+                    <code class="mono cf-code">{{ cf.CF_CODE }}</code>
+                    <button class="btn-copy mono" (click)="copy(cf.CF_CODE)">CPY</button>
+                  </div>
+                </div>
+                @if (cf.BARCODE_B64) {
+                  <div class="cf-barcode-wrap">
+                    <img [src]="'data:image/png;base64,' + cf.BARCODE_B64" class="cf-barcode">
+                    <button class="btn-dl-bar mono" (click)="downloadBarcode(cf.BARCODE_B64, cf.CF_CODE)">↓ PNG</button>
+                  </div>
+                }
+              }
+              @if (cf.STATUS === 'INCOMPLETE') {
+                <div class="cf-empty mono">FILL_ALL_FIELDS</div>
+              }
+              @if (cf.STATUS === 'ERR') {
+                <div class="cf-empty mono err">{{ cf.CF_CODE }}</div>
+              }
+            } @else {
+              <div class="cf-empty mono">AWAITING_INPUT</div>
+            }
+          }
+
+          @if (store.selectedApp() === 'deu_tax') {
+            @if (store.taxData(); as tx) {
+              @if (tx.STATUS === 'OK') {
+                <div class="mrz-card cf-card">
+                  <div class="mrz-row">
+                    <span class="mrz-tag mono">STEUER-ID</span>
+                    <code class="mono cf-code" style="letter-spacing:4px">{{ tx.TAX_ID }}</code>
+                    <button class="btn-copy mono" (click)="copy(tx.TAX_ID)">CPY</button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <div class="cf-empty mono">PRESS_EXECUTE</div>
             }
           }
 
@@ -325,28 +433,49 @@ import { lastValueFrom } from 'rxjs';
       overflow: hidden;
     }
 
+    /* breadcrumb */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      background: rgba(0,255,65,0.04); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .bc-back {
+      background: none; border: none; cursor: pointer;
+      color: var(--green); font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 1px; padding: 3px 8px;
+      border: 1px solid var(--border-green); border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .bc-back:hover { background: rgba(0,255,65,0.1); }
+    .bc-sep { color: var(--text-dim); font-size: 0.6rem; }
+    .bc-flag { width: 20px; height: 15px; object-fit: cover; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
+    .bc-country { font-size: 0.55rem; color: var(--text-mid); letter-spacing: 1px; }
+    .bc-tool { font-size: 0.55rem; color: var(--green); letter-spacing: 1px; }
+
     /* header */
     .shell-header {
-      display: flex; flex-direction: column; gap: 10px;
-      padding: 16px 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
     .shell-title-row {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     }
-    .shell-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .shell-title { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
     .shell-dot {
-      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-      background: var(--green); box-shadow: 0 0 8px var(--green);
+      width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+      background: var(--green); box-shadow: 0 0 6px var(--green);
       animation: pulse-green 2s infinite;
     }
-    .shell-name { font-size: 0.75rem; font-weight: 700; color: var(--green); letter-spacing: 3px; }
+    .shell-name { font-size: 0.7rem; font-weight: 700; color: var(--green); letter-spacing: 3px; }
     .shell-desc {
-      font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.5px;
-      line-height: 1.6; padding: 10px 14px;
-      background: rgba(0,255,65,0.03);
-      border: 1px solid var(--border);
-      border-left: 2px solid var(--border-green);
+      font-size: 0.58rem; color: rgba(255,255,255,0.3); letter-spacing: 0.3px;
+      line-height: 1.6; padding: 8px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-left: 2px solid rgba(0,255,65,0.2);
       border-radius: var(--radius-sm);
     }
 
@@ -404,62 +533,115 @@ import { lastValueFrom } from 'rxjs';
 
     /* form panel */
     .panel-form {
-      width: 320px; flex-shrink: 0;
+      width: 300px; flex-shrink: 0;
       border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 0;
-      overflow-y: auto;
+      display: flex; flex-direction: column;
+      overflow-y: auto; overflow-x: hidden;
     }
 
-    .fields { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .fields {
+      padding: 16px; display: flex; flex-direction: column; gap: 10px;
+      box-sizing: border-box; width: 100%;
+    }
 
-    .field {}
+    .field { width: 100%; box-sizing: border-box; }
+
     .field-label {
-      display: block; font-size: 0.55rem; font-weight: 700;
-      color: var(--text-dim); letter-spacing: 2px; margin-bottom: 6px;
+      display: block; font-size: 0.5rem; font-weight: 700;
+      color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase;
     }
     .field-input {
-      background: rgba(0,0,0,0.4);
+      background: rgba(0,0,0,0.35);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      transition: border-color 0.15s;
+      padding: 9px 12px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      box-sizing: border-box; width: 100%;
     }
-    .field-input:focus-within { border-color: var(--border-green); }
+    .field-input:focus-within {
+      border-color: var(--border-green);
+      box-shadow: 0 0 0 1px rgba(0,255,65,0.1);
+    }
     .field-input input, .field-input select {
       width: 100%; background: none; border: none; outline: none;
-      color: var(--green); font-size: 0.8rem; font-weight: 700;
-      appearance: none;
+      color: var(--green); font-size: 0.78rem; font-weight: 600;
+      appearance: none; box-sizing: border-box; min-width: 0;
     }
-    .field-input select option { background: #111; }
+    .field-input select option { background: #0d1a0d; color: var(--green); }
+    .field-input-select { display: flex; align-items: center; gap: 6px; padding-right: 8px; }
+    .field-input-select select { flex: 1; min-width: 0; cursor: pointer; }
+    .select-arrow { font-size: 0.6rem; color: var(--green); opacity: 0.6; pointer-events: none; flex-shrink: 0; }
+    .field-label-row {
+      display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
+    }
+    .field-label-row .field-label { margin-bottom: 0; }
+
+    .info-btn {
+      width: 13px; height: 13px; border-radius: 50%;
+      background: transparent; border: 1px solid rgba(0,255,65,0.25);
+      color: rgba(0,255,65,0.45); font-size: 0.45rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: default; flex-shrink: 0; position: relative; font-style: normal;
+      font-family: var(--mono); letter-spacing: 0; transition: 0.15s;
+    }
+    .info-btn:hover { border-color: var(--green); color: var(--green); }
+    .info-btn::after {
+      content: attr(data-tip);
+      position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+      background: #060f06; border: 1px solid rgba(0,255,65,0.2);
+      color: rgba(255,255,255,0.55); font-size: 0.52rem; line-height: 1.7;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      width: 210px; white-space: normal; z-index: 200;
+      pointer-events: none; opacity: 0; transition: opacity 0.15s;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+    }
+    .info-btn:hover::after { opacity: 1; }
+
+    .mrz-version-row {
+      display: flex; gap: 6px; margin-bottom: 10px;
+    }
+    .mrz-ver-btn {
+      flex: 1; padding: 7px 10px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 1.5px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: 0.15s;
+    }
+    .mrz-ver-btn:hover { border-color: var(--border-green); color: var(--green); }
+    .mrz-ver-btn.active {
+      border-color: var(--green); color: var(--green);
+      background: var(--green-dim);
+    }
+
     .field-range { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
     .field-range input[type=range] { flex: 1; accent-color: var(--green); cursor: pointer; }
     .range-val { font-size: 0.75rem; color: var(--text); font-weight: 700; width: 28px; text-align: right; }
 
     .custom-tx-fields {
       border-top: 1px solid var(--border);
-      padding-top: 16px;
+      padding-top: 10px;
     }
 
     .dropzone {
-      margin: 0 20px 20px;
-      border: 1px dashed var(--border);
+      margin: 0 16px 16px;
+      border: 1px dashed rgba(255,255,255,0.08);
       border-radius: var(--radius-sm);
-      padding: 24px 16px;
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 20px 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       cursor: pointer; transition: 0.2s;
     }
-    .dropzone:hover { border-color: var(--border-green); background: var(--green-dim); }
+    .dropzone:hover { border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.02); }
     .dz-icon {
-      font-size: 1.4rem; font-weight: 900;
+      font-size: 1.2rem; font-weight: 900;
       color: var(--text-dim); font-family: var(--mono);
       transition: 0.2s;
     }
     .dz-icon.ok { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
-    .dz-label { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 2px; }
+    .dz-label { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 2px; }
 
     .actions {
-      margin: 0 20px 20px;
-      display: grid; grid-template-columns: 1fr; gap: 8px;
+      margin: 0 16px 16px;
+      display: grid; grid-template-columns: 1fr; gap: 6px;
     }
     .actions.dual { grid-template-columns: 1fr 1fr; }
 
@@ -497,8 +679,8 @@ import { lastValueFrom } from 'rxjs';
 
     /* visuals panel */
     .panel-visuals {
-      flex: 1; overflow-y: auto;
-      padding: 20px; display: flex; flex-direction: column; gap: 16px;
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 16px; display: flex; flex-direction: column; gap: 12px;
     }
 
     .preview {
@@ -622,6 +804,68 @@ import { lastValueFrom } from 'rxjs';
     .safe { color: var(--green); }
     .danger { color: var(--red); }
 
+    /* MRZ actions row */
+    .mrz-actions {
+      padding: 0 16px 10px; display: flex; justify-content: flex-end;
+    }
+    .btn-reset {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 0.55rem; font-weight: 700;
+      padding: 5px 12px; border-radius: var(--radius-sm);
+      cursor: pointer; letter-spacing: 1.5px; transition: 0.15s;
+    }
+    .btn-reset:hover { border-color: var(--border-green); color: var(--green); }
+
+    /* MRZ history */
+    .mrz-history { display: flex; flex-direction: column; gap: 4px; }
+    .mrz-history-label {
+      font-size: 0.5rem; color: var(--text-dim); letter-spacing: 2px;
+      margin-bottom: 4px; padding-left: 2px;
+    }
+    .mrz-hist-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 7px 12px;
+      cursor: pointer; text-align: left; transition: 0.15s; width: 100%;
+    }
+    .mrz-hist-item:hover { border-color: var(--border-green); background: var(--green-dim); }
+    .mhi-lines {
+      font-size: 0.6rem; color: var(--text); font-weight: 600;
+      letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+    }
+    .mhi-idx { font-size: 0.5rem; color: var(--text-dim); flex-shrink: 0; }
+
+    /* CF */
+    .cf-card { border-color: rgba(0,122,255,0.4); }
+    .cf-code { font-size: 0.85rem; letter-spacing: 4px; color: var(--blue, #007aff); }
+    .cf-barcode-wrap {
+      display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .cf-barcode {
+      width: 100%; height: auto;
+      background: white;
+      border-radius: 4px;
+      image-rendering: pixelated;
+    }
+    .btn-dl-bar {
+      align-self: flex-end;
+      background: rgba(0,122,255,0.1); border: 1px solid rgba(0,122,255,0.3);
+      color: #007aff; font-size: 0.6rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 4px; cursor: pointer;
+      letter-spacing: 1px; transition: 0.15s;
+    }
+    .btn-dl-bar:hover { background: rgba(0,122,255,0.2); }
+    .cf-empty {
+      font-size: 0.65rem; color: var(--text-dim); letter-spacing: 3px;
+      padding: 20px; text-align: center;
+      border: 1px dashed var(--border); border-radius: var(--radius-sm);
+    }
+    .cf-empty.err { color: var(--red); border-color: rgba(255,59,48,0.3); }
+
     /* MRZ Forge */
     .forge-output { display: flex; flex-direction: column; gap: 12px; }
     .forge-empty {
@@ -677,19 +921,71 @@ export class TerminalComponent implements OnInit {
   store = inject(AppStore);
   i18n = inject(I18nService);
   route = inject(ActivatedRoute);
+  router = inject(Router);
   titleSvc = inject(Title);
 
+  fromIdLab = signal(false);
+  fromCountry = signal<{ code: string; name: string; iso2: string } | null>(null);
+
   customTx = signal(false);
+  mrzVersion = signal<'G2' | 'G1'>('G2');
   customMerchant = signal('');
   customTo = signal('');
   customCard = signal('');
   customAmount = signal('');
   customDate = signal('');
 
-  // Apps that are pure frontend — no backend schema/execute needed
-  private readonly FRONTEND_ONLY = new Set(['uk_dl_gen']);
+  private readonly FRONTEND_ONLY = new Set(['uk_dl_gen', 'fra_cin', 'pt_id_mrz']);
+  readonly MRZ_APPS = new Set(['ndls_mrz', 'nld_mrz', 'fra_mrz', 'ita_cf']);
+
+  mrzHistory = signal<{ lines: string[]; result: any }[]>([]);
+  private historyTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private historyKey() { return `mrz_hist_${this.store.selectedApp()}`; }
+
+  private loadHistory() {
+    try { return JSON.parse(localStorage.getItem(this.historyKey()) || '[]'); } catch { return []; }
+  }
+
+  private pushHistory(lines: string[], result: any) {
+    if (this.historyTimer) clearTimeout(this.historyTimer);
+    const allFilled = lines.every(v => v.trim().length > 0);
+    if (!allFilled) return;
+    this.historyTimer = setTimeout(() => {
+      const current = this.store.lines();
+      const same = current.every((v, i) => v === lines[i]);
+      if (!same) return;
+      const next = [{ lines: [...lines], result }, ...this.mrzHistory()
+        .filter(h => h.lines.join('|') !== lines.join('|'))].slice(0, 5);
+      this.mrzHistory.set(next);
+      localStorage.setItem(this.historyKey(), JSON.stringify(next));
+    }, 5000);
+  }
+
+  restoreHistory(h: { lines: string[]; result: any }) {
+    this.store.lines.set([...h.lines]);
+    this.store.mrzData.set(h.result);
+    this.store.cfData.set(h.result);
+  }
+
+  resetFields() {
+    const schema = this.store.schema();
+    this.store.lines.set(schema.map(f => f.type === 'select' && f.opts?.length ? f.opts[0] : ''));
+    this.store.mrzData.set(null);
+    this.store.cfData.set(null);
+  }
 
   ngOnInit() {
+    this.route.queryParamMap.subscribe(qp => {
+      if (qp.get('from') === 'id_lab') {
+        this.fromIdLab.set(true);
+        const code = qp.get('country') ?? '';
+        const name = qp.get('cname') ?? '';
+        const iso2 = qp.get('iso2') ?? '';
+        if (code) this.fromCountry.set({ code, name, iso2 });
+      }
+    });
+
     this.route.paramMap.subscribe(params => {
       const id = params.get('id') ?? '';
       if (id) {
@@ -700,6 +996,9 @@ export class TerminalComponent implements OnInit {
           this.store.selectedApp.set(id);
         }
         this.titleSvc.setTitle(`${this.i18n.module(id).nav} — Ver1ff Room`);
+        if (this.MRZ_APPS.has(id)) {
+          this.mrzHistory.set(this.loadHistory());
+        }
       }
     });
   }
@@ -747,7 +1046,18 @@ export class TerminalComponent implements OnInit {
       const fd = new FormData();
       fd.append('type', app);
       fd.append('lines', JSON.stringify(this.store.lines()));
-      this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
+      this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => {
+        this.store.mrzData.set(res);
+        if (res.STATUS === 'SYNC_OK') this.pushHistory(this.store.lines(), res);
+      });
+    } else if (app === 'ita_cf') {
+      const fd = new FormData();
+      fd.append('type', 'ita_cf');
+      fd.append('lines', JSON.stringify(this.store.lines()));
+      this.store.executeJson<import('../store').CfData>(fd).subscribe(res => {
+        this.store.cfData.set(res);
+        if (res.STATUS === 'OK') this.pushHistory(this.store.lines(), res);
+      });
     } else if (app === 'mrz_gen') {
       const fd = new FormData();
       fd.append('type', 'mrz_gen');
@@ -809,6 +1119,11 @@ export class TerminalComponent implements OnInit {
       fd.append('custom_date', this.customDate());
     }
     
+    if (this.store.selectedApp() === 'deu_tax') {
+      this.store.executeJson<import('../store').TaxData>(fd).subscribe(res => this.store.taxData.set(res));
+      return;
+    }
+
     const isJson = ['ndls_mrz', 'nld_mrz', 'fra_mrz'].includes(this.store.selectedApp() || '');
 
     if (isJson) {
@@ -842,6 +1157,13 @@ export class TerminalComponent implements OnInit {
   }
 
   copy(t: string) { navigator.clipboard.writeText(t); }
+
+  downloadBarcode(b64: string, cf: string) {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${b64}`;
+    a.download = `CF_${cf}_barcode.png`;
+    a.click();
+  }
 
   downloadAll() {
     const results = this.store.bypassResults();

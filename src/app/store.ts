@@ -10,6 +10,7 @@ export interface SchemaField {
   opts?: string[];
   min?: number;
   max?: number;
+  desc?: string;
 }
 
 export interface MrzData {
@@ -30,6 +31,17 @@ export interface MrzGenResult {
   TD2?: string[];
   MRV_A?: string[];
   EDL?: string[];
+}
+
+export interface CfData {
+  STATUS: string;
+  CF_CODE: string;
+  BARCODE_B64: string;
+}
+
+export interface TaxData {
+  STATUS: string;
+  TAX_ID: string;
 }
 
 export interface BypassResult {
@@ -55,6 +67,8 @@ export class AppStore {
   selectedFile = signal<File | null>(null);
   mrzData = signal<MrzData | null>(null);
   mrzGenResult = signal<MrzGenResult | null>(null);
+  cfData = signal<CfData | null>(null);
+  taxData = signal<TaxData | null>(null);
   previewUrl = signal<string | null>(null);
 
   // Batch mode files (AI_BYPASS)
@@ -71,7 +85,7 @@ export class AppStore {
     this.selectedApp.set(name);
     this.http.get<SchemaField[]>(`/api/schema/${name}`).subscribe(s => {
       this.schema.set(s);
-      this.lines.set(new Array(s.length).fill(''));
+      this.lines.set(s.map(f => f.type === 'select' && f.opts?.length ? f.opts[0] : ''));
     });
   }
 
@@ -80,6 +94,8 @@ export class AppStore {
     this.selectedFile.set(null);
     this.mrzData.set(null);
     this.mrzGenResult.set(null);
+    this.cfData.set(null);
+    this.taxData.set(null);
     this.bypassResults.set([]);
     this.batchFiles.set([]);
     this.batchProgress.set(null);

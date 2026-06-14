@@ -8,30 +8,22 @@ interface NavItem { id: string; group: string; }
 interface ChangelogEntry { version: string; date: string; title: string; items: string[]; }
 
 const NAV: NavItem[] = [
-  { id: 'energia',      group: 'IRELAND'         },
-  { id: 'ndls_mrz',    group: 'IRELAND'         },
-  { id: 'uk_dl_gen',   group: 'UNITED KINGDOM'  },
-  { id: 'nld_mrz',     group: 'NETHERLANDS'     },
-  { id: 'fra_mrz',     group: 'FRANCE'          },
-  { id: 'exif_cleaner',group: 'TOOLS'           },
-  { id: 'face_cut',    group: 'TOOLS'           },
-  { id: 'ai_bypass',   group: 'TOOLS'           },
-  { id: 'revolut',     group: 'GLOBAL'          },
-  { id: 'mrz_gen',    group: 'GLOBAL'          },
+  { id: 'id_lab',       group: 'ID LAB' },
+  { id: 'mrz_gen',      group: 'GLOBAL' },
+  { id: 'revolut',      group: 'GLOBAL' },
+  { id: 'exif_cleaner', group: 'TOOLS'  },
+  { id: 'face_cut',     group: 'TOOLS'  },
+  { id: 'ai_bypass',    group: 'TOOLS'  },
 ];
 
 const ICONS: Record<string, string> = {
-  energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
-  nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
+  id_lab: '🧪', mrz_gen: '🔏', revolut: '💳',
   exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
-  mrz_gen: '🔏', uk_dl_gen: '🪪',
 };
 
 const COLORS: Record<string, string> = {
-  energia: '#00ff41', ndls_mrz: '#007aff', revolut: '#7c3aed',
-  nld_mrz: '#ff9500', fra_mrz: '#007aff',
+  id_lab: '#00ff41', mrz_gen: '#00ff41', revolut: '#7c3aed',
   exif_cleaner: '#ff9500', face_cut: '#ff3b30', ai_bypass: '#a855f7',
-  mrz_gen: '#00ff41', uk_dl_gen: '#ff3b30',
 };
 
 @Component({
@@ -322,6 +314,10 @@ export class DashboardComponent implements OnInit {
   open(id: string) {
     this.store.closeApp();
     this.store.selectedApp.set(id);
-    this.router.navigate(['/tool', id]);
+    if (id === 'id_lab') {
+      this.router.navigate(['/id-lab']);
+    } else {
+      this.router.navigate(['/tool', id]);
+    }
   }
 }

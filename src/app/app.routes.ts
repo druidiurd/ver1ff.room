@@ -10,5 +10,10 @@ export const routes: Routes = [
     path: 'tool/:id',
     loadComponent: () => import('./components/terminal').then(m => m.TerminalComponent),
   },
+  {
+    path: 'id-lab',
+    loadComponent: () => import('./components/id-lab').then(m => m.IdLabComponent),
+    title: 'ID Lab — Ver1ff Room',
+  },
   { path: '**', redirectTo: '' },
 ];

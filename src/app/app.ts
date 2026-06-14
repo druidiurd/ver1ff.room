@@ -7,16 +7,12 @@ import { I18nService } from './services/i18n';
 interface NavItem { id: string; group: string; }
 
 const NAV: NavItem[] = [
-  { id: 'energia',      group: 'IRELAND'        },
-  { id: 'ndls_mrz',    group: 'IRELAND'        },
-  { id: 'uk_dl_gen',   group: 'UNITED KINGDOM' },
-  { id: 'nld_mrz',     group: 'NETHERLANDS'    },
-  { id: 'fra_mrz',     group: 'FRANCE'         },
-  { id: 'exif_cleaner',group: 'TOOLS'          },
-  { id: 'face_cut',    group: 'TOOLS'          },
-  { id: 'ai_bypass',   group: 'TOOLS'          },
-  { id: 'revolut',     group: 'GLOBAL'         },
-  { id: 'mrz_gen',     group: 'GLOBAL'         },
+  { id: 'id_lab',       group: '🧪 ID LAB'      },
+  { id: 'mrz_gen',      group: '⬡ GLOBAL'       },
+  { id: 'revolut',      group: '⬡ GLOBAL'       },
+  { id: 'exif_cleaner', group: '⚙ TOOLS'        },
+  { id: 'face_cut',     group: '⚙ TOOLS'        },
+  { id: 'ai_bypass',    group: '⚙ TOOLS'        },
 ];
 
 @Component({
@@ -266,10 +262,8 @@ export class App implements AfterViewInit, OnInit {
 
   getIcon(id: string): string {
     const icons: Record<string, string> = {
-      energia: '⚡', ndls_mrz: '🆔', revolut: '💳',
-      nld_mrz: '🇳🇱', fra_mrz: '🇫🇷',
-      exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
-      mrz_gen: '🔏', uk_dl_gen: '🪪',
+      revolut: '💳', exif_cleaner: '📸', face_cut: '👤',
+      ai_bypass: '🥷', mrz_gen: '🔏', id_lab: '🧪',
     };
     return icons[id] ?? '⬡';
   }
@@ -281,10 +275,13 @@ export class App implements AfterViewInit, OnInit {
   }
 
   open(id: string) {
-    this.store.closeApp();   // clears old file/mrz/batch data, sets selectedApp=null
-    this.router.navigate(['/tool', id]);
+    this.store.closeApp();
+    if (id === 'id_lab') {
+      this.router.navigate(['/id-lab']);
+    } else {
+      this.router.navigate(['/tool', id]);
+    }
     this.drawerOpen.set(false);
-    // selectedApp will be set by NavigationEnd handler above
   }
 
   ngOnInit() {
@@ -293,9 +290,11 @@ export class App implements AfterViewInit, OnInit {
       const path = this.router.url.split('?')[0];
       const segments = path.split('/');
       const toolIdx = segments.indexOf('tool');
-      const id = toolIdx >= 0 ? segments[toolIdx + 1] : null;
-      if (id && NAV.some(n => n.id === id)) {
-        this.store.selectedApp.set(id);
+      const id = toolIdx >= 0 ? decodeURIComponent(segments[toolIdx + 1]) : null;
+      const pathId = path === '/id-lab' ? 'id_lab' : id;
+      // set selectedApp for any known tool route, not just sidebar items
+      if (pathId) {
+        this.store.selectedApp.set(pathId);
       } else {
         this.store.selectedApp.set(null);
       }

@@ -1318,6 +1318,7 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
       DEU: 'DE: subType D required. Line 1 starts with IDD<<',
       AUT: 'AT: official ID cards use subType A (IDA<<)',
       CHE: 'CH: Swiss ID uses subType C (IDC<<)',
+      ITA: 'IT: CIE (Carta d\'Identità Elettronica) — doc type is C, subType I. Line 1: CI<ITA...',
       GBR: 'GB: BRP/BRC cards use subType A or B',
       USA: 'US: Passport Card uses subType C',
       CAN: 'CA: PR card uses subType R',
@@ -1745,8 +1746,6 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
     ROU: { label: 'GEN CNP', hint: 'e.g. 1234567890123' },
     // France: INSEE — 15 digits
     FRA: { label: 'GEN INSEE', hint: 'e.g. 123456789012345' },
-    // Italy: Codice Fiscale — 16 alphanum
-    ITA: { label: 'GEN CF', hint: 'e.g. RSSMRA85M01H501Z' },
     // Belgium: NISS — 11 digits
     BEL: { label: 'GEN NISS', hint: 'e.g. 85010112345' },
     // Austria: Sozialversicherungsnummer — 10 digits
@@ -1914,23 +1913,6 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
         // INSEE: 1(sex) + YY + MM + dept(2-3D) + commune(3D) + order(3D) + key(2D)
         const s = sex === 'F' ? '2' : '1';
         return s + (bd ? bd.yy + bd.mo : rd(4)) + String(ri(1,95)).padStart(2,'0') + rd(3) + rd(3) + rd(3) + rd(2);
-      }
-      case 'ITA': {
-        // Codice Fiscale: 6L + 2D + 1L + 2D + 1L + 3D + 1L (simplified random)
-        const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
-        const vowels = 'AEIOU';
-        const rCons = () => consonants[ri(0, consonants.length-1)];
-        const rVow = () => vowels[ri(0, vowels.length-1)];
-        const surname = rCons() + rCons() + rCons();
-        const name3 = rCons() + rCons() + rCons();
-        const months = 'ABCDEHLMPRST';
-        const year = bd ? bd.yy : rd(2);
-        const month = months[bd ? +bd.mo - 1 : ri(0,11)];
-        const day = bd ? (sex === 'F' ? String(+bd.d + 40).padStart(2,'0') : bd.d) : String(ri(1,31)).padStart(2,'0');
-        const town = rCons() + String(ri(1,999)).padStart(3,'0');
-        const checkChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const check = checkChars[ri(0,25)];
-        return surname + name3 + year + month + day + town + check;
       }
       case 'BEL': {
         // NISS: YY MM DD 3D(seq) 2D(check) — simplified
