@@ -1,6 +1,7 @@
 import { Component, inject, AfterViewInit, ElementRef, ViewChild, signal, OnInit } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { AppStore } from './store';
 import { I18nService } from './services/i18n';
 
@@ -63,7 +64,11 @@ const NAV: NavItem[] = [
         </div>
 
 <div class="sidebar-footer mono">
-          <span class="led"></span>{{ i18n.t().sysOnline }}
+          @if (updateReady()) {
+            <button class="update-btn mono" (click)="applyUpdate()">⟳ UPDATE</button>
+          } @else {
+            <span class="led"></span>{{ i18n.t().sysOnline }}
+          }
         </div>
       </nav>
 
@@ -193,6 +198,14 @@ const NAV: NavItem[] = [
       display: flex; align-items: center; gap: 8px;
       flex-shrink: 0;
     }
+    .update-btn {
+      width: 100%; padding: 7px 0; border-radius: var(--radius-sm);
+      background: rgba(0,255,65,0.1); border: 1px solid var(--border-green);
+      color: var(--green); font-size: 0.6rem; font-weight: 900;
+      letter-spacing: 2px; cursor: pointer; animation: pulse-green 1.5s infinite;
+      transition: background 0.15s;
+    }
+    .update-btn:hover { background: rgba(0,255,65,0.22); }
 
     /* ── WORKSPACE ── */
     .workspace {
@@ -252,9 +265,11 @@ export class App implements AfterViewInit, OnInit {
   store = inject(AppStore);
   i18n = inject(I18nService);
   router = inject(Router);
+  private sw = inject(SwUpdate, { optional: true });
 
   ram = 210;
   drawerOpen = signal(false);
+  updateReady = signal(false);
 @ViewChild('mc') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   groups = [...new Set(NAV.map(n => n.group))];
@@ -284,7 +299,16 @@ export class App implements AfterViewInit, OnInit {
     this.drawerOpen.set(false);
   }
 
+  applyUpdate() { document.location.reload(); }
+
   ngOnInit() {
+    if (this.sw?.isEnabled) {
+      this.sw.versionUpdates.pipe(
+        filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY')
+      ).subscribe(() => this.updateReady.set(true));
+      this.sw.checkForUpdate();
+    }
+
     // Sync selectedApp signal from router URL (read-only, no side effects)
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       const path = this.router.url.split('?')[0];
