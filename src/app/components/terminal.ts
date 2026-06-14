@@ -66,9 +66,24 @@ import { lastValueFrom } from 'rxjs';
         <!-- LEFT: form -->
         <div class="panel-form">
           @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen' && store.selectedApp() !== 'fra_cin' && store.selectedApp() !== 'pt_id_mrz') {
+
+          @if (store.selectedApp() === 'ai_bypass') {
+            <div class="ai-preset-bar">
+              @for (p of AI_PRESETS; track p.id) {
+                <button class="ai-preset-btn mono"
+                  [class.active]="aiPreset() === p.id"
+                  [style.--ap-color]="p.color"
+                  (click)="setAiPreset(p.id)">
+                  <span class="ap-id">{{ p.id }}</span>
+                  <span class="ap-sub">{{ p.sub }}</span>
+                </button>
+              }
+            </div>
+          }
+
           <div class="fields">
             @for (field of store.schema(); track field.id) {
-              @if (!(store.selectedApp() === 'ndls_mrz' && field.id === 'dr' && mrzVersion() === 'G2')) {
+              @if (!(store.selectedApp() === 'ndls_mrz' && field.id === 'dr' && mrzVersion() === 'G2') && !(store.selectedApp() === 'ai_bypass' && field.id === 'preset')) {
               <div class="field">
                 <div class="field-label-row">
                   <label class="mono field-label">{{ field.label }}</label>
@@ -666,6 +681,35 @@ import { lastValueFrom } from 'rxjs';
       color: var(--text-dim); font-size: 0.6rem;
     }
     .btn-exec.btn-dl-all:hover { border-color: var(--border-green); color: var(--green); }
+
+    /* AI-STEALTH preset bar */
+    .ai-preset-bar {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .ai-preset-btn {
+      flex: 1; min-width: 80px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4);
+      transition: 0.15s;
+    }
+    .ai-preset-btn:hover {
+      border-color: var(--ap-color, #00ff41);
+      background: color-mix(in srgb, var(--ap-color, #00ff41) 10%, transparent);
+    }
+    .ai-preset-btn.active {
+      border-color: var(--ap-color, #00ff41);
+      background: color-mix(in srgb, var(--ap-color, #00ff41) 14%, transparent);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--ap-color, #00ff41) 25%, transparent);
+    }
+    .ap-id {
+      font-size: 0.6rem; font-weight: 900; letter-spacing: 1.5px;
+      color: var(--ap-color, #00ff41);
+    }
+    .ap-sub {
+      font-size: 0.42rem; color: var(--text-dim); letter-spacing: 0.5px; text-align: center;
+    }
+    .ai-preset-btn:not(.active) .ap-id { color: var(--text-mid); }
+
     .btn-arrow { font-size: 1rem; }
     .btn-loader {
       width: 12px; height: 12px;
@@ -937,6 +981,24 @@ export class TerminalComponent implements OnInit {
 
   private readonly FRONTEND_ONLY = new Set(['uk_dl_gen', 'fra_cin', 'pt_id_mrz']);
   readonly MRZ_APPS = new Set(['ndls_mrz', 'nld_mrz', 'fra_mrz', 'ita_cf']);
+
+  readonly AI_PRESETS = [
+    { id: 'LITE',     sub: 'blur + noise',        color: '#4caf50' },
+    { id: 'STANDARD', sub: 'full camera pipeline', color: '#007aff' },
+    { id: 'GHOST',    sub: 'signal-level / no EXIF', color: '#9c27b0' },
+    { id: 'MAX',      sub: 'all techniques',       color: '#ff6b00' },
+    { id: 'DENOISE',  sub: 'NLM cleanup',          color: '#00bcd4' },
+  ];
+
+  setAiPreset(preset: string) {
+    const lines = [...this.store.lines()];
+    lines[0] = preset;
+    this.store.lines.set(lines);
+  }
+
+  aiPreset(): string {
+    return this.store.lines()[0] || 'STANDARD';
+  }
 
   mrzHistory = signal<{ lines: string[]; result: any }[]>([]);
   private historyTimer: ReturnType<typeof setTimeout> | null = null;
