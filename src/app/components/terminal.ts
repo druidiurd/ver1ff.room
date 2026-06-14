@@ -111,7 +111,7 @@ import { lastValueFrom } from 'rxjs';
                   <div class="field-input field-range">
                     <input type="range" [(ngModel)]="store.lines()[$index]" (ngModelChange)="onInput()"
                       [min]="field.min" [max]="field.max">
-                    <span class="mono range-val">{{ store.lines()[$index] || field.p }}</span>
+                    <span class="mono range-val">{{ store.lines()[$index] !== '' && store.lines()[$index] != null ? store.lines()[$index] : field.p }}</span>
                   </div>
                 }
               </div>
