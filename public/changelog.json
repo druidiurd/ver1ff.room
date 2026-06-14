@@ -1,5 +1,45 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-06-15",
+    "title": "Auto-update, AI-STEALTH v5, EXIF map search",
+    "items": [
+      "Auto-update via Service Worker — pulsing UPDATE button appears in sidebar when new version is ready, one click applies it",
+      "AI-STEALTH v5: 5-preset pipeline system — LITE / STANDARD / GHOST / MAX / DENOISE with visual pill selector",
+      "GHOST preset: adaptive photon noise + INTER_AREA/LANCZOS4 destructive resampling + double-shift JPEG (pixel-shift 4px, DCT grid desync)",
+      "MAX preset: all techniques combined — radial aberration + adaptive+PRNU noise + destructive resample + double-shift JPEG + EXIF",
+      "DENOISE preset: NLM denoising via OpenCV (Non-local Means) for cleanup / post-process",
+      "Range sliders (Radial Aberration, Sensor Noise, Freq Break) now correctly display and pass 0 (off)",
+      "EXIF-SNIPER map: city/country search via Nominatim OSM (no API key), flyTo animation",
+      "EXIF-SNIPER map: 24 popular city chips — London, Paris, Berlin, Tokyo, NYC, Dubai and more"
+    ]
+  },
+  {
+    "version": "1.5.0",
+    "date": "2026-06-14",
+    "title": "ID Lab expansion — FR-CNI, PT-ID-MRZ, NL/POL/EST/LVA",
+    "items": [
+      "FR-CNI generator: YY+MM+dept+service+serial → 13-char code, ICAO 7-3-1 checksum, RND/CLR/CPY, localStorage history",
+      "PT-ID-MRZ: Portuguese Bilhete de Identidade TD1 MRZ — NIC Modulo-11 check digit, correct composite checksum",
+      "Portugal in ID Lab: pt_id_mrz tool + MRZ Passport",
+      "Netherlands: NL-BSN inline widget (elfproef Mod-11), removed incorrect MRZ ID CARD",
+      "Poland: PESEL inline widget (century-encoded DOB, gender serial, weighted CD) + Doc Dates widget",
+      "Estonia: Isikukood inline widget — gender+century prefix (1–6), two-round Mod-11 control digit",
+      "Latvia: Personas Kods inline widget — DDMMYY-NNNC format, weights [1,6,3,7,9,10,5,8,4,2]"
+    ]
+  },
+  {
+    "version": "1.4.0",
+    "date": "2026-06-13",
+    "title": "ID Lab — ITA Codice Fiscale + DEU Steuer-ID",
+    "items": [
+      "Italian Codice Fiscale generator: surname/name encoding, DOB+gender, Belfiore municipality code, 16-char output",
+      "Code 39 barcode export (transparent PNG, 2740×383)",
+      "German Steuer-ID: 11-digit, ISO 7064 Mod-11,10 inline widget in ID Lab card",
+      "ID Lab country cards redesign with inline widget support"
+    ]
+  },
+  {
     "version": "1.3.0",
     "date": "2026-05-22",
     "title": "UK DL Gen — full document data & card preview",
@@ -9,7 +49,6 @@
       "Standard 10yr vs Group 2 HGV/Bus 5yr validity with correct date ranges per revision",
       "Generation history — last 10 sessions saved to localStorage with one-click full restore",
       "Random UK address generation from dedicated address pool (uk-dl-addresses.ts)",
-      "Fixed issue date ranges: EU cards capped at Jun 2021, 2021–23 cards Jul 2021–Sep 2023",
       "SVG card preview fixed at 350px width — no layout jump on address change",
       "Sidebar UNITED KINGDOM group added"
     ]
@@ -20,12 +59,11 @@
     "title": "MRZ Forge — Manual Intelligence",
     "items": [
       "Manual data integrated for 30+ countries — doc number formats, personal number formats, validity periods",
-      "Document number generator rewritten per country manuals (DE, FR, ES, BE, HU, FI, LV, CH, AU, IE, BG, RO, SE, EE and more)",
-      "📋 INFO overlay — shows doc number format, personal number spec and notes from the manual for selected country",
-      "🔤 FONTS overlay — lists exact fonts used in each country's document",
-      "✅ MANUAL_VALID badge — validates generated doc number against manual rules after each MRZ generation",
-      "📅 Expiry autofill — one-click fills expiry date based on country standard validity (5 or 10 years)",
-      "🟢 Manual coverage dots — green indicator in country selector for countries with manual data",
+      "Document number generator rewritten per country manuals",
+      "INFO overlay — doc number format, personal number spec and notes per country",
+      "FONTS overlay — lists exact fonts used in each country's document",
+      "MANUAL_VALID badge — validates generated doc number against manual rules",
+      "Expiry autofill — one-click fills expiry date based on country standard validity",
       "Personal number generator expanded to 30+ countries: BSN, PESEL, CPF, NINo, TFN, personnummer, HETU, INSEE, Codice Fiscale, EGN, OIB, EMŠO, AMKA, PPS, Steuer-ID and more",
       "PWA / Offline mode — service worker caches app shell and flag images for 30 days"
     ]
@@ -40,12 +78,8 @@
       "Generation history — last 5 results with one-click field restore",
       "RANDOM and CLEAR buttons for quick data fill",
       "Auto document number generator per country (Europe + USA/CAN/AUS/BRA)",
-      "Cyrillic input blocked, all name fields auto-uppercase",
-      "SubType warnings for country-specific document variants (DE, AT, CH, GB, US, CA, FR, NL, PL)",
-      "Date validation — birth date vs expiry date cross-check",
       "Custom Transaction toggle in Revolut — set merchant, amount, date manually",
-      "📡 UPDATES news feed on dashboard",
-      "Fixed --text-dim color contrast"
+      "Updates news feed on dashboard"
     ]
   },
   {
@@ -59,9 +93,7 @@
       "EXIF Cleaner with GPS map preview",
       "Face Cut tool",
       "Irish NDLS MRZ, Dutch & French MRZ generators",
-      "Energia bill generator",
-      "Deep links for MRZ Forge",
-      "Quick presets & custom preset save in MRZ Forge"
+      "Energia bill generator"
     ]
   }
 ]
