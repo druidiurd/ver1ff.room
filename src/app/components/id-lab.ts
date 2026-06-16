@@ -1167,24 +1167,79 @@ export class IdLabComponent implements OnInit {
   }
 
   // ── IRL NDLS ─────────────────────────────────────────────────────
-  private ndlsHashFnv(s: string): string {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return h.toString(16).padStart(8, '0').toUpperCase();
+  private readonly ndlsB36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  private ndlsToB36(n: number, len: number): string {
+    let s = ''; let x = Math.max(0, Math.round(n));
+    for (let i = 0; i < len; i++) { s = this.ndlsB36[x % 36] + s; x = Math.floor(x / 36); }
+    return s;
   }
 
-  private ndlsHorizNum(day: number, month: number, yr2: number): string {
-    const half = month <= 6 ? '60' : '62';
-    const dayStr = day.toString().padStart(2, '0');
-    const dateStr = `${day.toString().padStart(2,'0')}${month.toString().padStart(2,'0')}${yr2.toString().padStart(2,'0')}`;
-    const hashPart = this.ndlsHashFnv(dateStr + 'NDLS' + (day * month * yr2)).slice(0, 8);
-    const checksum = month <= 6
-      ? 'AD'
-      : (((day * 11) + (month * 7) + yr2) % 256).toString(16).padStart(2, '0').toUpperCase();
-    return (half + dayStr + hashPart + checksum).slice(0, 16);
+  // Field 5 = "0001" + 6-char base-36 sequential counter (ascending with issue date).
+  // Anchors from 7 real NDLS cards (Apr 2016 – Jan 2017).
+  private ndlsField5(issueDate: Date): string {
+    const A: [number, number][] = [
+      [Date.UTC(2016, 3, 23), 257_035_546],
+      [Date.UTC(2016, 5, 22), 388_770_597],
+      [Date.UTC(2016, 11,  3), 744_392_411],
+      [Date.UTC(2016, 11, 17), 771_366_667],
+      [Date.UTC(2017,  0,  5), 795_134_008],
+      [Date.UTC(2017,  0, 14), 816_700_003],
+    ];
+    const t = issueDate.getTime();
+    let val: number;
+    if (t <= A[0][0]) {
+      const r = (A[1][1] - A[0][1]) / (A[1][0] - A[0][0]);
+      val = A[0][1] + r * (t - A[0][0]);
+    } else if (t >= A[A.length - 1][0]) {
+      const n = A.length - 1;
+      const r = (A[n][1] - A[n-1][1]) / (A[n][0] - A[n-1][0]);
+      val = A[n][1] + r * (t - A[n][0]);
+    } else {
+      let lo = 0;
+      for (let i = 0; i < A.length - 1; i++) { if (A[i][0] <= t && t < A[i+1][0]) { lo = i; break; } }
+      const frac = (t - A[lo][0]) / (A[lo+1][0] - A[lo][0]);
+      val = A[lo][1] + frac * (A[lo+1][1] - A[lo][1]);
+    }
+    val = Math.round(val) + Math.floor((Math.random() - 0.5) * 500_000);
+    val = Math.max(0, Math.min(val, 36**6 - 1));
+    return '0001' + this.ndlsToB36(val, 6);
+  }
+
+  // Horizontal code (field 12 back) — PP + CCCCCCCCCCCC + SS (16 chars total)
+  // PP: 60=H1-2016(Jan-Jun), 62=H2-2016(Jul-Dec)+H1-2017
+  // CC: 12-char uppercase hex sequential counter interpolated from real samples
+  // SS: 'AD' for H1-2016; decimal (23 + 11×months_since_Dec2016) for H2+
+  private ndlsHorizNum(issueDate: Date): string {
+    const m = issueDate.getMonth() + 1;
+    const y = issueDate.getFullYear();
+    const h1_2016 = y === 2016 && m <= 6;
+    const prefix = h1_2016 ? '60' : '62';
+
+    let suffix: string;
+    if (h1_2016) {
+      suffix = 'AD';
+    } else {
+      const msd = (y - 2016) * 12 + (m - 12);
+      suffix = ((23 + 11 * Math.max(0, msd)) % 100).toString().padStart(2, '0');
+    }
+
+    const t = BigInt(issueDate.getTime());
+    let counter: bigint;
+    if (h1_2016) {
+      const a1t = BigInt(Date.UTC(2016, 3, 23));
+      const rate = (BigInt('0x313E081D1325') - BigInt('0x233F03313225')) / BigInt(60 * 86400 * 1000);
+      counter = BigInt('0x233F03313225') + rate * (t - a1t);
+    } else {
+      const a1t = BigInt(Date.UTC(2016, 11, 3));
+      const rate = (BigInt('0x56C312151325') - BigInt('0x56C30C131025')) / BigInt(14 * 86400 * 1000);
+      counter = BigInt('0x56C30C131025') + rate * (t - a1t);
+    }
+    const maxH = BigInt('0xFFFFFFFFFFFF');
+    const vr = BigInt(Math.floor((Math.random() - 0.5) * 10_000_000));
+    counter = counter < 0n ? 0n : counter > maxH ? maxH : counter + vr;
+
+    return prefix + counter.toString(16).padStart(12, '0').slice(-12).toUpperCase() + suffix;
   }
 
   private ndlsFmt(d: Date): string {
@@ -1224,12 +1279,13 @@ export class IdLabComponent implements OnInit {
     }
 
     const rndDigits = (n: number) => Array.from({length: n}, () => Math.floor(Math.random() * 10)).join('');
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const rndAlpha = (n: number) => Array.from({length: n}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 
-    const frontNum = rndDigits(9);
-    const licNum = '0001' + rndAlpha(6);
-    const horizCode = this.ndlsHorizNum(issueDate.getDate(), issueDate.getMonth() + 1, issueDate.getFullYear() % 100);
+    // Field 4d: office prefix (known NDLS batches) + sequential 6-digit suffix
+    const prefixes = ['050', '110', '280', '290', '292', '550'];
+    const officePrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const frontNum = officePrefix + rndDigits(6);
+    const licNum = this.ndlsField5(issueDate);
+    const horizCode = this.ndlsHorizNum(issueDate);
     const catB = ageAtIssue >= 17 ? { start: this.ndlsFmt(issueDate), end: this.ndlsFmt(expiryDate) } : null;
 
     this.ndlsResult.set({ frontNum, licNum, horizCode, issueDate: this.ndlsFmt(issueDate), expiryDate: this.ndlsFmt(expiryDate), validityYrs, ageAtIssue, catB });
