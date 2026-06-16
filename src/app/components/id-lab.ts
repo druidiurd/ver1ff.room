@@ -36,7 +36,6 @@ const COUNTRIES: Country[] = [
     tools: [
       { id: 'energia',  icon: '🧾', label: 'IE-BILL-GEN', desc: 'Irish utility bill generator. Auto-aligns fields. Scan mode adds noise and analog artifacts.', color: '#00ff41', tag: 'BILL' },
       { id: 'ndls_mrz', icon: '🚗', label: 'IE-DL-MRZ',   desc: 'Real-time dual-core MRZ for Irish NDLS. Sync checksums for GEN1 and GEN2 standards.',        color: '#34c759', tag: 'MRZ'  },
-      { id: 'irl_ndls', icon: '🪪', label: 'NDLS-GEN',    desc: 'Irish NDLS driving licence field generator. Field 4d (front ctrl #), Field 5 (back lic #), 16-char horizontal code. Age-group validity for B/BE categories.', color: '#06b6d4', tag: 'CARD·DL' },
       { id: 'mrz_gen', ...MRZ_ID },
       { id: 'mrz_gen', ...MRZ_PP },
     ],
@@ -419,79 +418,6 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                     </div>
 
-                  } @else if (t.id === 'irl_ndls') {
-                    <!-- Inline IRL NDLS card -->
-                    <div class="tool-card inline-card ndls-card mono" [style.--tc]="t.color">
-                      <div class="tc-top">
-                        <span class="tc-icon">{{ t.icon }}</span>
-                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
-                      </div>
-                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-
-                      @if (ndlsResult(); as r) {
-                        <div class="ndls-result">
-                          <div class="ndls-section-label mono">FRONT</div>
-                          <div class="ndls-row">
-                            <span class="ndls-key">CTRL #</span>
-                            <code class="ndls-val">{{ r.frontNum }}</code>
-                            <button class="ndls-cpy" [style.color]="t.color" (click)="copyNdls('front')">{{ ndlsCopied() === 'front' ? '✓' : '⎘' }}</button>
-                          </div>
-                          <div class="ndls-row">
-                            <span class="ndls-key">HORIZ</span>
-                            <code class="ndls-val ndls-horiz">{{ r.horizCode }}</code>
-                            <button class="ndls-cpy" [style.color]="t.color" (click)="copyNdls('horiz')">{{ ndlsCopied() === 'horiz' ? '✓' : '⎘' }}</button>
-                          </div>
-                          <div class="ndls-divider"></div>
-                          <div class="ndls-section-label mono">BACK</div>
-                          <div class="ndls-row">
-                            <span class="ndls-key">LIC #</span>
-                            <code class="ndls-val ndls-lic">{{ r.licNum }}</code>
-                            <button class="ndls-cpy" [style.color]="t.color" (click)="copyNdls('lic')">{{ ndlsCopied() === 'lic' ? '✓' : '⎘' }}</button>
-                          </div>
-                          <div class="ndls-divider"></div>
-                          <div class="ndls-row ndls-meta">
-                            <span class="ndls-key">ISSUED</span>
-                            <span class="ndls-date">{{ r.issueDate }}</span>
-                          </div>
-                          <div class="ndls-row ndls-meta">
-                            <span class="ndls-key">EXPIRES</span>
-                            <span class="ndls-date ndls-exp" [style.color]="t.color">{{ r.expiryDate }}</span>
-                            <span class="ndls-badge" [style.background]="'rgba(6,182,212,0.12)'" [style.color]="t.color">{{ r.validityYrs }}yr · age {{ r.ageAtIssue }}</span>
-                          </div>
-                          @if (r.catB) {
-                            <div class="ndls-divider"></div>
-                            <div class="ndls-cats">
-                              <div class="ndls-cat-row">
-                                <span class="ndls-cat-label" [style.color]="t.color">B</span>
-                                <span class="ndls-cat-range">{{ r.catB.start }} → {{ r.catB.end }}</span>
-                              </div>
-                              <div class="ndls-cat-row">
-                                <span class="ndls-cat-label" [style.color]="t.color">BE</span>
-                                <span class="ndls-cat-range">{{ r.catB.start }} → {{ r.catB.end }}</span>
-                              </div>
-                            </div>
-                          }
-                          <button class="ndls-copy-all mono" [style.border-color]="'rgba(6,182,212,0.3)'" [style.color]="t.color"
-                            (click)="copyNdls('all')">{{ ndlsCopied() === 'all' ? '✓ COPIED' : '⎘ CPY ALL' }}</button>
-                        </div>
-                      }
-
-                      <div class="il-field">
-                        <label class="il-lbl">DOB (DD-MM-YYYY)</label>
-                        <input class="il-inp" [ngModel]="ndlsDob()" (ngModelChange)="ndlsDob.set($event)"
-                          placeholder="01-01-1990" maxlength="10" autocomplete="off">
-                      </div>
-                      <div class="il-field">
-                        <label class="il-lbl">ISSUE DATE <span style="opacity:.5">(DD-MM-YYYY, blank = today)</span></label>
-                        <input class="il-inp" [ngModel]="ndlsIssue()" (ngModelChange)="ndlsIssue.set($event)"
-                          placeholder="auto" maxlength="10" autocomplete="off">
-                      </div>
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genNdls()" [style.background]="t.color" style="flex:2">⚡ GEN</button>
-                        <button class="il-btn-sm mono" (click)="randomNdls()" title="Random DOB">⚄</button>
-                        <button class="il-btn-sm mono" (click)="clearNdls()" style="color:#ff3b30">✕</button>
-                      </div>
-                    </div>
 
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
@@ -777,73 +703,10 @@ const FAV_KEY = 'id_lab_favorites';
     .doc-date { font-size: 0.65rem; color: var(--text-mid); letter-spacing: 1px; }
     .doc-date strong { color: #ff6b35; }
 
-    /* IRL NDLS card */
-    .ndls-card { grid-column: 1 / -1; }
-    .ndls-result {
-      display: flex; flex-direction: column; gap: 5px;
-      background: rgba(6,182,212,0.04);
-      border: 1px solid rgba(6,182,212,0.2);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      position: relative; overflow: hidden;
-    }
-    .ndls-result::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, #06b6d4, transparent);
-      opacity: 0.5;
-    }
-    .ndls-section-label {
-      font-size: 0.42rem; letter-spacing: 3px; color: #06b6d4;
-      opacity: 0.6; margin-top: 2px;
-    }
-    .ndls-row {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .ndls-key {
-      font-size: 0.45rem; color: var(--text-dim); letter-spacing: 1px;
-      width: 42px; flex-shrink: 0;
-    }
-    .ndls-val {
-      flex: 1; font-size: 0.68rem; letter-spacing: 2px; color: var(--text);
-    }
-    .ndls-horiz { letter-spacing: 1.5px; font-size: 0.62rem; }
-    .ndls-lic { color: #06b6d4; }
-    .ndls-cpy {
-      background: none; border: none; cursor: pointer;
-      font-size: 0.7rem; color: var(--text-dim); padding: 2px 4px;
-      transition: color 0.15s; flex-shrink: 0;
-    }
-    .ndls-cpy:hover { color: #06b6d4; }
-    .ndls-divider {
-      height: 1px; background: rgba(6,182,212,0.12); margin: 3px 0;
-    }
-    .ndls-meta { gap: 8px; }
-    .ndls-date { font-size: 0.6rem; color: var(--text-mid); letter-spacing: 1px; }
-    .ndls-exp { font-weight: 700; }
-    .ndls-badge {
-      font-size: 0.4rem; letter-spacing: 1px; padding: 2px 6px;
-      border-radius: 3px; margin-left: auto;
-    }
-    .ndls-cats { display: flex; flex-direction: column; gap: 4px; }
-    .ndls-cat-row { display: flex; align-items: center; gap: 10px; }
-    .ndls-cat-label {
-      font-size: 0.55rem; font-weight: 800; letter-spacing: 2px; width: 20px;
-    }
-    .ndls-cat-range { font-size: 0.55rem; color: var(--text-mid); letter-spacing: 1px; }
-    .ndls-copy-all {
-      margin-top: 6px; padding: 5px 10px; border-radius: var(--radius-sm);
-      background: rgba(6,182,212,0.06); border: 1px solid;
-      font-size: 0.5rem; font-weight: 800; letter-spacing: 2px;
-      cursor: pointer; transition: background 0.15s; align-self: flex-start;
-    }
-    .ndls-copy-all:hover { background: rgba(6,182,212,0.14); }
-
     @media (max-width: 767px) {
       .lab-body { flex-direction: column; }
       .country-panel { width: 100%; }
       .tool-grid { grid-template-columns: 1fr; }
-      .ndls-card { grid-column: auto; }
     }
   `]
 })
@@ -887,15 +750,6 @@ export class IdLabComponent implements OnInit {
   lvResult = signal<string | null>(null);
   lvCopied = signal(false);
 
-  // IRL NDLS
-  ndlsDob    = signal('');
-  ndlsIssue  = signal('');
-  ndlsResult = signal<{
-    frontNum: string; licNum: string; horizCode: string;
-    issueDate: string; expiryDate: string; validityYrs: number;
-    ageAtIssue: number; catB: { start: string; end: string } | null;
-  } | null>(null);
-  ndlsCopied = signal<string | null>(null);
 
   // PL DOC DATES
   docDob     = signal('');
@@ -1166,159 +1020,6 @@ export class IdLabComponent implements OnInit {
     this.docCopied.set(true); setTimeout(() => this.docCopied.set(false), 1500);
   }
 
-  // ── IRL NDLS ─────────────────────────────────────────────────────
-  private readonly ndlsB36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-  private ndlsToB36(n: number, len: number): string {
-    let s = ''; let x = Math.max(0, Math.round(n));
-    for (let i = 0; i < len; i++) { s = this.ndlsB36[x % 36] + s; x = Math.floor(x / 36); }
-    return s;
-  }
-
-  // Field 5 = "0001" + 6-char base-36 sequential counter (ascending with issue date).
-  // Anchors from 7 real NDLS cards (Apr 2016 – Jan 2017).
-  private ndlsField5(issueDate: Date): string {
-    const A: [number, number][] = [
-      [Date.UTC(2016, 3, 23), 257_035_546],
-      [Date.UTC(2016, 5, 22), 388_770_597],
-      [Date.UTC(2016, 11,  3), 744_392_411],
-      [Date.UTC(2016, 11, 17), 771_366_667],
-      [Date.UTC(2017,  0,  5), 795_134_008],
-      [Date.UTC(2017,  0, 14), 816_700_003],
-    ];
-    const t = issueDate.getTime();
-    let val: number;
-    if (t <= A[0][0]) {
-      const r = (A[1][1] - A[0][1]) / (A[1][0] - A[0][0]);
-      val = A[0][1] + r * (t - A[0][0]);
-    } else if (t >= A[A.length - 1][0]) {
-      const n = A.length - 1;
-      const r = (A[n][1] - A[n-1][1]) / (A[n][0] - A[n-1][0]);
-      val = A[n][1] + r * (t - A[n][0]);
-    } else {
-      let lo = 0;
-      for (let i = 0; i < A.length - 1; i++) { if (A[i][0] <= t && t < A[i+1][0]) { lo = i; break; } }
-      const frac = (t - A[lo][0]) / (A[lo+1][0] - A[lo][0]);
-      val = A[lo][1] + frac * (A[lo+1][1] - A[lo][1]);
-    }
-    val = Math.round(val) + Math.floor((Math.random() - 0.5) * 500_000);
-    const maxB36 = 36**6;
-    val = ((val % maxB36) + maxB36) % maxB36; // wrap instead of clamp
-    return '0001' + this.ndlsToB36(val, 6);
-  }
-
-  // Horizontal code (field 12 back) — PP + CCCCCCCCCCCC + SS (16 chars total)
-  // PP: 60=H1-2016(Jan-Jun), 62=H2-2016(Jul-Dec)+H1-2017
-  // CC: 12-char uppercase hex sequential counter interpolated from real samples
-  // SS: 'AD' for H1-2016; decimal (23 + 11×months_since_Dec2016) for H2+
-  private ndlsHorizNum(issueDate: Date): string {
-    const m = issueDate.getMonth() + 1;
-    const y = issueDate.getFullYear();
-    const h1_2016 = y === 2016 && m <= 6;
-    const prefix = h1_2016 ? '60' : '62';
-
-    let suffix: string;
-    if (h1_2016) {
-      suffix = 'AD';
-    } else {
-      const msd = (y - 2016) * 12 + (m - 12);
-      suffix = ((23 + 11 * Math.max(0, msd)) % 100).toString().padStart(2, '0');
-    }
-
-    const t = BigInt(issueDate.getTime());
-    let counter: bigint;
-    if (h1_2016) {
-      const a1t = BigInt(Date.UTC(2016, 3, 23));
-      const rate = (BigInt('0x313E081D1325') - BigInt('0x233F03313225')) / BigInt(60 * 86400 * 1000);
-      counter = BigInt('0x233F03313225') + rate * (t - a1t);
-    } else {
-      const a1t = BigInt(Date.UTC(2016, 11, 3));
-      const rate = (BigInt('0x56C312151325') - BigInt('0x56C30C131025')) / BigInt(14 * 86400 * 1000);
-      counter = BigInt('0x56C30C131025') + rate * (t - a1t);
-    }
-    const maxH = BigInt('0xFFFFFFFFFFFF');
-    const vr = BigInt(Math.floor((Math.random() - 0.5) * 10_000_000));
-    counter = counter < 0n ? 0n : counter > maxH ? maxH : counter + vr;
-
-    return prefix + counter.toString(16).padStart(12, '0').slice(-12).toUpperCase() + suffix;
-  }
-
-  private ndlsFmt(d: Date): string {
-    return `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`;
-  }
-
-  genNdls() {
-    const dobM = this.ndlsDob().match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (!dobM) return;
-    const [, dd, mm, yyyy] = dobM.map(Number);
-    if (!dd || !mm || !yyyy) return;
-
-    let issueDate: Date;
-    const issM = this.ndlsIssue().match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (issM) {
-      const [, id, im, iy] = issM.map(Number);
-      issueDate = new Date(iy, im - 1, id);
-    } else {
-      issueDate = new Date();
-    }
-
-    const birthDate = new Date(yyyy, mm - 1, dd);
-    const ageAtIssue = Math.floor((issueDate.getTime() - birthDate.getTime()) / (365.25 * 86400000));
-    if (ageAtIssue < 0) return;
-
-    let validityYrs: number;
-    let expiryDate: Date;
-    if (ageAtIssue < 65) {
-      validityYrs = 10;
-      expiryDate = new Date(issueDate.getFullYear() + 10, issueDate.getMonth(), issueDate.getDate());
-    } else if (ageAtIssue < 72) {
-      validityYrs = 75 - ageAtIssue;
-      expiryDate = new Date(yyyy + 75, mm - 1, dd);
-    } else {
-      validityYrs = 3;
-      expiryDate = new Date(issueDate.getFullYear() + 3, issueDate.getMonth(), issueDate.getDate());
-    }
-
-    const rndDigits = (n: number) => Array.from({length: n}, () => Math.floor(Math.random() * 10)).join('');
-
-    // Field 4d: office prefix (known NDLS batches) + sequential 6-digit suffix
-    const prefixes = ['050', '110', '280', '290', '292', '550'];
-    const officePrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const frontNum = officePrefix + rndDigits(6);
-    const licNum = this.ndlsField5(issueDate);
-    const horizCode = this.ndlsHorizNum(issueDate);
-    const catB = ageAtIssue >= 17 ? { start: this.ndlsFmt(issueDate), end: this.ndlsFmt(expiryDate) } : null;
-
-    this.ndlsResult.set({ frontNum, licNum, horizCode, issueDate: this.ndlsFmt(issueDate), expiryDate: this.ndlsFmt(expiryDate), validityYrs, ageAtIssue, catB });
-  }
-
-  randomNdls() {
-    const yr = 1965 + Math.floor(Math.random() * 40);
-    const mo = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
-    const dy = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
-    this.ndlsDob.set(`${dy}-${mo}-${yr}`);
-    // Random issue date in 2015–2024 range so Field 5 counter stays in realistic range
-    const issYr = 2015 + Math.floor(Math.random() * 10);
-    const issMo = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
-    const issDy = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
-    this.ndlsIssue.set(`${issDy}-${issMo}-${issYr}`);
-    this.genNdls();
-  }
-
-  clearNdls() { this.ndlsDob.set(''); this.ndlsIssue.set(''); this.ndlsResult.set(null); }
-
-  copyNdls(field: string) {
-    const r = this.ndlsResult(); if (!r) return;
-    const texts: Record<string, string> = {
-      front: r.frontNum,
-      lic: r.licNum,
-      horiz: r.horizCode,
-      all: `FRONT #  ${r.frontNum}\nLIC #    ${r.licNum}\nHORIZ    ${r.horizCode}\nISSUED   ${r.issueDate}\nEXPIRES  ${r.expiryDate}`,
-    };
-    navigator.clipboard.writeText(texts[field] ?? '');
-    this.ndlsCopied.set(field);
-    setTimeout(() => this.ndlsCopied.set(null), 1500);
-  }
 
   private loadFavs(): Set<string> {
     try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); }
