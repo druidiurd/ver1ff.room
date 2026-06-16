@@ -1202,7 +1202,8 @@ export class IdLabComponent implements OnInit {
       val = A[lo][1] + frac * (A[lo+1][1] - A[lo][1]);
     }
     val = Math.round(val) + Math.floor((Math.random() - 0.5) * 500_000);
-    val = Math.max(0, Math.min(val, 36**6 - 1));
+    const maxB36 = 36**6;
+    val = ((val % maxB36) + maxB36) % maxB36; // wrap instead of clamp
     return '0001' + this.ndlsToB36(val, 6);
   }
 
@@ -1296,7 +1297,11 @@ export class IdLabComponent implements OnInit {
     const mo = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
     const dy = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
     this.ndlsDob.set(`${dy}-${mo}-${yr}`);
-    this.ndlsIssue.set('');
+    // Random issue date in 2015–2024 range so Field 5 counter stays in realistic range
+    const issYr = 2015 + Math.floor(Math.random() * 10);
+    const issMo = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+    const issDy = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+    this.ndlsIssue.set(`${issDy}-${issMo}-${issYr}`);
     this.genNdls();
   }
 
