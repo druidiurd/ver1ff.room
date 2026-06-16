@@ -274,12 +274,12 @@ import { lastValueFrom } from 'rxjs';
           }
 
           @if (store.selectedApp() === 'nld_mrz') {
-            <div class="mrz-card amber">
+            <div class="mrz-card">
               <div class="mrz-row">
                 <span class="mrz-tag mono">L1</span>
                 <code class="mono">{{ store.mrzData()?.L1 || '——————————————————————————————' }}</code>
                 @if (store.mrzData()?.L1) {
-                  <button class="btn-copy amber mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||'')+'\n'+(store.mrzData()!.L3||''))">ALL</button>
+                  <button class="btn-copy mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||'')+'\n'+(store.mrzData()!.L3||''))">ALL</button>
                 }
               </div>
               <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ store.mrzData()?.L2 || '——————————————————————————————' }}</code></div>
@@ -289,13 +289,13 @@ import { lastValueFrom } from 'rxjs';
           }
 
           @if (store.selectedApp() === 'fra_mrz') {
-            <div class="mrz-card amber">
+            <div class="mrz-card">
               @if (!store.mrzData() || store.mrzData()?.STATUS === 'SYNC_OK') {
                 <div class="mrz-row">
                   <span class="mrz-tag mono">L1</span>
                   <code class="mono">{{ store.mrzData()?.L1 || '——————————————————————————————' }}</code>
                   @if (store.mrzData()?.L1) {
-                    <button class="btn-copy amber mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||''))">ALL</button>
+                    <button class="btn-copy mono" (click)="copy((store.mrzData()!.L1||'')+'\n'+(store.mrzData()!.L2||''))">ALL</button>
                   }
                 </div>
                 <div class="mrz-row"><span class="mrz-tag mono">L2</span><code class="mono">{{ store.mrzData()?.L2 || '——————————————————————————————' }}</code></div>
@@ -746,8 +746,15 @@ import { lastValueFrom } from 'rxjs';
       border: 1px solid var(--border-green);
       border-radius: var(--radius-sm);
       padding: 16px 20px;
+      position: relative;
+      overflow: hidden;
     }
-    .mrz-card.amber { border-color: rgba(255,149,0,0.3); }
+    .mrz-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      opacity: 0.6;
+    }
     .mrz-row {
       display: flex; align-items: center; gap: 16px;
       margin-bottom: 10px;
@@ -755,7 +762,6 @@ import { lastValueFrom } from 'rxjs';
     .mrz-row:last-child { margin-bottom: 0; }
     .mrz-row.err code, .mrz-row.err .mrz-tag { color: var(--red); }
     .mrz-tag { font-size: 0.55rem; font-weight: 700; color: var(--green); width: 20px; letter-spacing: 1px; }
-    .mrz-card.amber .mrz-tag { color: var(--amber); }
     code { color: var(--text); font-size: 0.7rem; letter-spacing: 3px; flex: 1; word-break: break-all; }
     .btn-copy {
       background: var(--green-dim); border: 1px solid var(--border-green);
@@ -763,7 +769,6 @@ import { lastValueFrom } from 'rxjs';
       padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
       white-space: nowrap; flex-shrink: 0;
     }
-    .btn-copy.amber { background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3); color: var(--amber); }
 
     /* batch */
     .batch { display: flex; flex-direction: column; gap: 16px; }

@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { MrzForgeComponent } from './mrz-forge';
 
 interface Tool {
   id: string;
@@ -118,7 +119,7 @@ const FAV_KEY = 'id_lab_favorites';
 @Component({
   selector: 'app-id-lab',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MrzForgeComponent],
   template: `
     <div class="lab fade-in">
 
@@ -195,7 +196,28 @@ const FAV_KEY = 'id_lab_favorites';
             </div>
           }
 
-          @if (selected(); as country) {
+          @if (mrzActive(); as mrz) {
+            <div class="tool-area fade-in">
+              <div class="tool-header">
+                <img class="th-flag" [src]="flagUrl(mrz.country.iso2)" [alt]="mrz.country.code">
+                <div>
+                  <div class="mono th-name">{{ mrz.country.name }}</div>
+                  <div class="mono th-code">{{ mrz.tool.label }}</div>
+                </div>
+                <button class="th-fav" style="font-size:0.8rem;letter-spacing:1px" (click)="mrzActive.set(null)">← BACK</button>
+              </div>
+              <div class="mrz-embed-wrap">
+                <app-mrz-forge
+                  [embedded]="true"
+                  [preDoc]="mrz.tool.mrzDoc!"
+                  [preNat]="mrz.country.mrzCode"
+                  [preIss]="mrz.country.mrzCode"
+                ></app-mrz-forge>
+              </div>
+            </div>
+          }
+
+          @if (!mrzActive() && selected(); as country) {
             <div class="tool-area fade-in">
 
               <div class="tool-header">
@@ -528,6 +550,7 @@ const FAV_KEY = 'id_lab_favorites';
     .empty-hint { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 2px; opacity: 0.2; }
 
     .tool-area { display: flex; flex-direction: column; height: 100%; }
+    .mrz-embed-wrap { flex: 1; overflow-y: auto; }
 
     .tool-header {
       display: flex; align-items: center; gap: 14px;
@@ -755,21 +778,21 @@ export class IdLabComponent implements OnInit {
     return `https://flagcdn.com/32x24/${iso2}.png`;
   }
 
+  mrzActive = signal<{ country: Country; tool: Tool } | null>(null);
+
   select(c: Country) {
     this.selected.set(c);
+    this.mrzActive.set(null);
     this.router.navigate([], { queryParams: { country: c.code }, replaceUrl: true });
   }
 
   open(tool: Tool, country: Country) {
-    const base = { from: 'id_lab', country: country.code, iso2: country.iso2, cname: country.name };
     if (tool.mrzDoc) {
-      this.router.navigate(['/tool', 'mrz_gen'], {
-        queryParams: { ...base, doc: tool.mrzDoc, nat: country.mrzCode, iss: country.mrzCode }
-      });
-    } else {
-      this.router.navigate(['/tool', tool.id], { queryParams: base });
+      this.mrzActive.set({ country, tool });
+      return;
     }
-    // URL already has ?country= from select(); it will be replaced by the new navigation
+    const base = { from: 'id_lab', country: country.code, iso2: country.iso2, cname: country.name };
+    this.router.navigate(['/tool', tool.id], { queryParams: base });
   }
 
   toggleFav(code: string) {

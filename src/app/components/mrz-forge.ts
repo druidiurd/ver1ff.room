@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, input, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
@@ -410,6 +410,7 @@ const DEFAULT_PRESETS: Preset[] = [
     <div class="forge">
 
       <!-- Top bar: presets + steps -->
+      @if (!embedded()) {
       <div class="forge-topbar">
         <div class="steps">
           @for (s of [1,2,3]; track s) {
@@ -442,6 +443,7 @@ const DEFAULT_PRESETS: Preset[] = [
           }
         </div>
       </div>
+      } <!-- end @if (!embedded()) -->
 
       <!-- Two-column body -->
       <div class="forge-cols">
@@ -668,17 +670,22 @@ const DEFAULT_PRESETS: Preset[] = [
                 placeholder="DD-MM-YYYY" autocomplete="off">
             </div>
             <div class="fg-field">
-              <label class="mono fg-label">SUB_TYPE <span class="opt">opt</span></label>
+              <label class="mono fg-label">SUB_TYPE <span class="opt">opt</span>
+                @if (isDeuIdCard()) { <span class="opt" style="color:var(--green)">locked: D</span> }
+              </label>
               <input class="mono fg-input"
-                [ngModel]="fields().subType"
+                [ngModel]="isDeuIdCard() ? 'D' : fields().subType"
                 (ngModelChange)="patch('subType', $event)"
                 (blur)="trigger()"
+                [readonly]="isDeuIdCard()"
+                [style.opacity]="isDeuIdCard() ? '0.5' : '1'"
                 placeholder="e.g. A" maxlength="1" autocomplete="off">
             </div>
-            <div class="fg-field">
+            <div class="fg-field" [style.opacity]="isDeuIdCard() ? '0.4' : '1'">
               <label class="mono fg-label">
                 PERSONAL_NUM <span class="opt">opt</span>
-                @if (canGenPersNum()) {
+                @if (isDeuIdCard()) { <span class="opt">not in DEU ID</span> }
+                @if (!isDeuIdCard() && canGenPersNum()) {
                   <button type="button" class="btn-icn-gen mono" (click)="genPersNum()">⚡ {{ persNumLabel() }}</button>
                 }
               </label>
@@ -686,6 +693,7 @@ const DEFAULT_PRESETS: Preset[] = [
                 [ngModel]="fields().persNum"
                 (ngModelChange)="patch('persNum', $event)"
                 (blur)="trigger()"
+                [readonly]="isDeuIdCard()"
                 [placeholder]="persNumPlaceholder()" autocomplete="off">
             </div>
             <div class="fg-field fg-full">
@@ -1305,11 +1313,21 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
 
+  embedded = input(false);
+  preDoc   = input('');
+  preNat   = input('');
+  preIss   = input('');
+  preSub   = input('');
+
   step = signal(1);
   natSearch = signal('');
   issuerSearch = signal('');
   copiedKey = signal<string | null>(null);
   genHistory = signal<HistoryEntry[]>(this.loadHistory());
+
+  isDeuIdCard = computed(() =>
+    this.fields().nationality === 'DEU' && this.fields().docType === 'ID Card'
+  );
 
   subTypeWarning = computed<string | null>(() => {
     const f = this.fields();
@@ -1375,6 +1393,15 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.initTrigger();
+    if (this.embedded()) {
+      const doc = this.preDoc(), nat = this.preNat(), iss = this.preIss(), sub = this.preSub();
+      if (doc && nat && iss) {
+        const autoSub = (doc === 'ID Card' && nat === 'DEU') ? 'D' : (sub || '');
+        this.fields.update(f => ({ ...f, docType: doc, nationality: nat, issuer: iss, subType: autoSub }));
+        this.step.set(3);
+      }
+      return;
+    }
     const p = this.route.snapshot.queryParamMap;
     const doc = p.get('doc');
     const nat = p.get('nat');
@@ -1393,6 +1420,7 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
   }
 
   private syncUrl() {
+    if (this.embedded()) return;
     const f = this.fields();
     const queryParams: Record<string, string> = {};
     if (f.docType)    queryParams['doc'] = f.docType;
@@ -1644,10 +1672,11 @@ export class MrzForgeComponent implements OnInit, OnDestroy {
       debounceTime(250),
       switchMap(() => {
         const f = this.fields();
+        const deuId = f.nationality === 'DEU' && f.docType === 'ID Card';
         const lines = [
           f.docType, f.lastname, f.firstname, f.birthDate,
           f.nationality, f.sex, f.docNum, f.expiryDate,
-          f.issuer, f.subType, f.persNum, f.optional,
+          f.issuer, deuId ? 'D' : f.subType, deuId ? '' : f.persNum, f.optional,
         ];
         const fd = new FormData();
         fd.append('type', 'mrz_gen');

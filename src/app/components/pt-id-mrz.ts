@@ -66,7 +66,10 @@ interface HistEntry { lines: string[]; ts: number; }
       <div class="mrz-output-box">
         @if (mrz(); as m) {
           @for (line of m; track $index) {
-            <code class="mono mrz-line">{{ line }}</code>
+            <div class="mrz-row">
+              <span class="mrz-tag mono">L{{ $index + 1 }}</span>
+              <code class="mono mrz-line">{{ line }}</code>
+            </div>
           }
         } @else {
           <span class="mono mrz-wait">AWAITING_INPUT</span>
@@ -163,8 +166,10 @@ interface HistEntry { lines: string[]; ts: number; }
     .mrz-output-box {
       display: flex; flex-direction: column; gap: 10px;
       background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,65,0.3);
-      border-radius: var(--radius); padding: 16px 20px; position: relative; overflow: hidden;
+      border-radius: var(--radius-sm); padding: 16px 20px; position: relative; overflow: hidden;
     }
+    .mrz-row { display: flex; align-items: center; gap: 16px; }
+    .mrz-tag { font-size: 0.55rem; font-weight: 700; color: var(--green); width: 20px; letter-spacing: 1px; }
     .mrz-output-box::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
       background: linear-gradient(90deg, transparent, var(--green), transparent);
