@@ -23,6 +23,11 @@ from engines.deu_tax_engine import DeuTaxEngine
 app = FastAPI()
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+@app.exception_handler(Exception)
+async def catch_all(request, exc):
+    import traceback
+    return JSONResponse({"ERR": str(exc), "TB": traceback.format_exc()}, status_code=200)
+
 registry = {
     "energia":    EnergiaEngine(base_dir),
     "ndls_mrz":   MrzEngine(base_dir),
