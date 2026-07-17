@@ -28,6 +28,14 @@ async def catch_all(request, exc):
     import traceback
     return JSONResponse({"ERR": str(exc), "TB": traceback.format_exc()}, status_code=200)
 
+@app.middleware("http")
+async def debug_middleware(request, call_next):
+    import traceback as tb_mod
+    try:
+        return await call_next(request)
+    except Exception as e:
+        return JSONResponse({"ERR_MW": str(e), "TB": tb_mod.format_exc()}, status_code=200)
+
 registry = {
     "energia":    EnergiaEngine(base_dir),
     "ndls_mrz":   MrzEngine(base_dir),

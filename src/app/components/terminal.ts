@@ -1154,7 +1154,11 @@ export class TerminalComponent implements OnInit {
       this.store.bypassResults.set([]);
     } else {
       const f = filesList[0];
-      if (f) { this.store.selectedFile.set(f); if (this.store.hasPreview()) this.reqPreview(); }
+      if (f) {
+        if (f.size > 4 * 1024 * 1024) { alert(`FILE_TOO_LARGE: ${(f.size/1024/1024).toFixed(1)}MB — max 4MB`); return; }
+        this.store.selectedFile.set(f);
+        if (this.store.hasPreview()) this.reqPreview();
+      }
     }
   }
 
