@@ -36,19 +36,26 @@ async def debug_middleware(request, call_next):
     except Exception as e:
         return JSONResponse({"ERR_MW": str(e), "TB": tb_mod.format_exc()}, status_code=200)
 
-registry = {
-    "energia":    EnergiaEngine(base_dir),
-    "ndls_mrz":   MrzEngine(base_dir),
-    "nld_mrz":    NldMrzEngine(base_dir),
-    "fra_mrz":    FraMrzEngine(base_dir),
-    "exif_cleaner": ExifEngine(base_dir),
-    "face_cut":   FaceEngine(base_dir),
-    "ai_bypass":  AIBypassEngine(base_dir),
-    "revolut":    RevolutEngine(base_dir),
-    "mrz_gen":    MrzGenEngine(base_dir),
-    "ita_cf":     ItaCfEngine(base_dir),
-    "deu_tax":    DeuTaxEngine(base_dir),
-}
+def _init_engine(cls, *args):
+    try:
+        return cls(*args)
+    except Exception as e:
+        print(f"ENGINE_INIT_FAIL {cls.__name__}: {e}")
+        return None
+
+registry = {k: v for k, v in {
+    "energia":      _init_engine(EnergiaEngine, base_dir),
+    "ndls_mrz":     _init_engine(MrzEngine, base_dir),
+    "nld_mrz":      _init_engine(NldMrzEngine, base_dir),
+    "fra_mrz":      _init_engine(FraMrzEngine, base_dir),
+    "exif_cleaner": _init_engine(ExifEngine, base_dir),
+    "face_cut":     _init_engine(FaceEngine, base_dir),
+    "ai_bypass":    _init_engine(AIBypassEngine, base_dir),
+    "revolut":      _init_engine(RevolutEngine, base_dir),
+    "mrz_gen":      _init_engine(MrzGenEngine, base_dir),
+    "ita_cf":       _init_engine(ItaCfEngine, base_dir),
+    "deu_tax":      _init_engine(DeuTaxEngine, base_dir),
+}.items() if v is not None}
 
 @app.get("/api/schema/{module}")
 async def get_schema(module: str):
