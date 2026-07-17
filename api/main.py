@@ -81,5 +81,7 @@ async def execute(
         m_type = "image/jpeg" if type in ["exif_cleaner", "face_cut"] else "application/pdf"
         return StreamingResponse(res, media_type=m_type)
     except Exception as e:
-        print(f"CORE_ERR: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        tb = traceback.format_exc()
+        print(f"CORE_ERR: {tb}")
+        return JSONResponse({"ERR": str(e), "TB": tb}, status_code=200)
