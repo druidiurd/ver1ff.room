@@ -1259,14 +1259,16 @@ export class TerminalComponent implements OnInit {
     } else {
       this.store.executeBlob(fd).subscribe(res => {
         const fname = this.getFileName();
-        const dlUrl = URL.createObjectURL(res);
-        const anchor = document.createElement('a');
-        anchor.href = dlUrl; anchor.download = fname; anchor.click();
-        URL.revokeObjectURL(dlUrl);
-        const histUrl = URL.createObjectURL(res);
-        const prev = this.imageHistory();
-        if (prev.length >= 6) URL.revokeObjectURL(prev[prev.length - 1].url);
-        this.imageHistory.set([{ url: histUrl, app: this.store.selectedApp() || '', name: fname }, ...prev.slice(0, 5)]);
+        const url = URL.createObjectURL(res);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname; a.click();
+        URL.revokeObjectURL(url);
+        setTimeout(() => {
+          const histUrl = URL.createObjectURL(res);
+          const prev = this.imageHistory();
+          if (prev.length >= 6) URL.revokeObjectURL(prev[prev.length - 1].url);
+          this.imageHistory.set([{ url: histUrl, app: this.store.selectedApp() || '', name: fname }, ...prev.slice(0, 5)]);
+        }, 0);
       });
     }
   }
