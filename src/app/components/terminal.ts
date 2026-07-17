@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { UkDlGenComponent } from './uk-dl-gen';
 import { FraCinComponent } from './fra-cin';
 import { PtIdMrzComponent } from './pt-id-mrz';
 import { lastValueFrom } from 'rxjs';
+import { zipSync } from 'fflate';
 
 @Component({
   selector: 'app-terminal',
@@ -205,6 +206,9 @@ import { lastValueFrom } from 'rxjs';
                 @if (store.bypassResults().some(r => r?.IMAGE_BASE64)) {
                   <button class="btn-exec btn-dl-all mono" (click)="downloadAll()">
                     ↓ DOWNLOAD_ALL
+                  </button>
+                  <button class="btn-exec btn-dl-zip mono" (click)="downloadAllZip()">
+                    ↓ ZIP
                   </button>
                 }
               }
@@ -436,6 +440,20 @@ import { lastValueFrom } from 'rxjs';
           }
         </div>
       </div>
+
+      @if (imageHistory().length > 0) {
+        <div class="img-history">
+          <div class="ih-label mono">// SESSION_HISTORY</div>
+          <div class="ih-row">
+            @for (h of imageHistory(); track h.url) {
+              <div class="ih-item">
+                <img [src]="h.url" class="ih-thumb">
+                <span class="mono ih-name">{{ h.name }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -956,6 +974,38 @@ import { lastValueFrom } from 'rxjs';
     .btn-copy.edl { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--purple); }
     .btn-copy.visa { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--blue); }
 
+    /* ZIP button */
+    .btn-dl-zip {
+      background: rgba(0,188,212,0.1); border-color: rgba(0,188,212,0.3);
+      color: #00bcd4;
+    }
+    .btn-dl-zip:hover { background: rgba(0,188,212,0.2); }
+
+    /* image session history */
+    .img-history {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .ih-label { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 2px; }
+    .ih-row {
+      display: flex; gap: 10px; overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .ih-item {
+      display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+    }
+    .ih-thumb {
+      width: 72px; height: 54px; object-fit: cover;
+      border: 1px solid var(--border); border-radius: 4px;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .ih-thumb:hover { border-color: var(--border-green); }
+    .ih-name {
+      font-size: 0.42rem; color: var(--text-dim); letter-spacing: 0.5px;
+      max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
     /* mobile */
     @media (max-width: 767px) {
       .shell-body { flex-direction: column; overflow: visible; }
@@ -1005,8 +1055,20 @@ export class TerminalComponent implements OnInit {
     return this.store.lines()[0] || 'STANDARD';
   }
 
+  imageHistory = signal<{ url: string; app: string; name: string }[]>([]);
+
   mrzHistory = signal<{ lines: string[]; result: any }[]>([]);
   private historyTimer: ReturnType<typeof setTimeout> | null = null;
+
+  @HostListener('document:dragover', ['$event'])
+  onDocDragOver(e: DragEvent) { if (this.store.isMediaApp()) e.preventDefault(); }
+
+  @HostListener('document:drop', ['$event'])
+  onDocDrop(e: DragEvent) {
+    if (!this.store.isMediaApp()) return;
+    e.preventDefault();
+    if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files);
+  }
 
   private historyKey() { return `mrz_hist_${this.store.selectedApp()}`; }
 
@@ -1168,7 +1230,6 @@ export class TerminalComponent implements OnInit {
         this.store.batchProgress.set({ done: i + 1, total: files.length });
       }
       this.store.loading.set(false);
-      this.store.batchProgress.set(null);
       return;
     }
 
@@ -1197,9 +1258,15 @@ export class TerminalComponent implements OnInit {
       this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
     } else {
       this.store.executeBlob(fd).subscribe(res => {
-        const url = URL.createObjectURL(res); const a = document.createElement('a'); a.href = url;
-        a.download = this.getFileName();
-        a.click(); URL.revokeObjectURL(url);
+        const fname = this.getFileName();
+        const dlUrl = URL.createObjectURL(res);
+        const anchor = document.createElement('a');
+        anchor.href = dlUrl; anchor.download = fname; anchor.click();
+        URL.revokeObjectURL(dlUrl);
+        const histUrl = URL.createObjectURL(res);
+        const prev = this.imageHistory();
+        if (prev.length >= 6) URL.revokeObjectURL(prev[prev.length - 1].url);
+        this.imageHistory.set([{ url: histUrl, app: this.store.selectedApp() || '', name: fname }, ...prev.slice(0, 5)]);
       });
     }
   }
@@ -1213,13 +1280,17 @@ export class TerminalComponent implements OnInit {
       const rnd = Math.floor(Math.random() * 90000 + 10000);
       return `transaction_statement_${ts}_${rnd}.pdf`;
     }
-    return `V_OUT_${Date.now()}.${ext}`;
+    const n1 = String(Math.floor(Math.random() * 9000 + 1000));
+    const n2 = String(Math.floor(Math.random() * 9000 + 1000));
+    return `IMG_${n1}_${n2}.${ext}`;
   }
 
   download(base64Data: string, originalName: string) {
     const a = document.createElement('a');
     a.href = `data:image/jpeg;base64,${base64Data}`;
-    a.download = `STEALTH_${originalName}`;
+    const n1 = String(Math.floor(Math.random() * 9000 + 1000));
+    const n2 = String(Math.floor(Math.random() * 9000 + 1000));
+    a.download = `IMG_${n1}_${n2}.jpg`;
     a.click();
   }
 
@@ -1237,9 +1308,29 @@ export class TerminalComponent implements OnInit {
     const files = this.store.batchFiles();
     results.forEach((res, i) => {
       if (res?.IMAGE_BASE64) {
-        setTimeout(() => this.download(res.IMAGE_BASE64!, files[i]?.name ?? `img_${i}.jpg`), i * 200);
+        setTimeout(() => this.download(res.IMAGE_BASE64!, files[i]?.name ?? ''), i * 200);
       }
     });
+  }
+
+  downloadAllZip() {
+    const results = this.store.bypassResults();
+    const entries: Record<string, Uint8Array> = {};
+    results.forEach(res => {
+      if (!res?.IMAGE_BASE64) return;
+      const bin = atob(res.IMAGE_BASE64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const n1 = String(Math.floor(Math.random() * 9000 + 1000));
+      const n2 = String(Math.floor(Math.random() * 9000 + 1000));
+      entries[`IMG_${n1}_${n2}.jpg`] = arr;
+    });
+    const zipped = zipSync(entries);
+    const blob = new Blob([zipped], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `STEALTH_BATCH.zip`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   getScore(res: import('../store').BypassResult): string {
