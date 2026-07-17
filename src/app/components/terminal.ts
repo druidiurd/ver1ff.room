@@ -1257,18 +1257,27 @@ export class TerminalComponent implements OnInit {
     if (isJson) {
       this.store.executeJson<import('../store').MrzData>(fd).subscribe(res => this.store.mrzData.set(res));
     } else {
-      this.store.executeBlob(fd).subscribe(res => {
-        const fname = this.getFileName();
-        const url = URL.createObjectURL(res);
-        const a = document.createElement('a');
-        a.href = url; a.download = fname; a.click();
-        URL.revokeObjectURL(url);
-        setTimeout(() => {
-          const histUrl = URL.createObjectURL(res);
-          const prev = this.imageHistory();
-          if (prev.length >= 6) URL.revokeObjectURL(prev[prev.length - 1].url);
-          this.imageHistory.set([{ url: histUrl, app: this.store.selectedApp() || '', name: fname }, ...prev.slice(0, 5)]);
-        }, 0);
+      this.store.executeBlob(fd).subscribe({
+        next: res => {
+          const fname = this.getFileName();
+          const url = URL.createObjectURL(res);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url; a.download = fname;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            const histUrl = URL.createObjectURL(res);
+            const prev = this.imageHistory();
+            if (prev.length >= 6) URL.revokeObjectURL(prev[prev.length - 1].url);
+            this.imageHistory.set([{ url: histUrl, app: this.store.selectedApp() || '', name: fname }, ...prev.slice(0, 5)]);
+          }, 100);
+        },
+        error: err => {
+          err?.error?.text().then((t: string) => console.error('EXEC_BLOB_ERR:', t)).catch(() => console.error('EXEC_BLOB_ERR:', err.status, err.message));
+        }
       });
     }
   }
