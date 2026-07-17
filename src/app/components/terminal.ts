@@ -162,8 +162,8 @@ import { zipSync } from 'fflate';
 
           @if (store.isMediaApp()) {
             <div class="dropzone" (click)="fi.click()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
-              <input type="file" #fi (change)="onFile($event)" [multiple]="store.selectedApp() === 'ai_bypass'" hidden>
-              @if (store.selectedApp() !== 'ai_bypass') {
+              <input type="file" #fi (change)="onFile($event)" [multiple]="isBatchApp()" accept="image/*" hidden>
+              @if (!isBatchApp()) {
                 <div class="dz-icon" [class.ok]="store.selectedFile()">
                   {{ store.selectedFile() ? '✓' : '↑' }}
                 </div>
@@ -175,7 +175,7 @@ import { zipSync } from 'fflate';
                   {{ store.batchFiles().length > 0 ? '✓' : '⊞' }}
                 </div>
                 <div class="mono dz-label">
-                  {{ store.batchFiles().length > 0 ? store.batchFiles().length + '_FILES' : i18n.t().dropUpTo5 }}
+                  {{ store.batchFiles().length > 0 ? store.batchFiles().length + '_FILES' : (store.selectedApp() === 'exif_cleaner' ? 'DROP_UP_TO_10' : i18n.t().dropUpTo5) }}
                 </div>
               }
             </div>
@@ -203,14 +203,14 @@ import { zipSync } from 'fflate';
                   <span class="btn-arrow">⚡</span>{{ i18n.t().autoCompress }}
                   @if (store.loading()) { <span class="btn-loader btn-loader-purple"></span> }
                 </button>
-                @if (store.bypassResults().some(r => r?.IMAGE_BASE64)) {
-                  <button class="btn-exec btn-dl-all mono" (click)="downloadAll()">
-                    ↓ DOWNLOAD_ALL
-                  </button>
-                  <button class="btn-exec btn-dl-zip mono" (click)="downloadAllZip()">
-                    ↓ ZIP
-                  </button>
-                }
+              }
+              @if (isBatchApp() && store.bypassResults().some(r => r?.IMAGE_BASE64)) {
+                <button class="btn-exec btn-dl-all mono" (click)="downloadAll()">
+                  ↓ DOWNLOAD_ALL
+                </button>
+                <button class="btn-exec btn-dl-zip mono" (click)="downloadAllZip()">
+                  ↓ ZIP
+                </button>
               }
             </div>
           }
@@ -372,7 +372,7 @@ import { zipSync } from 'fflate';
             }
           }
 
-          @if (store.selectedApp() === 'ai_bypass' && store.batchFiles().length > 0) {
+          @if (isBatchApp() && store.batchFiles().length > 0) {
             <div class="batch">
               @if (store.batchProgress(); as prog) {
                 <div class="batch-progress">
@@ -390,19 +390,23 @@ import { zipSync } from 'fflate';
                     <span class="mono side-fname">{{ f.name }}</span>
                     <img [src]="store.batchUrls()[i]" class="side-img">
                   </div>
-                  <div class="batch-side purple">
-                    <span class="mono side-tag purple">STEALTH</span>
+                  <div class="batch-side" [class.green]="store.selectedApp() === 'exif_cleaner'">
+                    <span class="mono side-tag" [class.green]="store.selectedApp() === 'exif_cleaner'">{{ store.selectedApp() === 'exif_cleaner' ? 'CLEANED' : 'STEALTH' }}</span>
                     @if (store.bypassResults()[i]; as res) {
-                      @if (res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD') {
+                      @if (res.STATUS === 'OK' || (res.STATUS !== 'ERROR' && res.STATUS !== 'ALL_NODES_DEAD')) {
                         <img [src]="'data:image/jpeg;base64,' + res.IMAGE_BASE64" class="side-img">
                         <div class="batch-stats">
-                          <div class="stat-main">
-                            <span class="mono stat-score" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
-                              {{ getScore(res) }}
-                            </span>
-                            <span class="mono stat-label">{{ isSafe(res) ? 'AI_SAFE' : 'DETECTED' }}</span>
-                          </div>
-                          <span class="mono stat-node">{{ res.USED_PROFILE }}</span>
+                          @if (store.selectedApp() === 'exif_cleaner') {
+                            <span class="mono stat-label safe">EXIF_CLEANED</span>
+                          } @else {
+                            <div class="stat-main">
+                              <span class="mono stat-score" [class.safe]="isSafe(res)" [class.danger]="!isSafe(res)">
+                                {{ getScore(res) }}
+                              </span>
+                              <span class="mono stat-label">{{ isSafe(res) ? 'AI_SAFE' : 'DETECTED' }}</span>
+                            </div>
+                            <span class="mono stat-node">{{ res.USED_PROFILE }}</span>
+                          }
                           <button class="btn-dl mono" (click)="download(res.IMAGE_BASE64||'', f.name)">↓</button>
                         </div>
                         @if (res.TYPE === 'ai_batch' && $any(res).RESULTS) {
@@ -421,7 +425,7 @@ import { zipSync } from 'fflate';
                           </div>
                         }
                       } @else {
-                        <span class="mono empty-label err">{{ i18n.t().nodesDead }}</span>
+                        <span class="mono empty-label err">ERROR</span>
                       }
                     } @else {
                       <div class="pending-slot">
@@ -974,6 +978,9 @@ import { zipSync } from 'fflate';
     .btn-copy.edl { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--purple); }
     .btn-copy.visa { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--blue); }
 
+    .batch-side.green { border-color: rgba(0,255,65,0.2); }
+    .side-tag.green { background: var(--green-dim); color: var(--green); border-color: var(--border-green); }
+
     /* ZIP button */
     .btn-dl-zip {
       background: rgba(0,188,212,0.1); border-color: rgba(0,188,212,0.3);
@@ -1145,9 +1152,15 @@ export class TerminalComponent implements OnInit {
   onFile(e: Event) { this.handleFiles((e.target as HTMLInputElement).files!); }
   onDrop(e: DragEvent) { e.preventDefault(); if (e.dataTransfer?.files.length) this.handleFiles(e.dataTransfer.files); }
 
+  isBatchApp() { return this.store.selectedApp() === 'ai_bypass' || this.store.selectedApp() === 'exif_cleaner'; }
+
   handleFiles(filesList: FileList) {
-    if (this.store.selectedApp() === 'ai_bypass') {
-      const files = Array.from(filesList).slice(0, 5) as File[];
+    if (this.isBatchApp()) {
+      const limit = this.store.selectedApp() === 'ai_bypass' ? 5 : 10;
+      const files = Array.from(filesList).filter(f => {
+        if (f.size > 4 * 1024 * 1024) { alert(`FILE_TOO_LARGE: ${f.name} (${(f.size/1024/1024).toFixed(1)}MB) — max 4MB`); return false; }
+        return true;
+      }).slice(0, limit) as File[];
       this.store.batchUrls().forEach(url => URL.revokeObjectURL(url));
       this.store.batchFiles.set(files);
       this.store.batchUrls.set(files.map(f => URL.createObjectURL(f)));
@@ -1163,7 +1176,7 @@ export class TerminalComponent implements OnInit {
   }
 
   canExecute() {
-    if (this.store.selectedApp() === 'ai_bypass') return this.store.batchFiles().length > 0;
+    if (this.isBatchApp()) return this.store.batchFiles().length > 0;
     if (this.store.requiresFile()) return !!this.store.selectedFile();
     return true;
   }
@@ -1209,7 +1222,43 @@ export class TerminalComponent implements OnInit {
     });
   }
 
+  private async blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve((r.result as string).split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+
   async execute(isBatch: boolean = false) {
+    if (this.store.selectedApp() === 'exif_cleaner') {
+      this.store.loading.set(true);
+      const files = this.store.batchFiles();
+      const results: (import('../store').BypassResult | null)[] = new Array(files.length).fill(null);
+      this.store.bypassResults.set([...results]);
+      this.store.batchProgress.set({ done: 0, total: files.length });
+
+      for (let i = 0; i < files.length; i++) {
+        const fd = new FormData();
+        fd.append('type', 'exif_cleaner');
+        fd.append('lines', JSON.stringify(this.store.lines()));
+        fd.append('scan_mode', 'false');
+        fd.append('file', files[i]);
+        try {
+          const blob = await lastValueFrom(this.store.executeSilentBlob(fd));
+          const b64 = await this.blobToBase64(blob);
+          results[i] = { STATUS: 'OK', IMAGE_BASE64: b64 };
+        } catch {
+          results[i] = { STATUS: 'ERROR' };
+        }
+        this.store.bypassResults.set([...results]);
+        this.store.batchProgress.set({ done: i + 1, total: files.length });
+      }
+      this.store.loading.set(false);
+      return;
+    }
+
     if (this.store.selectedApp() === 'ai_bypass') {
       this.store.loading.set(true);
       const files = this.store.batchFiles();

@@ -124,4 +124,8 @@ export class AppStore {
   executeSilentJson<T>(fd: FormData): Observable<T> {
     return this.http.post<T>('/api/execute', fd);
   }
+
+  executeSilentBlob(fd: FormData): Observable<Blob> {
+    return this.http.post('/api/execute', fd, { responseType: 'blob' });
+  }
 }
