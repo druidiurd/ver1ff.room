@@ -47,6 +47,12 @@ class MrzGenEngine:
         'Ő': 'O',  'Ű': 'U',
         'Ā': 'A',  'Ē': 'E',  'Ī': 'I',  'Ō': 'O',  'Ū': 'U',
         'Ģ': 'G',  'Ķ': 'K',  'Ļ': 'L',  'Ņ': 'N',  'Ŗ': 'R',
+        # Romanian (comma-below, U+0218/021A — distinct from cedilla variants)
+        'Ș': 'S',  'Ț': 'T',
+        # Maltese
+        'Ħ': 'H',  'Ġ': 'G',
+        # Lithuanian
+        'Ė': 'E',  'Į': 'I',  'Ų': 'U',
     }
 
     def _clean(self, s: str) -> str:
@@ -86,12 +92,16 @@ class MrzGenEngine:
 
     @staticmethod
     def _date_to_mrz(dmy: str) -> str:
-        """Convert DD-MM-YYYY → YYMMDD."""
+        """Convert DD-MM-YYYY or YYYY-MM-DD → YYMMDD."""
         try:
             parts = dmy.strip().replace('/', '-').split('-')
-            dd, mm, yyyy = parts[0].zfill(2), parts[1].zfill(2), parts[2]
-            yy = yyyy[-2:]
-            return f"{yy}{mm}{dd}"
+            if len(parts[0]) == 4:
+                # ISO 8601: YYYY-MM-DD
+                yyyy, mm, dd = parts[0], parts[1].zfill(2), parts[2].zfill(2)
+            else:
+                # European: DD-MM-YYYY
+                dd, mm, yyyy = parts[0].zfill(2), parts[1].zfill(2), parts[2]
+            return f"{yyyy[-2:]}{mm}{dd}"
         except Exception:
             return '000000'
 
