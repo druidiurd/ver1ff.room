@@ -66,6 +66,17 @@ import { zipSync } from 'fflate';
       <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen' || store.selectedApp() === 'fra_cin' || store.selectedApp() === 'pt_id_mrz'">
         <!-- LEFT: form -->
         <div class="panel-form">
+          @if (store.schemaLoading()) {
+            <div class="skeleton-wrap">
+              <div class="skel skel-label"></div>
+              <div class="skel skel-input"></div>
+              <div class="skel skel-label"></div>
+              <div class="skel skel-input"></div>
+              <div class="skel skel-label"></div>
+              <div class="skel skel-input"></div>
+              <div class="skel skel-btn"></div>
+            </div>
+          }
           @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen' && store.selectedApp() !== 'fra_cin' && store.selectedApp() !== 'pt_id_mrz') {
 
           @if (store.selectedApp() === 'ai_bypass') {
@@ -978,6 +989,24 @@ import { zipSync } from 'fflate';
     .btn-copy.edl { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--purple); }
     .btn-copy.visa { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--blue); }
 
+    /* skeleton */
+    .skeleton-wrap {
+      padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    @keyframes skel-shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skel {
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--surface2) 25%, rgba(0,255,65,0.05) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: skel-shimmer 1.4s infinite;
+    }
+    .skel-label  { height: 10px; width: 40%; }
+    .skel-input  { height: 32px; width: 100%; }
+    .skel-btn    { height: 36px; width: 60%; margin-top: 6px; }
+
     .batch-side.green { border-color: rgba(0,255,65,0.2); }
     .side-tag.green { background: var(--green-dim); color: var(--green); border-color: var(--border-green); }
 
@@ -1343,6 +1372,10 @@ export class TerminalComponent implements OnInit {
       const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
       const rnd = Math.floor(Math.random() * 90000 + 10000);
       return `transaction_statement_${ts}_${rnd}.pdf`;
+    }
+    if (app === 'energia') {
+      const rnd10 = String(Math.floor(Math.random() * 9_000_000_000) + 1_000_000_000);
+      return `bill_${rnd10}.pdf`;
     }
     const n1 = String(Math.floor(Math.random() * 9000 + 1000));
     const n2 = String(Math.floor(Math.random() * 9000 + 1000));

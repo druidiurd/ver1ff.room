@@ -58,6 +58,7 @@ export class AppStore {
   private http = inject(HttpClient);
 
   loading = signal<boolean>(false);
+  schemaLoading = signal<boolean>(false);
   selectedApp = signal<string | null>(null);
   schema = signal<SchemaField[]>([]);
   lines = signal<string[]>([]);
@@ -83,9 +84,14 @@ export class AppStore {
 
   openApp(name: string) {
     this.selectedApp.set(name);
-    this.http.get<SchemaField[]>(`/api/schema/${name}`).subscribe(s => {
-      this.schema.set(s);
-      this.lines.set(s.map(f => f.type === 'select' && f.opts?.length ? f.opts[0] : ''));
+    this.schemaLoading.set(true);
+    this.http.get<SchemaField[]>(`/api/schema/${name}`).subscribe({
+      next: s => {
+        this.schema.set(s);
+        this.lines.set(s.map(f => f.type === 'select' && f.opts?.length ? f.opts[0] : ''));
+        this.schemaLoading.set(false);
+      },
+      error: () => this.schemaLoading.set(false),
     });
   }
 
