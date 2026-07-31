@@ -118,20 +118,10 @@ class MrzGenEngine:
         mapped = self._MRZ_CODE.get(code, code)
         return self._clamp(mapped, 3)
 
-    # Countries that mandate '<' for non-binary/unspecified sex in MRZ
-    _SEX_FORCE_NEUTRAL = {'DEU', 'AUT', 'CHE'}
-
     def _norm_sex(self, s: str, issuer: str = '', nationality: str = '') -> str:
-        """ICAO 9303: only M, F, < are valid. Some countries always use < for non-binary."""
+        """ICAO 9303: only M, F, < are valid in MRZ."""
         v = (s or '').strip().upper()[:1]
-        if v not in ('M', 'F'):
-            return '<'
-        # Germany, Austria, Switzerland use < for 'diverse' identity category
-        raw_issuer = (issuer or '').strip().upper()
-        raw_nat    = (nationality or '').strip().upper()
-        if raw_issuer in self._SEX_FORCE_NEUTRAL or raw_nat in self._SEX_FORCE_NEUTRAL:
-            return v  # M and F still valid, only X/diverse → <
-        return v
+        return v if v in ('M', 'F') else '<'
 
     # ── MRP — Passport (TD3), 2×44 ───────────────────────────────────────────
 
@@ -168,7 +158,8 @@ class MrzGenEngine:
 
     def _td1(self, f: Dict[str, str]) -> List[str]:
         issuer_code = self._mrz_country(f.get('issuer', 'XXX'))
-        doc_type  = self._TD1_DOC_CHAR.get(issuer_code, 'I')
+        raw_issuer  = self._clamp(self._clean(f.get('issuer', '') or 'XXX'), 3)
+        doc_type  = self._TD1_DOC_CHAR.get(raw_issuer, 'I')
         sub_type  = self._clamp(self._clean(f.get('sub_type', '') or ''), 1) or '<'
         issuer    = issuer_code
         doc_num   = self._clamp(self._clean(f.get('doc_num', '')), 9)
@@ -212,7 +203,8 @@ class MrzGenEngine:
         edate     = self._date_to_mrz(f.get('expiry_date', ''))
         cd3       = self._check_digit(edate)
         optional  = self._clamp(self._clean(f.get('optional', '') or ''), 7)
-        composite = f"{doc_num}{cd1}{bdate}{cd2}{edate}{cd3}{optional}"
+        # ICAO 9303-2: composite covers ALL of line2 chars 1-35 (incl. nat + sex)
+        composite = f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{optional}"
         cd4       = self._check_digit(composite)
         line2     = self._clamp(f"{doc_num}{cd1}{nat}{bdate}{cd2}{sex}{edate}{cd3}{optional}{cd4}", 36)
 
