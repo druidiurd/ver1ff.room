@@ -1,0 +1,11 @@
+[Unit]
+Description=Cloudflare Tunnel → h1d3.stream
+After=network.target ver1ff-api.service
+
+[Service]
+ExecStart=/home/ver1ff/bin/cloudflared tunnel run --token %i
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

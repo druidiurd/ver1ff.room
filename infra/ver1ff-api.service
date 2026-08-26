@@ -1,0 +1,13 @@
+[Unit]
+Description=ver1ff FastAPI + Angular
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ver1ff/ver1ff
+EnvironmentFile=/home/ver1ff/ver1ff/.env
+ExecStart=/home/ver1ff/ver1ff/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

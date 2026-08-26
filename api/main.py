@@ -4,6 +4,7 @@ import json
 import asyncio
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -105,3 +106,8 @@ async def execute(
         tb = traceback.format_exc()
         print(f"CORE_ERR: {tb}")
         return JSONResponse({"ERR": str(e), "TB": tb}, status_code=200)
+
+# Serve Angular SPA (only when dist/ exists — not on Vercel)
+_dist = os.path.join(os.path.dirname(base_dir), "dist", "browser")
+if os.path.isdir(_dist):
+    app.mount("/", StaticFiles(directory=_dist, html=True), name="spa")
