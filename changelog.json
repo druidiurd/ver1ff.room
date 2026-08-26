@@ -1,0 +1,36 @@
+{
+  "version": "1.4.0",
+  "releases": [
+    {
+      "version": "1.4.0",
+      "date": "2026-08-26",
+      "changes": [
+        "Переезд на собственный VPS — h1d3.stream",
+        "Cloudflare Tunnel: стабильный аптайм без 80/443",
+        "MRZ Generator: фикс TD2 composite check digit (ICAO 9303-2)",
+        "MRZ Generator: поддержка ISO-дат (YYYY-MM-DD) в полях дат",
+        "MRZ Generator: диакритика ROU/MLT/LTU — Ș Ț Ħ Ġ Ė Į Ų"
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "date": "2026-08-20",
+      "changes": [
+        "exif_cleaner: батч-режим до 10 фото, before/after грид, ZIP",
+        "Скелетон-лоадер пока схема грузится",
+        "Имена файлов IMG_XXXX_XXXX при скачивании",
+        "energia: имя файла bill_(10 цифр).pdf",
+        "Глобальный drag&drop на медиа-инструментах"
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-08-10",
+      "changes": [
+        "mrz_gen: универсальный генератор MRZ — TD1, TD2, TD3, MRV-A, eDL",
+        "Фикс FaceEngine crash на Vercel (cv2.CascadeClassifier)",
+        "Изоляция падений движков — один сломанный не роняет всё"
+      ]
+    }
+  ]
+}

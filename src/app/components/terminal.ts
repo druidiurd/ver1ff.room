@@ -469,7 +469,43 @@ import { zipSync } from 'fflate';
           </div>
         </div>
       }
+
+      @if (store.changelog(); as cl) {
+        <div class="version-badge" (click)="store.showChangelog.set(true)">
+          <span class="vb-dot"></span>
+          <span class="mono vb-text">v{{ cl.version }}</span>
+        </div>
+      }
     </div>
+
+    @if (store.showChangelog() && store.changelog(); as cl) {
+      <div class="cl-overlay" (click)="store.dismissChangelog()">
+        <div class="cl-modal" (click)="$event.stopPropagation()">
+          <div class="cl-header">
+            <span class="mono cl-title">// CHANGELOG</span>
+            <button class="cl-close" (click)="store.dismissChangelog()">✕</button>
+          </div>
+          <div class="cl-body">
+            @for (r of cl.releases; track r.version) {
+              <div class="cl-release">
+                <div class="cl-rel-header">
+                  <span class="mono cl-ver">v{{ r.version }}</span>
+                  <span class="mono cl-date">{{ r.date }}</span>
+                </div>
+                <ul class="cl-list">
+                  @for (c of r.changes; track c) {
+                    <li class="cl-item">{{ c }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+          <div class="cl-footer">
+            <button class="cl-ok" (click)="store.dismissChangelog()">DISMISS</button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .shell {
@@ -477,6 +513,7 @@ import { zipSync } from 'fflate';
       border: 1px solid var(--border);
       border-radius: var(--radius);
       display: flex; flex-direction: column;
+      position: relative;
       width: 100%; max-width: 1200px; margin: 0 auto;
       overflow: hidden;
     }
@@ -1042,6 +1079,70 @@ import { zipSync } from 'fflate';
       max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
+    /* version badge */
+    .version-badge {
+      position: absolute; bottom: 12px; right: 14px;
+      display: flex; align-items: center; gap: 5px;
+      cursor: pointer; opacity: 0.45;
+      transition: opacity 0.2s;
+      z-index: 5;
+    }
+    .version-badge:hover { opacity: 1; }
+    .vb-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 5px var(--green);
+    }
+    .vb-text { font-size: 0.48rem; color: var(--green); letter-spacing: 1.5px; }
+
+    /* changelog overlay */
+    .cl-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .cl-modal {
+      background: var(--surface);
+      border: 1px solid var(--border-green);
+      border-radius: var(--radius);
+      width: 100%; max-width: 520px;
+      max-height: 80vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 0 40px rgba(0,255,65,0.12);
+    }
+    .cl-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cl-title { font-size: 0.55rem; color: var(--green); letter-spacing: 2px; }
+    .cl-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 0.75rem;
+      padding: 2px 6px; border-radius: 3px;
+      transition: color 0.15s;
+    }
+    .cl-close:hover { color: var(--green); }
+    .cl-body { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; }
+    .cl-release { display: flex; flex-direction: column; gap: 8px; }
+    .cl-rel-header { display: flex; align-items: baseline; gap: 10px; }
+    .cl-ver { font-size: 0.58rem; color: var(--green); letter-spacing: 1px; }
+    .cl-date { font-size: 0.48rem; color: var(--text-dim); }
+    .cl-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+    .cl-item { font-size: 0.52rem; color: var(--text-mid); line-height: 1.5; }
+    .cl-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end;
+    }
+    .cl-ok {
+      background: none; border: 1px solid var(--border-green);
+      color: var(--green); font-size: 0.52rem; letter-spacing: 1.5px;
+      padding: 6px 16px; border-radius: 4px; cursor: pointer;
+      font-family: var(--font-mono); transition: background 0.15s;
+    }
+    .cl-ok:hover { background: rgba(0,255,65,0.1); }
+
     /* mobile */
     @media (max-width: 767px) {
       .shell-body { flex-direction: column; overflow: visible; }
@@ -1141,6 +1242,8 @@ export class TerminalComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.store.loadChangelog();
+
     this.route.queryParamMap.subscribe(qp => {
       if (qp.get('from') === 'id_lab') {
         this.fromIdLab.set(true);

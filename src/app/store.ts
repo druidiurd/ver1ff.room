@@ -44,6 +44,17 @@ export interface TaxData {
   TAX_ID: string;
 }
 
+export interface ChangelogRelease {
+  version: string;
+  date: string;
+  changes: string[];
+}
+
+export interface Changelog {
+  version: string;
+  releases: ChangelogRelease[];
+}
+
 export interface BypassResult {
   STATUS: string;
   TYPE?: string;
@@ -59,6 +70,8 @@ export class AppStore {
 
   loading = signal<boolean>(false);
   schemaLoading = signal<boolean>(false);
+  changelog = signal<Changelog | null>(null);
+  showChangelog = signal<boolean>(false);
   selectedApp = signal<string | null>(null);
   schema = signal<SchemaField[]>([]);
   lines = signal<string[]>([]);
@@ -81,6 +94,27 @@ export class AppStore {
   isMediaApp = computed(() => ['exif_cleaner', 'face_cut', 'ai_bypass'].includes(this.selectedApp() || ''));
   hasPreview = computed(() => ['face_cut'].includes(this.selectedApp() || ''));
   requiresFile = computed(() => this.isMediaApp());
+
+  loadChangelog() {
+    this.http.get<Changelog>('/api/changelog').subscribe({
+      next: cl => {
+        this.changelog.set(cl);
+        try {
+          const seen = localStorage.getItem('ver1ff_version');
+          if (seen !== cl.version) this.showChangelog.set(true);
+        } catch { this.showChangelog.set(true); }
+      },
+      error: () => {}
+    });
+  }
+
+  dismissChangelog() {
+    const cl = this.changelog();
+    if (cl) {
+      try { localStorage.setItem('ver1ff_version', cl.version); } catch {}
+    }
+    this.showChangelog.set(false);
+  }
 
   openApp(name: string) {
     this.selectedApp.set(name);

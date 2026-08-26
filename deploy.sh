@@ -1,27 +1,63 @@
 #!/usr/bin/env bash
-# deploy.sh — ver1ff.tools → VPS (ver1ff@74.50.87.75)
-# Usage: ./deploy.sh
-# Requires: ng CLI, rsync, ssh alias 'ver1ff' in ~/.ssh/config
+# deploy.sh — ver1ff.tools → h1d3.stream
+# Run from project root via Git Bash: ./deploy.sh
+# Optional: ./deploy.sh --skip-build  (just upload + restart)
 
 set -e
 
-REMOTE="ver1ff"
+SSH_KEY="$HOME/.ssh/id_deploy_ver1ff"
+REMOTE="ver1ff@74.50.87.75"
 REMOTE_DIR="/home/ver1ff/ver1ff"
+SSH="ssh -i $SSH_KEY"
+SCP="scp -i $SSH_KEY"
 
-echo "==> [1/4] Angular production build"
-ng build --configuration production --base-href /
+SKIP_BUILD=false
+[[ "$1" == "--skip-build" ]] && SKIP_BUILD=true
 
-echo "==> [2/4] Sync dist/"
-rsync -avz --delete dist/ "$REMOTE:$REMOTE_DIR/dist/"
+VERSION=$(node -e "console.log(require('./changelog.json').version)" 2>/dev/null || echo "?")
 
-echo "==> [3/4] Sync api/"
-rsync -avz --delete \
-  --exclude '__pycache__' \
-  --exclude '*.pyc' \
-  --exclude '.env' \
-  api/ "$REMOTE:$REMOTE_DIR/api/"
+echo ""
+echo "  ver1ff deploy  →  h1d3.stream  [v${VERSION}]"
+echo "  ─────────────────────────────────────────────"
 
-echo "==> [4/4] Restart API service"
-ssh "$REMOTE" "systemctl --user restart ver1ff-api"
+# ── 1. Build ───────────────────────────────────────────────────────────────
+if [ "$SKIP_BUILD" = false ]; then
+  echo "  [1/4] ng build production..."
+  ng build --configuration production --base-href / 2>&1 | grep -E 'complete|ERROR|WARNING.*budget' || true
+else
+  echo "  [1/4] skipping build"
+fi
 
-echo "==> Done. https://h1d3.stream"
+# ── 2. Pack dist/ ──────────────────────────────────────────────────────────
+echo "  [2/4] packing dist/..."
+DIST_TMP=$(mktemp /tmp/ver1ff_dist_XXXX.tar.gz)
+tar -czf "$DIST_TMP" dist/
+
+# ── 3. Pack api/ + changelog ───────────────────────────────────────────────
+echo "  [3/4] packing api/ + changelog..."
+API_TMP=$(mktemp /tmp/ver1ff_api_XXXX.tar.gz)
+tar --exclude="*/__pycache__" --exclude="*.pyc" --exclude=".env" \
+    -czf "$API_TMP" api/ changelog.json
+
+# ── 4. Upload & restart ────────────────────────────────────────────────────
+echo "  [4/4] uploading → restarting..."
+
+$SCP "$DIST_TMP" "$REMOTE:/home/ver1ff/ver1ff_dist.tar.gz"
+$SCP "$API_TMP"  "$REMOTE:/home/ver1ff/ver1ff_api.tar.gz"
+
+$SSH "$REMOTE" "
+  set -e
+  cd $REMOTE_DIR
+  tar xzf /home/ver1ff/ver1ff_dist.tar.gz
+  tar xzf /home/ver1ff/ver1ff_api.tar.gz
+  rm /home/ver1ff/ver1ff_dist.tar.gz /home/ver1ff/ver1ff_api.tar.gz
+  systemctl --user restart ver1ff-api
+  sleep 2
+  systemctl --user is-active ver1ff-api
+"
+
+rm -f "$DIST_TMP" "$API_TMP"
+
+echo ""
+echo "  ✓ deployed v${VERSION} → https://h1d3.stream"
+echo ""

@@ -58,6 +58,14 @@ registry = {k: v for k, v in {
     "deu_tax":      _init_engine(DeuTaxEngine, base_dir),
 }.items() if v is not None}
 
+@app.get("/api/changelog")
+async def get_changelog():
+    cl_path = os.path.join(os.path.dirname(base_dir), "changelog.json")
+    if not os.path.isfile(cl_path):
+        raise HTTPException(404, "CHANGELOG_NOT_FOUND")
+    with open(cl_path, "r", encoding="utf-8") as f:
+        return JSONResponse(json.load(f))
+
 @app.get("/api/schema/{module}")
 async def get_schema(module: str):
     if module not in registry: raise HTTPException(404, "MOD_NOT_FOUND")
