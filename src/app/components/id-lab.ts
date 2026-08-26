@@ -118,6 +118,7 @@ const COUNTRIES: Country[] = [
       { id: 'fin_hetu',     icon: '🆔', label: 'HETU',         desc: 'Finnish personal ID (Henkilötunnus). DDMMYY+SSSQ format. Century marker +/-/A. Control char via mod-31 → 31-char alphabet. Gender encoded in serial parity.', color: '#2979ff', tag: 'HETU' },
       { id: 'fin_passport', icon: '📕', label: 'FI-DOC-GEN',   desc: 'Finnish passport (FP+7 digits) and ID card (9 digits) numbers with calibrated sequential counters. Issue + expiry dates (5yr validity).', color: '#29b6f6', tag: 'DOCS' },
       { id: 'fin_iban',     icon: '🏦', label: 'FI-IBAN',      desc: 'Finnish IBAN. FI + 2 check digits (mod-97) + 6-digit bank code + 8–10 digit account number. 18 chars total.', color: '#00bcd4', tag: 'IBAN' },
+      { id: 'fin_phone',    icon: '📱', label: 'FI-PHONE',     desc: 'Finnish mobile (04XX prefix, 12 digits) and landline (01X/029, 10 digits) generator. Outputs local and +358 international format.', color: '#43a047', tag: 'TEL' },
       { id: 'mrz_gen', ...MRZ_ID },
       { id: 'mrz_gen', ...MRZ_PP },
     ],
@@ -522,6 +523,44 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                     </div>
 
+                  } @else if (t.id === 'fin_phone') {
+                    <!-- Inline FIN PHONE card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (finPhoneResult(); as r) {
+                        <div class="doc-dates-block">
+                          <div class="doc-row">
+                            <span class="doc-type">LOCAL</span>
+                            <span class="doc-date" style="letter-spacing:1.5px;color:var(--text-mid)">{{ r.local }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">INTERNATIONAL</span>
+                            <span class="doc-date" [style.color]="t.color" style="letter-spacing:1px">{{ r.intl }}</span>
+                          </div>
+                        </div>
+                      }
+                      <div class="il-field-row" style="gap:6px">
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">TYPE</label>
+                          <div class="il-sex">
+                            @for (tp of ['MOB','LINE']; track tp) {
+                              <button class="il-sex-btn" [class.active]="finPhoneType() === tp"
+                                [style.--sc]="t.color" (click)="finPhoneType.set(tp === 'MOB' ? 'MOB' : 'LINE')">{{ tp }}</button>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genFinPhone()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        <button class="il-btn-sm mono" (click)="copyFinPhone()">{{ finPhoneCopied() ? '✓' : '⎘' }}</button>
+                        <button class="il-btn-sm mono" (click)="finPhoneResult.set(null)" style="color:#ff3b30">✕</button>
+                      </div>
+                    </div>
+
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
                       <div class="tc-top">
@@ -872,6 +911,11 @@ export class IdLabComponent implements OnInit {
   // FIN IBAN
   finIbanResult = signal<string | null>(null);
   finIbanCopied = signal(false);
+
+  // FIN PHONE
+  finPhoneType   = signal<'MOB' | 'LINE'>('MOB');
+  finPhoneResult = signal<{ local: string; intl: string } | null>(null);
+  finPhoneCopied = signal(false);
 
 
   ngOnInit() {
@@ -1235,6 +1279,49 @@ export class IdLabComponent implements OnInit {
     const v = this.finIbanResult(); if (!v) return;
     navigator.clipboard.writeText(v);
     this.finIbanCopied.set(true); setTimeout(() => this.finIbanCopied.set(false), 1500);
+  }
+
+  // ── FIN PHONE ────────────────────────────────────────────────────
+  // Mobile: '04' + zfill(2, 0-99) + 8 digits = 12 digits total
+  // Landline: '01' + random(0-9) (80%) | '029' (20%) + 7 digits = 10 digits
+  // Format local mobile:    XXXX XXX XXXX
+  // Format local landline:  XXX XXX XXXX
+  // Format intl mobile:     +358 XX XXXX XXXX
+  // Format intl landline:   +358 XX XXX XXXX
+  genFinPhone() {
+    let raw: string;
+    if (this.finPhoneType() === 'MOB') {
+      const mid = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+      const rest = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
+      raw = `04${mid}${rest}`;
+    } else {
+      const prefix = Math.random() < 0.8
+        ? `01${Math.floor(Math.random() * 10)}`
+        : '029';
+      const rest = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join('');
+      raw = prefix + rest;
+    }
+    this.finPhoneResult.set({
+      local: this.formatFinPhone(raw, 'local'),
+      intl:  this.formatFinPhone(raw, 'international'),
+    });
+  }
+  private formatFinPhone(raw: string, fmt: 'local' | 'international'): string {
+    if (fmt === 'local') {
+      return raw.length === 12
+        ? `${raw.slice(0,4)} ${raw.slice(4,7)} ${raw.slice(7)}`
+        : `${raw.slice(0,3)} ${raw.slice(3,6)} ${raw.slice(6)}`;
+    } else {
+      const intl = '+358' + raw.slice(1);
+      return raw.length === 12
+        ? `+358 ${intl.slice(4,6)} ${intl.slice(6,10)} ${intl.slice(10)}`
+        : `+358 ${intl.slice(4,6)} ${intl.slice(6,9)} ${intl.slice(9)}`;
+    }
+  }
+  copyFinPhone() {
+    const r = this.finPhoneResult(); if (!r) return;
+    navigator.clipboard.writeText(r.intl);
+    this.finPhoneCopied.set(true); setTimeout(() => this.finPhoneCopied.set(false), 1500);
   }
 
   private loadFavs(): Set<string> {
