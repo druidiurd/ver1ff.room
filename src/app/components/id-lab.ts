@@ -1285,24 +1285,25 @@ export class IdLabComponent implements OnInit {
   }
 
   // ── FIN PHONE ────────────────────────────────────────────────────
-  // Mobile: '04' + zfill(2, 0-99) + 8 digits = 12 digits total
+  // Mobile:   '0' + ('4'|'5') + zfill(2, 0-99) + 6 digits = 10 digits total
   // Landline: '01' + random(0-9) (80%) | '029' (20%) + 7 digits = 10 digits
-  // Format local mobile:    XXXX XXX XXXX
-  // Format local landline:  XXX XXX XXXX
-  // Format intl mobile:     +358 XX XXXX XXXX
+  // Format local mobile:    XXXX XXX XXX  (4+3+3)
+  // Format local landline:  XXX XXX XXXX  (3+3+4)
+  // Format intl mobile:     +358 XX XXX XXXX
   // Format intl landline:   +358 XX XXX XXXX
   genFinPhone() {
     let raw: string;
     if (this.finPhoneType() === 'MOB') {
+      const op  = Math.random() < 0.5 ? '4' : '5';
       const mid = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-      const rest = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
-      raw = `04${mid}${rest}`;
+      const rest = Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('');
+      raw = `0${op}${mid}${rest}`;                           // 10 digits
     } else {
       const prefix = Math.random() < 0.8
         ? `01${Math.floor(Math.random() * 10)}`
         : '029';
       const rest = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join('');
-      raw = prefix + rest;
+      raw = prefix + rest;                                   // 10 digits
     }
     this.finPhoneResult.set({
       local: this.formatFinPhone(raw, 'local'),
@@ -1311,14 +1312,15 @@ export class IdLabComponent implements OnInit {
   }
   private formatFinPhone(raw: string, fmt: 'local' | 'international'): string {
     if (fmt === 'local') {
-      return raw.length === 12
+      // mobile (04X / 05X): XXXX XXX XXX; landline (01X / 029): XXX XXX XXXX
+      return raw[1] === '4' || raw[1] === '5'
         ? `${raw.slice(0,4)} ${raw.slice(4,7)} ${raw.slice(7)}`
         : `${raw.slice(0,3)} ${raw.slice(3,6)} ${raw.slice(6)}`;
     } else {
-      const intl = '+358' + raw.slice(1);
-      return raw.length === 12
-        ? `+358 ${intl.slice(4,6)} ${intl.slice(6,10)} ${intl.slice(10)}`
-        : `+358 ${intl.slice(4,6)} ${intl.slice(6,9)} ${intl.slice(9)}`;
+      const digits = raw.slice(1);          // strip leading 0
+      return raw[1] === '4' || raw[1] === '5'
+        ? `+358 ${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5)}`
+        : `+358 ${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5)}`;
     }
   }
   copyFinPhone(which: 'local' | 'intl') {
