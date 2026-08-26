@@ -556,7 +556,10 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                       <div class="il-btn-row">
                         <button class="tax-btn mono" (click)="genFinPhone()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
-                        <button class="il-btn-sm mono" (click)="copyFinPhone()">{{ finPhoneCopied() ? '✓' : '⎘' }}</button>
+                        @if (finPhoneResult()) {
+                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyFinPhone('local')">{{ finPhoneCopied() === 'local' ? '✓' : 'LOC' }}</button>
+                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyFinPhone('intl')">{{ finPhoneCopied() === 'intl' ? '✓' : '+358' }}</button>
+                        }
                         <button class="il-btn-sm mono" (click)="finPhoneResult.set(null)" style="color:#ff3b30">✕</button>
                       </div>
                     </div>
@@ -913,9 +916,9 @@ export class IdLabComponent implements OnInit {
   finIbanCopied = signal(false);
 
   // FIN PHONE
-  finPhoneType   = signal<'MOB' | 'LINE'>('MOB');
-  finPhoneResult = signal<{ local: string; intl: string } | null>(null);
-  finPhoneCopied = signal(false);
+  finPhoneType        = signal<'MOB' | 'LINE'>('MOB');
+  finPhoneResult      = signal<{ local: string; intl: string } | null>(null);
+  finPhoneCopied      = signal<'local' | 'intl' | null>(null);
 
 
   ngOnInit() {
@@ -1318,10 +1321,14 @@ export class IdLabComponent implements OnInit {
         : `+358 ${intl.slice(4,6)} ${intl.slice(6,9)} ${intl.slice(9)}`;
     }
   }
-  copyFinPhone() {
+  copyFinPhone(which: 'local' | 'intl') {
     const r = this.finPhoneResult(); if (!r) return;
-    navigator.clipboard.writeText(r.intl);
-    this.finPhoneCopied.set(true); setTimeout(() => this.finPhoneCopied.set(false), 1500);
+    const text = which === 'local'
+      ? r.local.replace(/\s/g, '')
+      : r.intl.replace(/\s/g, '');
+    navigator.clipboard.writeText(text);
+    this.finPhoneCopied.set(which);
+    setTimeout(() => this.finPhoneCopied.set(null), 1500);
   }
 
   private loadFavs(): Set<string> {
