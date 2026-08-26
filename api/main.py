@@ -108,6 +108,14 @@ async def execute(
         return JSONResponse({"ERR": str(e), "TB": tb}, status_code=200)
 
 # Serve Angular SPA (only when dist/ exists — not on Vercel)
-_dist = os.path.join(os.path.dirname(base_dir), "dist", "browser")
-if os.path.isdir(_dist):
+# ng build output: dist/<project-name>/browser or dist/browser
+_root = os.path.dirname(base_dir)
+_dist = next(
+    (p for p in [
+        os.path.join(_root, "dist", "ver1ff.tools", "browser"),
+        os.path.join(_root, "dist", "browser"),
+    ] if os.path.isdir(p)),
+    None
+)
+if _dist:
     app.mount("/", StaticFiles(directory=_dist, html=True), name="spa")
