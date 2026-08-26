@@ -112,6 +112,16 @@ const COUNTRIES: Country[] = [
       { id: 'mrz_gen', ...MRZ_PP },
     ],
   },
+  {
+    code: 'FIN', iso2: 'fi', mrzCode: 'FIN', name: 'Finland',
+    tools: [
+      { id: 'fin_hetu',     icon: '🆔', label: 'HETU',         desc: 'Finnish personal ID (Henkilötunnus). DDMMYY+SSSQ format. Century marker +/-/A. Control char via mod-31 → 31-char alphabet. Gender encoded in serial parity.', color: '#2979ff', tag: 'HETU' },
+      { id: 'fin_passport', icon: '📕', label: 'FI-DOC-GEN',   desc: 'Finnish passport (FP+7 digits) and ID card (9 digits) numbers with calibrated sequential counters. Issue + expiry dates (5yr validity).', color: '#29b6f6', tag: 'DOCS' },
+      { id: 'fin_iban',     icon: '🏦', label: 'FI-IBAN',      desc: 'Finnish IBAN. FI + 2 check digits (mod-97) + 6-digit bank code + 8–10 digit account number. 18 chars total.', color: '#00bcd4', tag: 'IBAN' },
+      { id: 'mrz_gen', ...MRZ_ID },
+      { id: 'mrz_gen', ...MRZ_PP },
+    ],
+  },
 ];
 
 const FAV_KEY = 'id_lab_favorites';
@@ -418,6 +428,99 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                     </div>
 
+
+                  } @else if (t.id === 'fin_hetu') {
+                    <!-- Inline FIN HETU card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (hetuResult()) {
+                        <div class="tax-result" [style.border-color]="'rgba(41,121,255,0.35)'">
+                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:3px">{{ hetuResult() }}</code>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(41,121,255,0.4)'"
+                            (click)="copyHetu()">{{ hetuCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                      <div class="il-field-row">
+                        <div class="il-field">
+                          <label class="il-lbl">DOB (DD-MM-YYYY)</label>
+                          <input class="il-inp" [ngModel]="hetuDob()" (ngModelChange)="hetuDob.set($event)"
+                            placeholder="01-01-1990" maxlength="10" autocomplete="off">
+                        </div>
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">SEX</label>
+                          <div class="il-sex">
+                            @for (g of ['M','F']; track g) {
+                              <button class="il-sex-btn" [class.active]="hetuGender() === g"
+                                [style.--sc]="t.color" (click)="hetuGender.set(g === 'M' ? 'M' : 'F')">{{ g }}</button>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genHetu()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        <button class="il-btn-sm mono" (click)="randomHetu()">⚄</button>
+                        <button class="il-btn-sm mono" (click)="clearHetu()" style="color:#ff3b30">✕</button>
+                      </div>
+                    </div>
+
+                  } @else if (t.id === 'fin_passport') {
+                    <!-- Inline FIN PASSPORT / ID card card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (finDocResult(); as r) {
+                        <div class="doc-dates-block">
+                          <div class="doc-row">
+                            <span class="doc-type">📕 PASSPORT</span>
+                            <span class="doc-date" style="letter-spacing:1.5px">{{ r.pp }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">🪪 ID CARD</span>
+                            <span class="doc-date" style="letter-spacing:1.5px">{{ r.id }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">📅 ISSUED → EXPIRY</span>
+                            <span class="doc-date">{{ r.issued }} → <strong>{{ r.expiry }}</strong></span>
+                          </div>
+                        </div>
+                      }
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genFinDoc()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (finDocResult()) {
+                          <button class="il-btn-sm mono" (click)="copyFinDoc()">{{ finDocCopied() ? '✓' : '⎘' }}</button>
+                        }
+                      </div>
+                    </div>
+
+                  } @else if (t.id === 'fin_iban') {
+                    <!-- Inline FIN IBAN card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (finIbanResult()) {
+                        <div class="tax-result" [style.border-color]="'rgba(0,188,212,0.35)'">
+                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:2px;font-size:0.72rem">{{ finIbanResult() }}</code>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(0,188,212,0.4)'"
+                            (click)="copyFinIban()">{{ finIbanCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genFinIban()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        <button class="il-btn-sm mono" (click)="finIbanResult.set(null)">✕</button>
+                      </div>
+                    </div>
 
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
@@ -756,6 +859,20 @@ export class IdLabComponent implements OnInit {
   docResult  = signal<{ idIssue: string; idExpiry: string; idYrs: number; ppIssue: string; ppExpiry: string; ppYrs: number } | null>(null);
   docCopied  = signal(false);
 
+  // FIN HETU
+  hetuDob    = signal('');
+  hetuGender = signal<'M' | 'F'>('M');
+  hetuResult = signal<string | null>(null);
+  hetuCopied = signal(false);
+
+  // FIN PASSPORT / ID CARD
+  finDocResult  = signal<{ pp: string; id: string; issued: string; expiry: string } | null>(null);
+  finDocCopied  = signal(false);
+
+  // FIN IBAN
+  finIbanResult = signal<string | null>(null);
+  finIbanCopied = signal(false);
+
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
@@ -1020,6 +1137,105 @@ export class IdLabComponent implements OnInit {
     this.docCopied.set(true); setTimeout(() => this.docCopied.set(false), 1500);
   }
 
+
+  // ── FIN HETU (Henkilötunnus) ─────────────────────────────────────
+  // Format: DDMMYY[+/-/A]SSSQ
+  // Control char: (DDMMYY+SSS as integer) mod 31 → CHECKSUM_LETTERS[index]
+  private readonly HETU_LETTERS = '0123456789ABCDEFHJKLMNPRSTUVWXY';
+
+  private hetuCd(ddmmyy: string, serial: string): string {
+    const num = parseInt(ddmmyy + serial, 10);
+    return this.HETU_LETTERS[num % 31];
+  }
+
+  genHetu() {
+    const m = this.hetuDob().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (!m) return;
+    const [, dd, mm, yyyy] = m;
+    const year = parseInt(yyyy);
+    let century: string;
+    if (year >= 1800 && year <= 1899) century = '+';
+    else if (year >= 1900 && year <= 1999) century = '-';
+    else century = 'A';
+    const yy = String(year % 100).padStart(2, '0');
+    const ddmmyy = `${dd}${mm}${yy}`;
+    // Serial: 3 digits, last digit odd=M even=F
+    const base = Math.floor(Math.random() * 100);
+    const parity = this.hetuGender() === 'M'
+      ? (Math.floor(Math.random() * 5) * 2 + 1)  // odd: 1,3,5,7,9
+      : (Math.floor(Math.random() * 5) * 2);       // even: 0,2,4,6,8
+    const serial = String(base).padStart(2, '0') + parity;
+    const cd = this.hetuCd(ddmmyy, serial);
+    this.hetuResult.set(`${ddmmyy}${century}${serial}${cd}`);
+  }
+  randomHetu() {
+    const yr = 1960 + Math.floor(Math.random() * 45);
+    const mo = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+    const dy = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+    this.hetuDob.set(`${dy}-${mo}-${yr}`);
+    this.hetuGender.set(Math.random() > 0.5 ? 'M' : 'F');
+    this.genHetu();
+  }
+  clearHetu() { this.hetuDob.set(''); this.hetuResult.set(null); }
+  copyHetu() {
+    const v = this.hetuResult(); if (!v) return;
+    navigator.clipboard.writeText(v);
+    this.hetuCopied.set(true); setTimeout(() => this.hetuCopied.set(false), 1500);
+  }
+
+  // ── FIN PASSPORT + ID CARD ───────────────────────────────────────
+  // Passport: FP + 7 digits (sequential from base 1342193 at 2017-09-18, +2000/day)
+  // ID card:  9 digits       (sequential from base 530100000 at 2017-09-18, +10000/day)
+  // Validity: 5 years exactly
+  genFinDoc() {
+    const baseDate  = new Date(2017, 8, 18); // 2017-09-18
+    const today     = new Date();
+    // Random issue date between 2022-12-31 and today
+    const minIssue  = new Date(2022, 11, 31);
+    const rangeMs   = today.getTime() - minIssue.getTime();
+    const issueDate = new Date(minIssue.getTime() + Math.random() * rangeMs);
+    const days      = Math.floor((issueDate.getTime() - baseDate.getTime()) / 86400000);
+
+    const ppNum  = (1342193 + days * 2000 + Math.floor(Math.random() * 200 - 100));
+    const idNum  = (530100000 + days * 10000 + Math.floor(Math.random() * 400 - 200));
+
+    const expiry = new Date(issueDate.getFullYear() + 5, issueDate.getMonth(), issueDate.getDate());
+    const fmt = (d: Date) =>
+      `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+
+    this.finDocResult.set({
+      pp:     `FP${Math.max(1000000, ppNum % 10000000)}`,
+      id:     String(Math.max(100000000, idNum % 1000000000)),
+      issued: fmt(issueDate),
+      expiry: fmt(expiry),
+    });
+  }
+  copyFinDoc() {
+    const r = this.finDocResult(); if (!r) return;
+    navigator.clipboard.writeText(`PP: ${r.pp}\nID: ${r.id}\n${r.issued} → ${r.expiry}`);
+    this.finDocCopied.set(true); setTimeout(() => this.finDocCopied.set(false), 1500);
+  }
+
+  // ── FIN IBAN ─────────────────────────────────────────────────────
+  // FI + 2CD + 6-digit bank code + 8-10 digit account
+  // CD via mod-97: move first 4 chars to end, letters→digits, 98 - (numeric mod 97)
+  genFinIban() {
+    const bankCode  = String(Math.floor(Math.random() * 900000) + 100000);
+    const accLen    = 8 + Math.floor(Math.random() * 3); // 8, 9 or 10
+    const accNum    = Array.from({ length: accLen }, () => Math.floor(Math.random() * 10)).join('');
+    const base      = `FI00${bankCode}${accNum}`;
+    // Move first 4 to end, replace letters: F=15, I=18
+    const rearr     = base.slice(4) + base.slice(0, 4);
+    const numeric   = rearr.replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
+    const rem       = BigInt(numeric) % 97n;
+    const cd        = String(98n - rem).padStart(2, '0');
+    this.finIbanResult.set(`FI${cd}${bankCode}${accNum}`);
+  }
+  copyFinIban() {
+    const v = this.finIbanResult(); if (!v) return;
+    navigator.clipboard.writeText(v);
+    this.finIbanCopied.set(true); setTimeout(() => this.finIbanCopied.set(false), 1500);
+  }
 
   private loadFavs(): Set<string> {
     try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); }
