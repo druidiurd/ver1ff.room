@@ -480,24 +480,29 @@ const FAV_KEY = 'id_lab_favorites';
                       @if (finDocResult(); as r) {
                         <div class="doc-dates-block">
                           <div class="doc-row">
-                            <span class="doc-type">📕 PASSPORT</span>
-                            <span class="doc-date" style="letter-spacing:1.5px">{{ r.pp }}</span>
+                            <span class="doc-type">📕 PP</span>
+                            <span class="doc-date" style="letter-spacing:1.5px;flex:1">{{ r.pp }}</span>
+                            <button class="cp-inline" (click)="copyFinDoc('pp')">{{ finDocCopied() === 'pp' ? '✓' : '⎘' }}</button>
                           </div>
                           <div class="doc-row">
-                            <span class="doc-type">🪪 ID CARD</span>
-                            <span class="doc-date" style="letter-spacing:1.5px">{{ r.id }}</span>
+                            <span class="doc-type">🪪 ID</span>
+                            <span class="doc-date" style="letter-spacing:1.5px;flex:1">{{ r.id }}</span>
+                            <button class="cp-inline" (click)="copyFinDoc('id')">{{ finDocCopied() === 'id' ? '✓' : '⎘' }}</button>
                           </div>
                           <div class="doc-row">
-                            <span class="doc-type">📅 ISSUED → EXPIRY</span>
-                            <span class="doc-date">{{ r.issued }} → <strong>{{ r.expiry }}</strong></span>
+                            <span class="doc-type">📅 ISS</span>
+                            <span class="doc-date" style="flex:1">{{ r.issued }} → <strong>{{ r.expiry }}</strong></span>
+                            <button class="cp-inline" (click)="copyFinDoc('issued')">{{ finDocCopied() === 'issued' ? '✓' : '⎘' }}</button>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">📍 CITY</span>
+                            <span class="doc-date" style="flex:1">{{ r.city }}</span>
+                            <button class="cp-inline" (click)="copyFinDoc('city')">{{ finDocCopied() === 'city' ? '✓' : '⎘' }}</button>
                           </div>
                         </div>
                       }
                       <div class="il-btn-row">
                         <button class="tax-btn mono" (click)="genFinDoc()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
-                        @if (finDocResult()) {
-                          <button class="il-btn-sm mono" (click)="copyFinDoc()">{{ finDocCopied() ? '✓' : '⎘' }}</button>
-                        }
                       </div>
                     </div>
 
@@ -843,9 +848,16 @@ const FAV_KEY = 'id_lab_favorites';
       background: rgba(0,0,0,0.4); border: 1px solid rgba(255,107,53,0.25);
       border-radius: var(--radius-sm); padding: 10px 12px;
     }
-    .doc-row { display: flex; flex-direction: column; gap: 2px; }
-    .doc-type { font-size: 0.45rem; color: var(--text-dim); letter-spacing: 1px; }
+    .doc-row { display: flex; align-items: center; gap: 6px; }
+    .doc-type { font-size: 0.45rem; color: var(--text-dim); letter-spacing: 1px; white-space: nowrap; }
     .doc-date { font-size: 0.65rem; color: var(--text-mid); letter-spacing: 1px; }
+    .cp-inline {
+      flex-shrink: 0; background: none; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px; color: var(--text-dim); font-size: 0.55rem;
+      padding: 1px 5px; cursor: pointer; line-height: 1.4;
+      transition: color .15s, border-color .15s;
+    }
+    .cp-inline:hover { color: var(--text-mid); border-color: rgba(255,255,255,0.35); }
     .doc-date strong { color: #ff6b35; }
 
     @media (max-width: 767px) {
@@ -908,8 +920,8 @@ export class IdLabComponent implements OnInit {
   hetuCopied = signal(false);
 
   // FIN PASSPORT / ID CARD
-  finDocResult  = signal<{ pp: string; id: string; issued: string; expiry: string } | null>(null);
-  finDocCopied  = signal(false);
+  finDocResult  = signal<{ pp: string; id: string; issued: string; expiry: string; city: string } | null>(null);
+  finDocCopied  = signal<'pp'|'id'|'issued'|'city'|null>(null);
 
   // FIN IBAN
   finIbanResult = signal<string | null>(null);
@@ -1230,6 +1242,20 @@ export class IdLabComponent implements OnInit {
     this.hetuCopied.set(true); setTimeout(() => this.hetuCopied.set(false), 1500);
   }
 
+  private readonly FIN_CITIES = [
+    'Helsinki','Espoo','Vantaa','Tampere','Turku','Oulu','Jyväskylä','Kuopio',
+    'Lahti','Pori','Vaasa','Seinäjoki','Rovaniemi','Savonlinna','Joensuu',
+    'Hämeenlinna','Lappeenranta','Hyvinkää','Mikkeli','Porvoo','Kouvola',
+    'Raisio','Loimaa','Naantali','Kajaani','Kemi','Tornio','Ivalo','Kuhmo',
+    'Pello','Kemijärvi','Kitee','Kontiolahti','Lieksa','Nurmes','Outokumpu',
+    'Aura','Laitila','Lieto','Paimio','Salo','Uusikaupunki','Kirkkonummi',
+    'Kauniainen','Kerava','Järvenpää','Tuusula','Nurmijärvi','Raasepori',
+    'Akaa','Kangasala','Lempäälä','Nokia','Pirkkala','Ylöjärvi','Valkeakoski',
+    'Pietarsaari','Kristiinankaupunki','Närpiö','Äänekoski','Jämsä','Keuruu',
+    'Saarijärvi','Viitasaari','Raahe','Ylivieska','Haapajärvi','Nivala',
+    'Oulainen','Inari','Sodankylä','Imatra','Rauma','Eura','Harjavalta',
+  ];
+
   // ── FIN PASSPORT + ID CARD ───────────────────────────────────────
   // Passport: FP + 7 digits (sequential from base 1342193 at 2017-09-18, +2000/day)
   // ID card:  9 digits       (sequential from base 530100000 at 2017-09-18, +10000/day)
@@ -1250,17 +1276,20 @@ export class IdLabComponent implements OnInit {
     const fmt = (d: Date) =>
       `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
 
+    const city = this.FIN_CITIES[Math.floor(Math.random() * this.FIN_CITIES.length)];
     this.finDocResult.set({
       pp:     `FP${Math.max(1000000, ppNum % 10000000)}`,
       id:     String(Math.max(100000000, idNum % 1000000000)),
       issued: fmt(issueDate),
       expiry: fmt(expiry),
+      city,
     });
   }
-  copyFinDoc() {
+  copyFinDoc(field: 'pp'|'id'|'issued'|'city') {
     const r = this.finDocResult(); if (!r) return;
-    navigator.clipboard.writeText(`PP: ${r.pp}\nID: ${r.id}\n${r.issued} → ${r.expiry}`);
-    this.finDocCopied.set(true); setTimeout(() => this.finDocCopied.set(false), 1500);
+    const text = field === 'issued' ? `${r.issued} → ${r.expiry}` : r[field];
+    navigator.clipboard.writeText(text);
+    this.finDocCopied.set(field); setTimeout(() => this.finDocCopied.set(null), 1500);
   }
 
   // ── FIN IBAN ─────────────────────────────────────────────────────
