@@ -65,17 +65,19 @@ interface Stroke {
           (touchmove)="drawStroke($event)"
           (touchend)="endStroke()">
           <defs>
-            <!-- Checkerboard pattern for transparency -->
+            <!-- Checkerboard pattern for transparency indicator -->
             <pattern id="checker" x="20" y="20" patternUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="10" height="10" fill="#fff"/>
-              <rect x="10" y="0" width="10" height="10" fill="#e0e0e0"/>
-              <rect x="0" y="10" width="10" height="10" fill="#e0e0e0"/>
-              <rect x="10" y="10" width="10" height="10" fill="#fff"/>
+              <rect x="0" y="0" width="10" height="10" fill="#f5f5f5"/>
+              <rect x="10" y="0" width="10" height="10" fill="#d0d0d0"/>
+              <rect x="0" y="10" width="10" height="10" fill="#d0d0d0"/>
+              <rect x="10" y="10" width="10" height="10" fill="#f5f5f5"/>
             </pattern>
           </defs>
 
-          <!-- Checkerboard background -->
-          <rect width="800" height="300" fill="url(#checker)" rx="4"/>
+          <!-- White background for drawing visibility -->
+          <rect width="800" height="300" fill="#ffffff" rx="4"/>
+          <!-- Subtle checkerboard for transparency hint -->
+          <rect width="800" height="300" fill="url(#checker)" opacity="0.15" rx="4"/>
 
           <!-- Strokes -->
           @for (stroke of strokes(); track $index) {
