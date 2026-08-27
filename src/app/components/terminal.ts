@@ -10,13 +10,14 @@ import { MrzForgeComponent } from './mrz-forge';
 import { UkDlGenComponent } from './uk-dl-gen';
 import { FraCinComponent } from './fra-cin';
 import { PtIdMrzComponent } from './pt-id-mrz';
+import { SignatureDrawComponent } from './signature-draw';
 import { lastValueFrom } from 'rxjs';
 import { zipSync } from 'fflate';
 
 @Component({
   selector: 'app-terminal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent, UkDlGenComponent, FraCinComponent, PtIdMrzComponent],
+  imports: [CommonModule, FormsModule, MapComponent, MrzForgeComponent, UkDlGenComponent, FraCinComponent, PtIdMrzComponent, SignatureDrawComponent],
   template: `
     <div class="shell fade-in">
 
@@ -63,7 +64,7 @@ import { zipSync } from 'fflate';
         <div class="shell-desc mono">{{ getGuideText() }}</div>
       </div>
 
-      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen' || store.selectedApp() === 'fra_cin' || store.selectedApp() === 'pt_id_mrz'">
+      <div class="shell-body" [class.forge-mode]="store.selectedApp() === 'mrz_gen' || store.selectedApp() === 'uk_dl_gen' || store.selectedApp() === 'fra_cin' || store.selectedApp() === 'pt_id_mrz' || store.selectedApp() === 'signature_draw'">
         <!-- LEFT: form -->
         <div class="panel-form">
           @if (store.schemaLoading()) {
@@ -77,7 +78,7 @@ import { zipSync } from 'fflate';
               <div class="skel skel-btn"></div>
             </div>
           }
-          @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen' && store.selectedApp() !== 'fra_cin' && store.selectedApp() !== 'pt_id_mrz') {
+          @if (store.selectedApp() !== 'mrz_gen' && store.selectedApp() !== 'uk_dl_gen' && store.selectedApp() !== 'fra_cin' && store.selectedApp() !== 'pt_id_mrz' && store.selectedApp() !== 'signature_draw') {
 
           @if (store.selectedApp() === 'ai_bypass') {
             <div class="ai-preset-bar">
@@ -198,7 +199,7 @@ import { zipSync } from 'fflate';
             </div>
           }
 
-          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen','uk_dl_gen','ita_cf','fra_cin','pt_id_mrz'].includes(store.selectedApp() || '')) {
+          @if (!['ndls_mrz','nld_mrz','fra_mrz','mrz_gen','uk_dl_gen','ita_cf','fra_cin','pt_id_mrz','signature_draw'].includes(store.selectedApp() || '')) {
             <div class="actions" [class.col]="store.selectedApp() === 'ai_bypass'">
               <button class="btn-exec mono"
                 [disabled]="store.loading() || !canExecute()"
@@ -248,6 +249,10 @@ import { zipSync } from 'fflate';
 
           @if (store.selectedApp() === 'pt_id_mrz') {
             <app-pt-id-mrz></app-pt-id-mrz>
+          }
+
+          @if (store.selectedApp() === 'signature_draw') {
+            <app-signature-draw></app-signature-draw>
           }
 
           @if (store.hasPreview()) {
