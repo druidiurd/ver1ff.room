@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 interface Stroke {
   points: Array<{ x: number; y: number }>;
   width: number;
+  color: string;
 }
 
 @Component({
@@ -19,6 +20,13 @@ interface Stroke {
           <input class="sig-range" type="range" min="1" max="10"
             [ngModel]="brushSize()" (ngModelChange)="setBrushSize($event)">
           <span class="sig-value mono">{{ brushSize() }}px</span>
+        </div>
+
+        <div class="sig-tool-group">
+          <label class="sig-label">COLOR</label>
+          <input class="sig-color" type="color"
+            [ngModel]="brushColor()" (ngModelChange)="brushColor.set($event)">
+          <span class="sig-value mono" [style.color]="brushColor()">■</span>
         </div>
 
         <div class="sig-tool-group">
@@ -56,14 +64,24 @@ interface Stroke {
           (touchstart)="startStroke($event)"
           (touchmove)="drawStroke($event)"
           (touchend)="endStroke()">
-          <!-- Background rect for touch -->
-          <rect width="800" height="300" fill="rgba(0,0,0,0.3)" rx="4"/>
+          <defs>
+            <!-- Checkerboard pattern for transparency -->
+            <pattern id="checker" x="20" y="20" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="10" height="10" fill="#fff"/>
+              <rect x="10" y="0" width="10" height="10" fill="#e0e0e0"/>
+              <rect x="0" y="10" width="10" height="10" fill="#e0e0e0"/>
+              <rect x="10" y="10" width="10" height="10" fill="#fff"/>
+            </pattern>
+          </defs>
+
+          <!-- Checkerboard background -->
+          <rect width="800" height="300" fill="url(#checker)" rx="4"/>
 
           <!-- Strokes -->
           @for (stroke of strokes(); track $index) {
             <polyline [attr.points]="formatPoints(stroke.points)"
               fill="none"
-              [attr.stroke]="'#00ff41'"
+              [attr.stroke]="stroke.color"
               stroke-linecap="round"
               stroke-linejoin="round"
               [attr.stroke-width]="stroke.width"/>
@@ -98,8 +116,13 @@ interface Stroke {
       width: 80px; height: 4px; cursor: pointer;
       accent-color: #00ff41;
     }
+    .sig-color {
+      width: 36px; height: 24px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 2px;
+    }
     .sig-value {
       font-size: 0.55rem; color: var(--text-mid); min-width: 35px;
+      font-size: 1rem; line-height: 1;
     }
 
     .sig-btn {
@@ -118,13 +141,12 @@ interface Stroke {
 
     /* Canvas */
     .sig-canvas-wrapper {
-      background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,65,0.25);
+      border: 1px solid rgba(0,255,65,0.35);
       border-radius: 6px; overflow: hidden; cursor: crosshair;
       touch-action: none;
     }
     .sig-svg {
       display: block; width: 100%; height: auto;
-      background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
     }
 
     /* Info */
@@ -137,6 +159,7 @@ interface Stroke {
 export class SignatureDrawComponent {
   strokes = signal<Stroke[]>([]);
   brushSize = signal(2);
+  brushColor = signal('#000000');
   copiedSvg = signal(false);
 
   svgCanvas = viewChild<ElementRef>('svgCanvas');
@@ -151,7 +174,7 @@ export class SignatureDrawComponent {
   startStroke(evt: MouseEvent | TouchEvent) {
     evt.preventDefault();
     this.isDrawing = true;
-    this.currentStroke = { points: [], width: this.brushSize() };
+    this.currentStroke = { points: [], width: this.brushSize(), color: this.brushColor() };
     this.addPoint(evt);
   }
 
@@ -204,12 +227,14 @@ export class SignatureDrawComponent {
   private generateSVG(): string {
     const lines = this.strokes()
       .map(stroke =>
-        `<polyline points="${this.formatPoints(stroke.points)}" fill="none" stroke="#00ff41" stroke-width="${stroke.width}" stroke-linecap="round" stroke-linejoin="round"/>`
+        `<polyline points="${this.formatPoints(stroke.points)}" fill="none" stroke="${stroke.color}" stroke-width="${stroke.width}" stroke-linecap="round" stroke-linejoin="round"/>`
       )
       .join('\n');
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300">
+<g>
 ${lines}
+</g>
 </svg>`;
   }
 
@@ -241,12 +266,12 @@ ${lines}
     // Transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw strokes
-    ctx.strokeStyle = '#00ff41';
+    // Draw strokes with their colors
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     for (const stroke of this.strokes()) {
+      ctx.strokeStyle = stroke.color;
       ctx.lineWidth = stroke.width;
       ctx.beginPath();
 
