@@ -45,9 +45,6 @@ interface Stroke {
           <button class="sig-btn" (click)="downloadPNG()" [disabled]="strokes().length === 0">
             📥 PNG
           </button>
-          <button class="sig-btn mono" (click)="copySVG()" [disabled]="strokes().length === 0">
-            {{ copiedSvg() ? '✓' : '⎘ SVG' }}
-          </button>
         </div>
       </div>
 
@@ -171,9 +168,8 @@ interface Stroke {
 })
 export class SignatureDrawComponent {
   strokes = signal<Stroke[]>([]);
-  brushSize = signal(4);
+  brushSize = signal(3);
   brushColor = signal('#000000');
-  copiedSvg = signal(false);
   previewStroke = signal<Stroke | null>(null);
 
   svgCanvas = viewChild<ElementRef>('svgCanvas');
@@ -259,13 +255,6 @@ export class SignatureDrawComponent {
 ${lines}
 </g>
 </svg>`;
-  }
-
-  copySVG() {
-    const svg = this.generateSVG();
-    navigator.clipboard.writeText(svg);
-    this.copiedSvg.set(true);
-    setTimeout(() => this.copiedSvg.set(false), 1500);
   }
 
   downloadSVG() {
