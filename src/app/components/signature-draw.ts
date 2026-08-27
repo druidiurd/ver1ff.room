@@ -88,6 +88,17 @@ interface Stroke {
               stroke-linejoin="round"
               [attr.stroke-width]="stroke.width"/>
           }
+
+          <!-- Preview stroke (real-time) -->
+          @if (previewStroke(); as preview) {
+            <polyline [attr.points]="formatPoints(preview.points)"
+              fill="none"
+              [attr.stroke]="preview.color"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              [attr.stroke-width]="preview.width"
+              opacity="0.7"/>
+          }
         </svg>
       </div>
 
@@ -160,9 +171,10 @@ interface Stroke {
 })
 export class SignatureDrawComponent {
   strokes = signal<Stroke[]>([]);
-  brushSize = signal(2);
+  brushSize = signal(4);
   brushColor = signal('#000000');
   copiedSvg = signal(false);
+  previewStroke = signal<Stroke | null>(null);
 
   svgCanvas = viewChild<ElementRef>('svgCanvas');
 
@@ -178,12 +190,14 @@ export class SignatureDrawComponent {
     this.isDrawing = true;
     this.currentStroke = { points: [], width: this.brushSize(), color: this.brushColor() };
     this.addPoint(evt);
+    this.updatePreview();
   }
 
   drawStroke(evt: MouseEvent | TouchEvent) {
     if (!this.isDrawing || !this.currentStroke) return;
     evt.preventDefault();
     this.addPoint(evt);
+    this.updatePreview();
   }
 
   endStroke() {
@@ -192,6 +206,13 @@ export class SignatureDrawComponent {
     }
     this.isDrawing = false;
     this.currentStroke = null;
+    this.previewStroke.set(null);
+  }
+
+  private updatePreview() {
+    if (this.currentStroke) {
+      this.previewStroke.set({ ...this.currentStroke });
+    }
   }
 
   private addPoint(evt: MouseEvent | TouchEvent) {
