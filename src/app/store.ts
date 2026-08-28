@@ -76,6 +76,7 @@ export class AppStore {
   schema = signal<SchemaField[]>([]);
   lines = signal<string[]>([]);
   scanMode = signal<boolean>(false);
+  apiError = signal<string | null>(null);
 
   // Single mode files
   selectedFile = signal<File | null>(null);

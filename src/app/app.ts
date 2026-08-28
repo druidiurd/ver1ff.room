@@ -88,6 +88,30 @@ const NAV: NavItem[] = [
         <div class="mono g-txt">SYNCING_CORE...</div>
       </div>
     }
+
+    <!-- API Error Toast -->
+    @if (store.apiError(); as err) {
+      <div class="api-error-toast" [class]="'err-' + err.toLowerCase()">
+        <div class="err-icon">⚠️</div>
+        <div class="err-text mono">
+          @switch (err) {
+            @case ('SERVER_UNREACHABLE') {
+              SERVER UNREACHABLE — API connection failed
+            }
+            @case ('SERVER_TIMEOUT') {
+              REQUEST TIMEOUT — server response took too long
+            }
+            @case ('NETWORK_ERROR') {
+              NETWORK ERROR — check your connection
+            }
+            @default {
+              SERVER ERROR ({{ err }}) — try again later
+            }
+          }
+        </div>
+        <button class="err-close" (click)="store.apiError.set(null)">✕</button>
+      </div>
+    }
   `,
   styles: [`
     :host { display: block; }
@@ -243,6 +267,34 @@ const NAV: NavItem[] = [
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .g-txt { font-size: 0.7rem; color: var(--green); letter-spacing: 4px; }
+
+    /* ── API ERROR TOAST ── */
+    .api-error-toast {
+      position: fixed; bottom: 20px; right: 20px; z-index: 9998;
+      background: rgba(255, 59, 48, 0.95); border: 1px solid rgba(255, 107, 53, 0.5);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(255, 59, 48, 0.3);
+      animation: slideIn 0.3s ease-out;
+      max-width: 380px;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .err-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .err-text {
+      font-size: 0.6rem; color: #fff;
+      letter-spacing: 0.5px; flex: 1;
+      line-height: 1.4;
+    }
+    .err-close {
+      background: none; border: none; color: rgba(255,255,255,0.7);
+      font-size: 0.8rem; cursor: pointer; flex-shrink: 0;
+      padding: 0; transition: color 0.15s;
+    }
+    .err-close:hover { color: #fff; }
 
     /* ── MOBILE ── */
     @media (max-width: 767px) {
