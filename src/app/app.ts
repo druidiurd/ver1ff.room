@@ -24,11 +24,13 @@ const NAV: NavItem[] = [
   template: `
     <canvas #mc id="matrix-bg"></canvas>
 
-    <!-- Migration Banner -->
-    <div class="migration-banner">
-      <span class="migration-text mono">🚀 We've moved! Ver1ff Room is now on <strong>h1d3.stream</strong> — Updated infrastructure, same tools.</span>
-      <a href="https://h1d3.stream" target="_blank" class="migration-btn mono">Visit New Home →</a>
-    </div>
+    <!-- Migration Banner (only on Vercel) -->
+    @if (isVercelDomain()) {
+      <div class="migration-banner">
+        <span class="migration-text mono">🚀 We've moved! Ver1ff Room is now on <strong>h1d3.stream</strong> — Updated infrastructure, same tools.</span>
+        <a href="https://h1d3.stream" target="_blank" class="migration-btn mono">Visit New Home →</a>
+      </div>
+    }
 
     <!-- Mobile topbar -->
     <header class="topbar">
@@ -197,7 +199,10 @@ const NAV: NavItem[] = [
     /* ── LAYOUT ── */
     .layout {
       position: fixed; inset: 0; z-index: 10;
-      display: flex; top: 48px;
+      display: flex;
+    }
+    :host:has(.migration-banner) .layout {
+      top: 48px;
     }
 
     /* ── SIDEBAR ── */
@@ -334,7 +339,8 @@ const NAV: NavItem[] = [
     /* ── MOBILE ── */
     @media (max-width: 767px) {
       .topbar { display: flex; }
-      .layout { top: calc(var(--topbar-h) + 48px); }
+      .layout { top: var(--topbar-h); }
+      :host:has(.migration-banner) .layout { top: calc(var(--topbar-h) + 48px); }
       .sidebar {
         position: fixed; left: 0; top: var(--topbar-h); bottom: 0;
         z-index: 300;
@@ -358,6 +364,7 @@ export class App implements AfterViewInit, OnInit {
   ram = 210;
   drawerOpen = signal(false);
   updateReady = signal(false);
+  isVercelDomain = signal(window.location.hostname.includes('vercel.app'));
 @ViewChild('mc') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   groups = [...new Set(NAV.map(n => n.group))];

@@ -1,0 +1,91 @@
+{
+  "name": "Ver1ff Room",
+  "short_name": "Ver1ff",
+  "description": "Universal identity generator & document forge. MRZ, IBAN, tax IDs, signatures, and more for European nations.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ff41",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23000' width='192' height='192'/><circle cx='96' cy='96' r='60' fill='%2300ff41'/><circle cx='96' cy='96' r='45' fill='%23000'/><text x='96' y='110' font-size='80' font-weight='700' fill='%2300ff41' text-anchor='middle' font-family='monospace'>◆</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23000' width='512' height='512'/><circle cx='256' cy='256' r='160' fill='%2300ff41'/><circle cx='256' cy='256' r='120' fill='%23000'/><text x='256' y='290' font-size='220' font-weight='700' fill='%2300ff41' text-anchor='middle' font-family='monospace'>◆</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23000' width='192' height='192'/><circle cx='96' cy='96' r='60' fill='%2300ff41'/><circle cx='96' cy='96' r='45' fill='%23000'/><text x='96' y='110' font-size='80' font-weight='700' fill='%2300ff41' text-anchor='middle' font-family='monospace'>◆</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230a0a0a' width='540' height='720'/><rect fill='%23001a00' width='540' height='150'/><text x='270' y='90' font-size='48' font-weight='700' fill='%2300ff41' text-anchor='middle' font-family='monospace'>VER1FF_ROOM</text><line x1='50' y1='400' x2='490' y2='400' stroke='%2300ff41' stroke-width='2'/><line x1='50' y1='450' x2='490' y2='450' stroke='%2300ff41' stroke-width='2'/><line x1='50' y1='500' x2='490' y2='500' stroke='%2300ff41' stroke-width='2'/></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "MRZ Generator",
+      "short_name": "MRZ Forge",
+      "description": "Generate ICAO 9303 MRZ codes",
+      "url": "/tool/mrz_gen",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2300ff41' width='96' height='96'/><text x='48' y='60' font-size='48' font-weight='700' fill='%23000' text-anchor='middle' font-family='monospace'>◆</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "ID Lab",
+      "short_name": "ID Lab",
+      "description": "Country-based identity generators",
+      "url": "/id-lab",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2300ff41' width='96' height='96'/><text x='48' y='60' font-size='48' font-weight='700' fill='%23000' text-anchor='middle' font-family='monospace'>🧪</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Signature Draw",
+      "short_name": "Signature",
+      "description": "Digital signature canvas",
+      "url": "/tool/signature_draw",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2300ff41' width='96' height='96'/><text x='48' y='60' font-size='48' font-weight='700' fill='%23000' text-anchor='middle' font-family='monospace'>✍️</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
