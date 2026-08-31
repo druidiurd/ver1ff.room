@@ -24,6 +24,12 @@ const NAV: NavItem[] = [
   template: `
     <canvas #mc id="matrix-bg"></canvas>
 
+    <!-- Migration Banner -->
+    <div class="migration-banner">
+      <span class="migration-text mono">🚀 We've moved! Ver1ff Room is now on <strong>h1d3.stream</strong> — Updated infrastructure, same tools.</span>
+      <a href="https://h1d3.stream" target="_blank" class="migration-btn mono">Visit New Home →</a>
+    </div>
+
     <!-- Mobile topbar -->
     <header class="topbar">
       <button class="burger" (click)="drawerOpen.set(!drawerOpen())" aria-label="menu">
@@ -121,6 +127,35 @@ const NAV: NavItem[] = [
       opacity: 0.07; pointer-events: none;
     }
 
+    /* ── MIGRATION BANNER ── */
+    .migration-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: linear-gradient(90deg, rgba(0,255,65,0.15), rgba(0,255,65,0.05));
+      border-bottom: 1px solid rgba(0,255,65,0.3);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+      backdrop-filter: blur(10px);
+    }
+    .migration-text {
+      font-size: 0.65rem; color: rgba(255,255,255,0.85);
+      letter-spacing: 0.5px; flex: 1; min-width: 200px;
+    }
+    .migration-text strong { color: #00ff41; font-weight: 700; }
+    .migration-btn {
+      display: inline-flex; align-items: center;
+      padding: 7px 14px; background: rgba(0,255,65,0.2);
+      border: 1px solid rgba(0,255,65,0.4);
+      border-radius: 4px; color: #00ff41;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; text-decoration: none;
+      transition: 0.15s; flex-shrink: 0;
+    }
+    .migration-btn:hover {
+      background: rgba(0,255,65,0.3); border-color: rgba(0,255,65,0.6);
+      box-shadow: 0 0 12px rgba(0,255,65,0.2);
+    }
+
     /* ── TOPBAR (mobile only) ── */
     .topbar {
       display: none;
@@ -162,7 +197,7 @@ const NAV: NavItem[] = [
     /* ── LAYOUT ── */
     .layout {
       position: fixed; inset: 0; z-index: 10;
-      display: flex;
+      display: flex; top: 48px;
     }
 
     /* ── SIDEBAR ── */
@@ -299,7 +334,7 @@ const NAV: NavItem[] = [
     /* ── MOBILE ── */
     @media (max-width: 767px) {
       .topbar { display: flex; }
-      .layout { top: var(--topbar-h); }
+      .layout { top: calc(var(--topbar-h) + 48px); }
       .sidebar {
         position: fixed; left: 0; top: var(--topbar-h); bottom: 0;
         z-index: 300;
