@@ -499,7 +499,19 @@ import { zipSync } from 'fflate';
                 </div>
                 <ul class="cl-list">
                   @for (c of r.changes; track c) {
-                    <li class="cl-item">{{ c }}</li>
+                    @if (c.startsWith('  ')) {
+                      <li class="cl-item cl-item-sub">{{ c }}</li>
+                    } @else if (c.startsWith('⚠️')) {
+                      <li class="cl-section-title cl-breaking">{{ c }}</li>
+                    } @else if (c.startsWith('✨')) {
+                      <li class="cl-section-title cl-features">{{ c }}</li>
+                    } @else if (c.startsWith('🐛')) {
+                      <li class="cl-section-title cl-fixes">{{ c }}</li>
+                    } @else if (c.startsWith('📝')) {
+                      <li class="cl-section-title cl-other">{{ c }}</li>
+                    } @else {
+                      <li class="cl-item">{{ c }}</li>
+                    }
                   }
                 </ul>
               </div>
@@ -1133,8 +1145,22 @@ import { zipSync } from 'fflate';
     .cl-rel-header { display: flex; align-items: baseline; gap: 10px; }
     .cl-ver { font-size: 0.58rem; color: var(--green); letter-spacing: 1px; }
     .cl-date { font-size: 0.48rem; color: var(--text-dim); }
-    .cl-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
-    .cl-item { font-size: 0.52rem; color: var(--text-mid); line-height: 1.5; }
+    .cl-list { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .cl-item { font-size: 0.52rem; color: var(--text-mid); line-height: 1.5; list-style: none; }
+    .cl-item-sub {
+      font-size: 0.50rem; color: var(--text-dim);
+      padding-left: 12px; margin-left: 8px;
+      border-left: 2px solid rgba(0,255,65,0.2);
+    }
+    .cl-section-title {
+      font-size: 0.53rem; color: var(--text); font-weight: 600;
+      margin-top: 8px; margin-bottom: 4px; list-style: none;
+      letter-spacing: 0.5px;
+    }
+    .cl-breaking { color: #ff3b30; }
+    .cl-features { color: #00ff41; }
+    .cl-fixes { color: #ffa500; }
+    .cl-other { color: var(--text-dim); }
     .cl-footer {
       padding: 12px 18px;
       border-top: 1px solid var(--border);

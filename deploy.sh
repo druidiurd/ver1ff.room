@@ -14,6 +14,10 @@ SCP="scp -i $SSH_KEY"
 SKIP_BUILD=false
 [[ "$1" == "--skip-build" ]] && SKIP_BUILD=true
 
+# ── 0. Auto-generate changelog ─────────────────────────────────────────────
+echo "  [0/4] checking for changelog updates..."
+node scripts/generate-changelog.js 2>/dev/null || true
+
 VERSION=$(node -e "console.log(require('./changelog.json').version)" 2>/dev/null || echo "?")
 
 echo ""
