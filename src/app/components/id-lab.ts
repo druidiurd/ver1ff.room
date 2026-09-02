@@ -85,6 +85,7 @@ const COUNTRIES: Country[] = [
     tools: [
       { id: 'pl_pesel',     icon: '🆔', label: 'PESEL',     desc: 'Polish PESEL number. 11 digits: YYMMDD + 4-digit serial (gender-encoded) + check digit. Weights [1,3,7,9,...].', color: '#e02e2e', tag: 'PESEL' },
       { id: 'pl_doc_dates', icon: '📅', label: 'DOC DATES', desc: 'Generates valid Polish ID card and passport issue/expiry dates. Validity: 5yr (under 12), 10yr (adult).', color: '#ff6b35', tag: 'DOCS' },
+      { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
       { id: 'mrz_gen', ...MRZ_PP },
     ],
   },
@@ -569,6 +570,47 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                     </div>
 
+                  } @else if (t.id === 'pl_phone') {
+                    <!-- Inline PL PHONE card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plPhoneResult(); as r) {
+                        <div class="doc-dates-block">
+                          <div class="doc-row">
+                            <span class="doc-type">LOCAL</span>
+                            <span class="doc-date" style="letter-spacing:1.5px;color:var(--text-mid)">{{ r.local }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">INTERNATIONAL</span>
+                            <span class="doc-date" [style.color]="t.color" style="letter-spacing:1px">{{ r.intl }}</span>
+                          </div>
+                        </div>
+                      }
+                      <div class="il-field-row" style="gap:6px">
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">TYPE</label>
+                          <div class="il-sex">
+                            @for (tp of ['MOB','LINE']; track tp) {
+                              <button class="il-sex-btn" [class.active]="plPhoneType() === tp"
+                                [style.--sc]="t.color" (click)="plPhoneType.set(tp === 'MOB' ? 'MOB' : 'LINE')">{{ tp }}</button>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genPlPhone()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (plPhoneResult()) {
+                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyPlPhone('local')">{{ plPhoneCopied() === 'local' ? '✓' : 'LOC' }}</button>
+                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyPlPhone('intl')">{{ plPhoneCopied() === 'intl' ? '✓' : '+48' }}</button>
+                        }
+                        <button class="il-btn-sm mono" (click)="plPhoneResult.set(null)" style="color:#ff3b30">✕</button>
+                      </div>
+                    </div>
+
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
                       <div class="tc-top">
@@ -932,6 +974,10 @@ export class IdLabComponent implements OnInit {
   finPhoneResult      = signal<{ local: string; intl: string } | null>(null);
   finPhoneCopied      = signal<'local' | 'intl' | null>(null);
 
+  // PL PHONE
+  plPhoneType         = signal<'MOB' | 'LINE'>('MOB');
+  plPhoneResult       = signal<{ local: string; intl: string } | null>(null);
+  plPhoneCopied       = signal<'local' | 'intl' | null>(null);
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
@@ -1360,6 +1406,44 @@ export class IdLabComponent implements OnInit {
     navigator.clipboard.writeText(text);
     this.finPhoneCopied.set(which);
     setTimeout(() => this.finPhoneCopied.set(null), 1500);
+  }
+
+  // ── PL PHONE ────────────────────────────────────────────────────
+  // Mobile:   '0' + ('5X' where X=0-9) + 7 digits = 10 digits total
+  // Landline: '0' + ('2X'-'25' area code) + 7 digits = 10 digits
+  genPlPhone() {
+    let raw: string;
+    if (this.plPhoneType() === 'MOB') {
+      const prefix = `5${Math.floor(Math.random() * 10)}`; // 50-59
+      const rest = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join('');
+      raw = `0${prefix}${rest}`;
+    } else {
+      // Landline: 21-25 (Warsaw area codes)
+      const areaCode = 21 + Math.floor(Math.random() * 5); // 21-25
+      const rest = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join('');
+      raw = `0${areaCode}${rest}`;
+    }
+    this.plPhoneResult.set({
+      local: this.formatPlPhone(raw, 'local'),
+      intl:  this.formatPlPhone(raw, 'international'),
+    });
+  }
+  private formatPlPhone(raw: string, fmt: 'local' | 'international'): string {
+    if (fmt === 'local') {
+      return `${raw.slice(0,2)} ${raw.slice(2,5)} ${raw.slice(5,8)} ${raw.slice(8)}`;
+    } else {
+      const digits = raw.slice(1); // strip leading 0 → 48XXXXXXXXX
+      return `+48 ${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5,8)} ${digits.slice(8)}`;
+    }
+  }
+  copyPlPhone(which: 'local' | 'intl') {
+    const r = this.plPhoneResult(); if (!r) return;
+    const text = which === 'local'
+      ? r.local.replace(/\s/g, '')
+      : r.intl.replace(/\s/g, '');
+    navigator.clipboard.writeText(text);
+    this.plPhoneCopied.set(which);
+    setTimeout(() => this.plPhoneCopied.set(null), 1500);
   }
 
   private loadFavs(): Set<string> {
