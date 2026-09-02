@@ -14,9 +14,9 @@ SCP="scp -i $SSH_KEY"
 SKIP_BUILD=false
 [[ "$1" == "--skip-build" ]] && SKIP_BUILD=true
 
-# ── 0. Auto-generate changelog ─────────────────────────────────────────────
-echo "  [0/4] checking for changelog updates..."
-node scripts/generate-changelog.js 2>/dev/null || true
+# ── 0. Auto-generate changelog & version ───────────────────────────────────
+echo "  [0/6] auto-bump version..."
+(cd .. && node scripts/generate-changelog.js)
 
 VERSION=$(node -e "console.log(require('./changelog.json').version)" 2>/dev/null || echo "?")
 
@@ -26,25 +26,32 @@ echo "  ────────────────────────
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 if [ "$SKIP_BUILD" = false ]; then
-  echo "  [1/4] ng build production..."
+  echo "  [1/6] ng build production..."
   ng build --configuration production --base-href / 2>&1 | grep -E 'complete|ERROR|WARNING.*budget' || true
 else
-  echo "  [1/4] skipping build"
+  echo "  [1/6] skipping build"
 fi
 
-# ── 2. Pack dist/ ──────────────────────────────────────────────────────────
-echo "  [2/4] packing dist/..."
+# ── 2. Fix base href in index.html (ng build env workaround) ───────────────
+echo "  [3/5] fixing base href..."
+DIST_INDEX="dist/ver1ff.tools/browser/index.html"
+if [ -f "$DIST_INDEX" ]; then
+  sed -i 's|base href="C:/Program Files/Git/"|base href="/"|g' "$DIST_INDEX"
+fi
+
+# ── 3. Pack dist/ ──────────────────────────────────────────────────────────
+echo "  [4/5] packing dist/..."
 DIST_TMP=$(mktemp /tmp/ver1ff_dist_XXXX.tar.gz)
 tar -czf "$DIST_TMP" dist/
 
-# ── 3. Pack api/ + changelog ───────────────────────────────────────────────
-echo "  [3/4] packing api/ + changelog..."
+# ── 4. Pack api/ + changelog ───────────────────────────────────────────────
+echo "  [4/5] packing api/ + changelog..."
 API_TMP=$(mktemp /tmp/ver1ff_api_XXXX.tar.gz)
 tar --exclude="*/__pycache__" --exclude="*.pyc" --exclude=".env" \
     -czf "$API_TMP" api/ changelog.json
 
-# ── 4. Upload & restart ────────────────────────────────────────────────────
-echo "  [4/4] uploading → restarting..."
+# ── 5. Upload & restart ────────────────────────────────────────────────────
+echo "  [6/6] uploading → restarting..."
 
 $SCP "$DIST_TMP" "$REMOTE:/home/ver1ff/ver1ff_dist.tar.gz"
 $SCP "$API_TMP"  "$REMOTE:/home/ver1ff/ver1ff_api.tar.gz"

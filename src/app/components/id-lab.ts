@@ -86,6 +86,7 @@ const COUNTRIES: Country[] = [
       { id: 'pl_pesel',     icon: '🆔', label: 'PESEL',     desc: 'Polish PESEL number. 11 digits: YYMMDD + 4-digit serial (gender-encoded) + check digit. Weights [1,3,7,9,...].', color: '#e02e2e', tag: 'PESEL' },
       { id: 'pl_doc_dates', icon: '📅', label: 'DOC DATES', desc: 'Generates valid Polish ID card and passport issue/expiry dates. Validity: 5yr (under 12), 10yr (adult).', color: '#ff6b35', tag: 'DOCS' },
       { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
+      { id: 'pl_passport',  icon: '📕', label: 'PL-PASSPORT', desc: 'Polish passport number generator. ICAO 9303 algorithm. Input: issue date → generates series (2 letters) + 7-digit number (control digit + serial). Includes city of issue.', color: '#d81b60', tag: 'PASSPORT' },
       { id: 'mrz_gen', ...MRZ_PP },
     ],
   },
@@ -611,6 +612,49 @@ const FAV_KEY = 'id_lab_favorites';
                       </div>
                     </div>
 
+                  } @else if (t.id === 'pl_passport') {
+                    <!-- Inline PL PASSPORT card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plPassportResult(); as r) {
+                        <div class="doc-dates-block">
+                          <div class="doc-row">
+                            <span class="doc-type">PASSPORT #</span>
+                            <span class="doc-date" style="letter-spacing:1px;color:var(--text-mid)">{{ r.passportNumber }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">SERIES</span>
+                            <span class="doc-date" style="color:var(--text-mid)">{{ r.series }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">ISSUED</span>
+                            <span class="doc-date" [style.color]="t.color">{{ r.issueDate }}</span>
+                          </div>
+                          <div class="doc-row">
+                            <span class="doc-type">CITY</span>
+                            <span class="doc-date" style="color:var(--text-mid)">{{ r.city }} ({{ r.voivodeship }})</span>
+                          </div>
+                        </div>
+                      }
+                      <div class="il-field-row">
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">ISSUE DATE</label>
+                          <input type="date" class="il-input" [(ngModel)]="plPassportDate" />
+                        </div>
+                      </div>
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genPlPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (plPassportResult()) {
+                          <button class="il-btn-sm mono" (click)="copyPlPassport()">{{ plPassportCopied() ? '✓' : 'COPY' }}</button>
+                        }
+                        <button class="il-btn-sm mono" (click)="plPassportResult.set(null)" style="color:#ff3b30">✕</button>
+                      </div>
+                    </div>
+
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
                       <div class="tc-top">
@@ -978,6 +1022,11 @@ export class IdLabComponent implements OnInit {
   plPhoneType         = signal<'MOB' | 'LINE'>('MOB');
   plPhoneResult       = signal<{ local: string; intl: string } | null>(null);
   plPhoneCopied       = signal<'local' | 'intl' | null>(null);
+
+  // PL PASSPORT
+  plPassportDate      = signal<string>('');
+  plPassportResult    = signal<{ passportNumber: string; series: string; issueDate: string; city: string; voivodeship: string } | null>(null);
+  plPassportCopied    = signal<boolean>(false);
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
@@ -1444,6 +1493,171 @@ export class IdLabComponent implements OnInit {
     navigator.clipboard.writeText(text);
     this.plPhoneCopied.set(which);
     setTimeout(() => this.plPhoneCopied.set(null), 1500);
+  }
+
+  // ── PL PASSPORT ────────────────────────────────────────────────────
+  // Polish passport generator based on ICAO 9303 (Modulus 10, weights 7-3-1)
+  // Format: 2 letters (series) + 1 check digit + 6 serial digits = 9 chars total
+  // Series determined by issue date; city randomly selected from Polish database
+
+  private readonly PL_CITIES: { [voivodeship: string]: string[] } = {
+    "Mazowieckie": ["Warszawa", "Piaseczno", "Pruszków", "Piastów", "Konstancin-Jeziorna", "Mokotów", "Ursynów", "Włochy", "Radość", "Wawer", "Łosin", "Sochaczew", "Błonie", "Kozery", "Drewnia"],
+    "Lubelskie": ["Lublin", "Zamość", "Chełm", "Radzyń Podlaski", "Biłgoraj", "Szczebrzeszyn", "Janów Lubelski", "Parczew", "Łucznik", "Opole Lubelskie"],
+    "Podlaskie": ["Białystok", "Grodno", "Suwałki", "Augustów", "Mońki", "Łapy", "Dąbrowa Białostocka", "Krynki", "Kolno", "Sok"],
+    "Pomerskie": ["Gdańsk", "Gdynia", "Sopot", "Tczew", "Słupsk", "Kartuzy", "Koscierzyna", "Elbląg", "Malbork", "Kwidzyn", "Pelplin", "Grudziądz", "Sztum"],
+    "Wielkopolskie": ["Poznań", "Konin", "Kolski", "Leszno", "Ostrów Wielkopolski", "Śrem", "Kalisz", "Pleszew", "Grodziczew", "Jarocin", "Sulejeów", "Wałcz", "Słupca", "Nowy Tomyśl", "Środa Wielkopolska"],
+    "Kuyavsko-Pomorskie": ["Toruń", "Bydgoszcz", "Tuchola", "Włocławek", "Kovalevo", "Radomin", "Lipno", "Radzanów", "Mogilno"],
+    "Warmińsko-Mazurskie": ["Olsztyn", "Elbląg", "Mrągowo", "Kędzierzyn", "Lidzbark Warmiński", "Działdowo", "Bartoszyce", "Giżycko", "Dąbrówno"],
+    "Śląskie": ["Kraków", "Katowice", "Częstochowa", "Bytom", "Zawiercie", "Zabrze", "Jaworzno", "Olkusz", "Wieliczka", "Tarnowskie Góry", "Rybnik", "Racibórz", "Radzionków", "Żory"],
+    "Małopolskie": ["Kraków", "Tarnów", "Nowy Sącz", "Zakopane", "Limanowa", "Muszyna", "Proszowice", "Wieliczka", "Myślenice", "Kęty", "Szczucin", "Tymbark", "Jasło", "Krosno"],
+    "Łódzkie": ["Łódź", "Piotrków Trybunalski", "Zgierz", "Pabianice", "Koluszki", "Ozorków", "Sochaczew", "Łomża", "Andrychów", "Tuszimów"],
+    "Lubuskie": ["Zielona Góra", "Gorzów Wielkopolski", "Żary", "Żagań", "Żelechów"],
+    "Opolskie": ["Opole", "Brzeg", "Strzelce Opolskie", "Otmuchów", "Kozle", "Nysa", "Kędzierzyn-Koźle", "Prudnik", "Krapkowice"],
+    "Podkarpackie": ["Rzeszów", "Przemyśl", "Krosno", "Sanok", "Jasło", "Limanowa", "Łańcut", "Stalowa Wola"],
+    "Zachodniopomorskie": ["Szczecin", "Mikołajki", "Świnoujście", "Darłowo", "Stargard", "Kamień Pomorski", "Goleniów", "Gryfino", "Police"],
+    "Świętokrzyskie": ["Kielce", "Busko-Zdrój", "Starachowice", "Skarżysko-Kamienna", "Końskie", "Jędrzejów", "Pińczów", "Bodzentyn"],
+    "Dolnośląskie": ["Wrocław", "Wałbrzych", "Legnica", "Jelenia Góra", "Żary", "Bolesławiec", "Dzierżoniów", "Świdnica", "Żagań"],
+  };
+
+  private readonly PL_SERIES_TIMELINE: { start: Date; end: Date; series: string }[] = [
+    { start: new Date(2001, 0, 1), end: new Date(2008, 11, 31), series: 'EA' },
+    { start: new Date(2009, 0, 1), end: new Date(2009, 11, 31), series: 'EB' },
+    { start: new Date(2010, 0, 1), end: new Date(2010, 11, 31), series: 'EC' },
+    { start: new Date(2011, 0, 1), end: new Date(2011, 11, 31), series: 'ED' },
+    { start: new Date(2012, 0, 1), end: new Date(2012, 11, 31), series: 'EE' },
+    { start: new Date(2013, 0, 1), end: new Date(2013, 11, 31), series: 'EF' },
+    { start: new Date(2014, 0, 1), end: new Date(2014, 11, 31), series: 'EG' },
+    { start: new Date(2015, 0, 1), end: new Date(2015, 11, 31), series: 'EH' },
+    { start: new Date(2016, 0, 1), end: new Date(2016, 11, 31), series: 'EI' },
+    { start: new Date(2017, 0, 1), end: new Date(2017, 11, 31), series: 'EJ' },
+    { start: new Date(2018, 0, 1), end: new Date(2018, 11, 31), series: 'EK' },
+    { start: new Date(2019, 0, 1), end: new Date(2019, 11, 31), series: 'EL' },
+    { start: new Date(2020, 0, 1), end: new Date(2020, 11, 31), series: 'EN' },
+    { start: new Date(2021, 0, 1), end: new Date(2021, 11, 31), series: 'EP' },
+    { start: new Date(2022, 0, 1), end: new Date(2022, 4, 30), series: 'ER' },
+    { start: new Date(2022, 4, 1), end: new Date(2022, 11, 31), series: 'FA' },
+    { start: new Date(2023, 0, 1), end: new Date(2023, 7, 31), series: 'FC' },
+    { start: new Date(2023, 7, 1), end: new Date(2023, 11, 31), series: 'FD' },
+    { start: new Date(2024, 0, 1), end: new Date(2024, 8, 31), series: 'FE' },
+    { start: new Date(2024, 8, 1), end: new Date(2025, 3, 30), series: 'FG' },
+    { start: new Date(2025, 3, 1), end: new Date(2026, 11, 31), series: 'FH' },
+  ];
+
+  private getSeriesForDate(date: Date): string {
+    for (const timeline of this.PL_SERIES_TIMELINE) {
+      if (date >= timeline.start && date <= timeline.end) {
+        return timeline.series;
+      }
+    }
+    // Fallback: if date is in future or before 2001, extrapolate
+    if (date.getFullYear() >= 2030) return 'GA';
+    if (date.getFullYear() < 2001) return 'EA';
+    return 'FA';
+  }
+
+  private computeCheckDigit(baseStr: string): number {
+    // ICAO 9303: Modulus 10, weights [7, 3, 1] repeating
+    const weights = [7, 3, 1];
+    let sum = 0;
+    for (let i = 0; i < baseStr.length; i++) {
+      const char = baseStr[i];
+      let val: number;
+      if (char >= '0' && char <= '9') {
+        val = parseInt(char, 10);
+      } else if (char >= 'A' && char <= 'Z') {
+        val = char.charCodeAt(0) - 55; // A=10, B=11, ..., Z=35
+      } else {
+        val = 0;
+      }
+      sum += val * weights[i % 3];
+    }
+    return sum % 10;
+  }
+
+  private formatPolishDate(date: Date): string {
+    // Format: DD MAJ/MAY 2024
+    const months = [
+      'STY', 'LUT', 'MAR', 'KWI', 'MAJ', 'CZE',
+      'LIP', 'SIE', 'WRZ', 'PAŹ', 'LIS', 'GRU',
+    ];
+    const monthNames = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+    ];
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    return `${day} ${months[month]}/${monthNames[month]} ${year}`;
+  }
+
+  private getRandomCity(): { city: string; voivodeship: string } {
+    const voivodeships = Object.keys(this.PL_CITIES);
+    const voivodeship = voivodeships[Math.floor(Math.random() * voivodeships.length)];
+    const cities = this.PL_CITIES[voivodeship];
+    const city = cities[Math.floor(Math.random() * cities.length)];
+    return { city, voivodeship };
+  }
+
+  genPlPassport() {
+    const dateStr = this.plPassportDate();
+    if (!dateStr) {
+      alert('Please enter an issue date');
+      return;
+    }
+
+    let issueDate: Date;
+    try {
+      // Parse date: expects format YYYY-MM-DD (from HTML date input)
+      issueDate = new Date(dateStr + 'T00:00:00Z');
+      if (isNaN(issueDate.getTime())) throw new Error('Invalid date');
+    } catch (e) {
+      alert('Invalid date format');
+      return;
+    }
+
+    // Validate date range
+    const minDate = new Date(1980, 0, 1);
+    const maxDate = new Date(2040, 11, 31);
+    if (issueDate < minDate || issueDate > maxDate) {
+      alert('Date must be between 1980-01-01 and 2040-12-31');
+      return;
+    }
+
+    // Get series based on date
+    const series = this.getSeriesForDate(issueDate);
+
+    // Generate 6 random digits
+    const serialDigits = Array.from({ length: 6 }, () =>
+      Math.floor(Math.random() * 10)
+    ).join('');
+
+    // Compute check digit
+    const base = series + serialDigits;
+    const checkDigit = this.computeCheckDigit(base);
+
+    // Assemble passport number: series + check digit + 6 serial digits
+    const passportNumber = `${series}${checkDigit}${serialDigits}`;
+
+    // Get random city
+    const { city, voivodeship } = this.getRandomCity();
+
+    // Format date Polish style
+    const formattedDate = this.formatPolishDate(issueDate);
+
+    this.plPassportResult.set({
+      passportNumber,
+      series,
+      issueDate: formattedDate,
+      city,
+      voivodeship,
+    });
+  }
+
+  copyPlPassport() {
+    const r = this.plPassportResult(); if (!r) return;
+    navigator.clipboard.writeText(r.passportNumber);
+    this.plPassportCopied.set(true);
+    setTimeout(() => this.plPassportCopied.set(false), 1500);
   }
 
   private loadFavs(): Set<string> {
