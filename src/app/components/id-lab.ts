@@ -85,6 +85,9 @@ const COUNTRIES: Country[] = [
     tools: [
       { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
       { id: 'pl_documents', icon: '📋', label: 'POLISH DOCUMENTS', desc: 'Complete Polish document suite: PESEL, passport/ID card numbers, MRZ (TD1/TD3), issue/expiry dates with names.', color: '#d946ef', tag: 'DOCS' },
+      { id: 'pl_nip',       icon: '🆔', label: 'PL-NIP', desc: 'Polish Tax ID (Numer Identyfikacji Podatkowej) - 10-digit number with checksum validation.', color: '#3498db', tag: 'TAX' },
+      { id: 'pl_iban',      icon: '🏦', label: 'PL-IBAN', desc: 'Polish IBAN generator - international bank account number with IBAN checksum.', color: '#2ecc71', tag: 'BANK' },
+      { id: 'pl_regon',     icon: '🏢', label: 'PL-REGON', desc: 'Polish business registration number (REGON) - 9-digit company identifier with checksum.', color: '#f39c12', tag: 'BIZ' },
     ],
   },
   {
@@ -392,6 +395,63 @@ const FAV_KEY = 'id_lab_favorites';
                           </div>
                         </div>
                       }
+                    </div>
+
+                  } @else if (t.id === 'pl_nip') {
+                    <!-- PL NIP card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plNipResult()) {
+                        <div class="tax-result" [style.border-color]="'rgba(52,152,219,0.35)'">
+                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:2px">{{ plNipResult() }}</code>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(52,152,219,0.4)'"
+                            (click)="copyPlNip()">{{ plNipCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                      <button class="tax-btn mono" (click)="genPlNip()" [style.background]="t.color" style="color:#fff">⚡ GEN</button>
+                    </div>
+
+                  } @else if (t.id === 'pl_iban') {
+                    <!-- PL IBAN card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plIbanResult()) {
+                        <div class="tax-result" [style.border-color]="'rgba(46,204,113,0.35)'">
+                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:1px;font-size:0.8rem">{{ plIbanResult() }}</code>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(46,204,113,0.4)'"
+                            (click)="copyPlIban()">{{ plIbanCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                      <button class="tax-btn mono" (click)="genPlIban()" [style.background]="t.color" style="color:#fff">⚡ GEN</button>
+                    </div>
+
+                  } @else if (t.id === 'pl_regon') {
+                    <!-- PL REGON card -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plRegonResult()) {
+                        <div class="tax-result" [style.border-color]="'rgba(243,156,18,0.35)'">
+                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:3px">{{ plRegonResult() }}</code>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(243,156,18,0.4)'"
+                            (click)="copyPlRegon()">{{ plRegonCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                      <button class="tax-btn mono" (click)="genPlRegon()" [style.background]="t.color" style="color:#fff">⚡ GEN</button>
                     </div>
 
                   } @else if (t.id === 'ee_isikukood') {
@@ -1080,6 +1140,18 @@ export class IdLabComponent implements OnInit {
   plDocsResult        = signal<{ pesel: string; passportNum: string; city: string; voivodeship: string; issueDate: string; expiryDate: string; issueDateISO: string; expiryDateISO: string; validity: number; mrzIdCard: string; mrzPassport: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F' } | null>(null);
   plDocsCopied        = signal<'pesel' | 'passport' | 'mrzId' | 'mrzPp' | 'all' | null>(null);
 
+  // PL NIP (Tax ID)
+  plNipResult         = signal<string | null>(null);
+  plNipCopied         = signal(false);
+
+  // PL IBAN
+  plIbanResult        = signal<string | null>(null);
+  plIbanCopied        = signal(false);
+
+  // PL REGON (Company Registration)
+  plRegonResult       = signal<string | null>(null);
+  plRegonCopied       = signal(false);
+
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
     if (code) {
@@ -1711,6 +1783,71 @@ export class IdLabComponent implements OnInit {
       dob,
       gender: this.plDocsGender(),
     });
+  }
+
+  // ── PL NIP (Tax ID) ────────────────────────────────────────────────
+  genPlNip() {
+    const nip = String(Math.floor(Math.random() * 10000000000)).padStart(10, '0');
+    const weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(nip[i]) * weights[i];
+    }
+    const checkDigit = (11 - (sum % 11)) % 10;
+    const fullNip = nip + checkDigit;
+    this.plNipResult.set(fullNip);
+  }
+  copyPlNip() {
+    const v = this.plNipResult();
+    if (!v) return;
+    navigator.clipboard.writeText(v);
+    this.plNipCopied.set(true);
+    setTimeout(() => this.plNipCopied.set(false), 1500);
+  }
+
+  // ── PL IBAN ──────────────────────────────────────────────────────────
+  genPlIban() {
+    // Format: PL + 2 check digits + 8-digit bank code + 16-digit account
+    const bankCode = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+    const accountNum = String(Math.floor(Math.random() * 10000000000000000)).padStart(16, '0');
+    const base = `PL00${bankCode}${accountNum}`;
+
+    // IBAN check digit (mod 97)
+    const rearranged = base.slice(4) + base.slice(0, 4);
+    const numeric = rearranged.replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
+    const remainder = BigInt(numeric) % 97n;
+    const checkDigits = String(98n - remainder).padStart(2, '0');
+
+    const iban = `PL${checkDigits}${bankCode}${accountNum}`;
+    this.plIbanResult.set(iban);
+  }
+  copyPlIban() {
+    const v = this.plIbanResult();
+    if (!v) return;
+    navigator.clipboard.writeText(v);
+    this.plIbanCopied.set(true);
+    setTimeout(() => this.plIbanCopied.set(false), 1500);
+  }
+
+  // ── PL REGON (Company Registration) ────────────────────────────────────
+  genPlRegon() {
+    // 9-digit REGON
+    const regon = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+    const weights = [8, 9, 2, 3, 4, 5, 6, 7];
+    let sum = 0;
+    for (let i = 0; i < 8; i++) {
+      sum += parseInt(regon[i]) * weights[i];
+    }
+    const checkDigit = (11 - (sum % 11)) % 10;
+    const fullRegon = regon + checkDigit;
+    this.plRegonResult.set(fullRegon);
+  }
+  copyPlRegon() {
+    const v = this.plRegonResult();
+    if (!v) return;
+    navigator.clipboard.writeText(v);
+    this.plRegonCopied.set(true);
+    setTimeout(() => this.plRegonCopied.set(false), 1500);
   }
 
   private icaoChecksum(str: string): string {
