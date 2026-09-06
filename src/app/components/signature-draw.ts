@@ -1,4 +1,4 @@
-import { Component, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, signal, viewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -15,6 +15,17 @@ interface Stroke {
   template: `
     <div class="sig-container">
       <div class="sig-tools">
+        <div class="sig-tool-group">
+          <label class="sig-label">SURNAME (AUTO-GEN)</label>
+          <input class="sig-input" type="text"
+            [ngModel]="surname()" (ngModelChange)="surname.set($event)"
+            placeholder="Enter surname for auto-sig"
+            (keyup.enter)="generateSignature()">
+          <button class="sig-btn" (click)="generateSignature()" [disabled]="!surname()" title="Generate signature from surname">
+            ✎ GEN SIG
+          </button>
+        </div>
+
         <div class="sig-tool-group">
           <label class="sig-label">SIZE</label>
           <input class="sig-range" type="range" min="1" max="10"
@@ -135,6 +146,19 @@ interface Stroke {
       font-size: 1rem; line-height: 1;
     }
 
+    .sig-input {
+      padding: 4px 8px; background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(0,255,65,0.3); border-radius: 4px;
+      color: var(--text); font-size: 0.75rem;
+      outline: none; width: 150px;
+    }
+    .sig-input:focus {
+      border-color: rgba(0,255,65,0.6); background: rgba(0,0,0,0.5);
+    }
+    .sig-input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+
     .sig-btn {
       background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.3);
       color: #00ff41; font-size: 0.55rem; font-weight: 700;
@@ -171,11 +195,20 @@ export class SignatureDrawComponent {
   brushSize = signal(3);
   brushColor = signal('#000000');
   previewStroke = signal<Stroke | null>(null);
+  surname = signal('');
 
   svgCanvas = viewChild<ElementRef>('svgCanvas');
 
   private isDrawing = false;
   private currentStroke: Stroke | null = null;
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+      event.preventDefault();
+      this.undo();
+    }
+  }
 
   setBrushSize(val: any) {
     this.brushSize.set(parseInt(val, 10));
@@ -233,6 +266,50 @@ export class SignatureDrawComponent {
 
   formatPoints(points: Array<{ x: number; y: number }>): string {
     return points.map(p => `${p.x},${p.y}`).join(' ');
+  }
+
+  generateSignature() {
+    const sn = this.surname().toUpperCase().trim();
+    if (!sn) return;
+
+    this.clear();
+
+    // Seed random based on surname hash (same input = same base shape, but randomized)
+    const seed = sn.split('').reduce((s, c) => s + c.charCodeAt(0), 0) + Math.random() * 1000;
+    const rng = (min: number, max: number) => min + Math.sin(seed + Math.random()) * (max - min) / 2;
+
+    // Generate cursive-ish strokes
+    const strokeCount = Math.floor(rng(3, 7));
+    const baseY = 150;
+    const baseX = 50;
+    const width = 700;
+
+    for (let s = 0; s < strokeCount; s++) {
+      const stroke: Stroke = {
+        points: [],
+        width: Math.floor(rng(2, 5)),
+        color: Math.random() > 0.8 ? '#444444' : '#000000' // Slight variation
+      };
+
+      const startX = baseX + (s / strokeCount) * width + rng(-30, 30);
+      const startY = baseY + rng(-40, 40);
+      const controlX = startX + rng(50, 150);
+      const controlY = startY + rng(-60, 60);
+      const endX = startX + rng(80, 200);
+      const endY = startY + rng(-30, 80);
+
+      // Bezier curve approximation
+      const steps = Math.floor(rng(20, 40));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const mt = 1 - t;
+        const x = mt * mt * startX + 2 * mt * t * controlX + t * t * endX;
+        const y = mt * mt * startY + 2 * mt * t * controlY + t * t * endY;
+        stroke.points.push({ x: Math.floor(x), y: Math.floor(y) });
+      }
+
+      this.strokes.update(s => [...s, stroke]);
+    }
   }
 
   undo() {
