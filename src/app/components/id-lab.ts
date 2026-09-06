@@ -1660,6 +1660,7 @@ export class IdLabComponent implements OnInit {
 
   private generateMrzIdCard(surname: string, given: string, docNum: string, dob: Date, gender: string, expiry: Date, pesel: string): string {
     // TD1 format (3 lines x 30 chars each) - ICAO 9303
+    // Verified against labeltools.nl/mrzgen.js reference implementation
     const docNumClean = docNum.replace(/[^A-Z0-9]/g, '').substring(0, 9).padEnd(9, '0');
     const surnameClean = surname.replace(/[^A-Z]/g, '').substring(0, 30);
     const givenClean = given.replace(/[^A-Z]/g, '').substring(0, 30);
@@ -1669,24 +1670,29 @@ export class IdLabComponent implements OnInit {
     const dd = String(dob.getDate()).padStart(2, '0');
     const dobStr = `${yy}${mm}${dd}`;
 
-    // Use actual expiry date passed as parameter
     const expYy = String(expiry.getFullYear() % 100).padStart(2, '0');
     const expMm = String(expiry.getMonth() + 1).padStart(2, '0');
     const expDd = String(expiry.getDate()).padStart(2, '0');
     const expStr = `${expYy}${expMm}${expDd}`;
 
     const sexChar = gender === 'M' ? 'M' : 'F';
-
-    // Line 1: I<[Country][Doc number (9)][Check (1)][Padding (15)]
     const docCheck = this.icaoChecksum(docNumClean);
-    const line1 = `I<POL${docNumClean}${docCheck}${'<'.repeat(15)}`;
-
-    // Line 2: [DOB (6)][Check (1)][Sex (1)][Expiry (6)][Check (1)][Issuing Country (3)][PESEL (11)][Check (1)] = 30
     const dobCheck = this.icaoChecksum(dobStr);
     const expCheck = this.icaoChecksum(expStr);
-    const line2Build = `${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}POL${pesel}`;
-    const line2Check = this.icaoChecksum(line2Build);
-    const line2 = `${line2Build}${line2Check}`;
+
+    // Optional data on line 1 (positions after doc+check), clamped to 15 chars - empty here
+    const optData = '<'.repeat(15);
+    const persField = pesel.substring(0, 11).padEnd(11, '<');
+
+    // Line 1: I<[Country(3)][Doc number(9)][Check(1)][Optional data(15)] = 30
+    const line1 = `I<POL${docNumClean}${docCheck}${optData}`;
+
+    // Composite check for line 2's final digit covers: doc+docCheck+optData+birth+birthCheck+expiry+expiryCheck+persField
+    const tdFinal = `${docNumClean}${docCheck}${optData}${dobStr}${dobCheck}${expStr}${expCheck}${persField}`;
+    const finalCheck = this.icaoChecksum(tdFinal);
+
+    // Line 2: [DOB(6)][Check(1)][Sex(1)][Expiry(6)][Check(1)][Nationality(3)][Personal#(11)][Composite check(1)] = 30
+    const line2 = `${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}POL${persField}${finalCheck}`;
 
     // Line 3: [Surname][<<][Firstname][Padding to 30]
     const nameField = `${surnameClean}<<${givenClean}`.substring(0, 29);
@@ -1697,6 +1703,7 @@ export class IdLabComponent implements OnInit {
 
   private generateMrzPassport(surname: string, given: string, docNum: string, dob: Date, gender: string, expiry: Date, pesel: string): string {
     // TD3 format (2 lines x 44 chars each) - ICAO 9303
+    // Verified against labeltools.nl/mrzgen.js reference implementation
     const docNumClean = docNum.replace(/[^A-Z0-9]/g, '').substring(0, 9).padEnd(9, '0');
     const surnameClean = surname.replace(/[^A-Z]/g, '');
     const givenClean = given.replace(/[^A-Z]/g, '');
@@ -1713,18 +1720,24 @@ export class IdLabComponent implements OnInit {
 
     const sexChar = gender === 'M' ? 'M' : 'F';
 
-    // Line 1: P<[Country (3)][Surname<<Firstname (39 total)]
-    const nameField = `${surnameClean}<<${givenClean}`.padEnd(39, '<');
+    // Line 1: P<[Country(3)][Surname<<Firstname, clamped to 39]
+    const nameField = `${surnameClean}<<${givenClean}`.substring(0, 39).padEnd(39, '<');
     const line1 = `P<POL${nameField}`;
 
-    // Line 2: [Doc# (9)][Check (1)][Nationality (3)][DOB (6)][Check (1)][Sex (1)][Expiry (6)][Check (1)][Personal# (11)][Padding (4)][Check (1)] = 44
     const docCheck = this.icaoChecksum(docNumClean);
     const dobCheck = this.icaoChecksum(dobStr);
     const expCheck = this.icaoChecksum(expStr);
-    const personal = pesel.substring(0, 11);
-    const line2Build = `${docNumClean}${docCheck}POL${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}${personal}<<<<`;
-    const line2Check = this.icaoChecksum(line2Build);
-    const line2 = `${line2Build}${line2Check}`;
+
+    // Personal number field is clamped to 14 chars (PESEL + padding) and has its OWN check digit
+    const persField = pesel.substring(0, 14).padEnd(14, '<');
+    const persCheck = this.icaoChecksum(persField);
+
+    // Composite final check covers: doc+docCheck+birth+birthCheck+expiry+expiryCheck+persField+persCheck
+    const mrpFinal = `${docNumClean}${docCheck}${dobStr}${dobCheck}${expStr}${expCheck}${persField}${persCheck}`;
+    const finalCheck = this.icaoChecksum(mrpFinal);
+
+    // Line 2: [Doc#(9)][Check(1)][Nationality(3)][DOB(6)][Check(1)][Sex(1)][Expiry(6)][Check(1)][Personal#(14)][PersCheck(1)][Composite check(1)] = 44
+    const line2 = `${docNumClean}${docCheck}POL${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}${persField}${persCheck}${finalCheck}`;
 
     return `${line1}\n${line2}`;
   }
