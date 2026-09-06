@@ -290,12 +290,18 @@ const FAV_KEY = 'id_lab_favorites';
 
                   } @else if (t.id === 'pl_documents') {
                     <!-- Polish Documents: Full Width -->
-                    <div class="tool-card inline-card mono pl-docs-full-width" [style.--tc]="t.color">
+                    <div class="tool-card inline-card mono pl-docs-full-width" [style.--tc]="t.color" style="position:relative">
                       <div class="tc-top">
                         <span class="tc-icon">{{ t.icon }}</span>
                         <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
                       </div>
                       <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+                      @if (plDocsResult()) {
+                        <button class="pl-copy-all mono" (click)="copyPlDocs('all')" [style.--tc]="t.color"
+                          title="Copy all fields (for parsing)">
+                          {{ plDocsCopied() === 'all' ? '✓ COPIED' : '⧉ COPY ALL' }}
+                        </button>
+                      }
 
                       <!-- All inputs in one row -->
                       <div class="il-field-row">
@@ -340,41 +346,47 @@ const FAV_KEY = 'id_lab_favorites';
 
                       <!-- RESULTS -->
                       @if (plDocsResult(); as r) {
-                        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;font-size:0.8rem">
-                          <!-- Document Numbers + Validity -->
-                          <div style="display:flex;justify-content:space-between;gap:8px">
-                            <div style="flex:1">
-                              <span style="color:var(--text-dim);font-size:0.7rem">PESEL</span>
-                              <div style="color:var(--green);letter-spacing:1px;margin-top:2px;font-size:0.8rem">{{ r.pesel }}</div>
+                        <div class="pl-results">
+                          <!-- Document Numbers + Validity + Issuing Authority -->
+                          <div class="pl-stats-row">
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">PESEL</span>
+                              <div class="pl-stat-val" style="color:var(--green)">{{ r.pesel }}</div>
                               <button class="cp-inline" (click)="copyPlDocs('pesel')" style="font-size:0.6rem;margin-top:2px">⎘</button>
                             </div>
-                            <div style="flex:1">
-                              <span style="color:var(--text-dim);font-size:0.7rem">PASSPORT</span>
-                              <div style="color:#a855f7;letter-spacing:1px;margin-top:2px;font-size:0.8rem">{{ r.passportNum }}</div>
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">PASSPORT</span>
+                              <div class="pl-stat-val" style="color:#c084f3">{{ r.passportNum }}</div>
                               <button class="cp-inline" (click)="copyPlDocs('passport')" style="font-size:0.6rem;margin-top:2px">⎘</button>
                             </div>
-                            <div style="flex:2">
-                              <span style="color:var(--text-dim);font-size:0.7rem">VALIDITY</span>
-                              <div style="display:flex;gap:4px;margin-top:2px;font-size:0.7rem;align-items:center">
+                            <div class="pl-stat pl-stat-wide">
+                              <span class="pl-stat-lbl">VALIDITY</span>
+                              <div class="pl-validity-row">
                                 <code style="color:var(--green);letter-spacing:0.5px">{{ r.issueDate }}</code>
                                 <span style="color:var(--text-dim)">→</span>
-                                <code style="color:#a855f7;letter-spacing:0.5px">{{ r.expiryDate }}</code>
-                                <span style="color:#a855f7">({{ r.validity }}y)</span>
-                                <button class="cp-inline" (click)="copyPlDocs('pesel')" style="font-size:0.55rem;margin-left:auto">⎘</button>
+                                <code style="color:#c084f3;letter-spacing:0.5px">{{ r.expiryDate }}</code>
+                                <span style="color:#c084f3;opacity:0.8">({{ r.validity }}y)</span>
+                              </div>
+                            </div>
+                            <div class="pl-stat pl-stat-wide">
+                              <span class="pl-stat-lbl">ISSUED BY</span>
+                              <div class="pl-validity-row">
+                                <code style="color:var(--text-mid)">{{ r.city }}</code>
+                                <span style="color:var(--text-dim);font-size:0.65rem">· {{ r.voivodeship }}</span>
                               </div>
                             </div>
                           </div>
 
                           <!-- MRZ Blocks (with line breaks) -->
-                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
-                            <div style="border:1px solid rgba(0,255,65,0.2);border-radius:var(--radius-sm);padding:6px;background:rgba(0,255,65,0.04)">
-                              <div style="color:var(--green);font-weight:600;margin-bottom:3px;font-size:0.65rem">ID CARD (TD1)</div>
-                              <code style="letter-spacing:0.4px;line-height:1.6;white-space:pre-wrap;word-break:break-all;display:block;color:rgba(0,255,65,0.6);font-size:0.55rem">{{ r.mrzIdCard }}</code>
+                          <div class="pl-mrz-grid">
+                            <div class="pl-mrz-block pl-mrz-td1">
+                              <div class="pl-mrz-hdr" style="color:var(--green)">ID CARD (TD1)</div>
+                              <code class="pl-mrz-code" style="color:rgba(0,255,65,0.7)">{{ r.mrzIdCard }}</code>
                               <button class="cp-inline" (click)="copyPlDocs('mrzId')" style="margin-top:3px;font-size:0.55rem">{{ plDocsCopied() === 'mrzId' ? '✓' : '⎘' }}</button>
                             </div>
-                            <div style="border:1px solid rgba(192,132,243,0.2);border-radius:var(--radius-sm);padding:6px;background:rgba(192,132,243,0.04)">
-                              <div style="color:#c084f3;font-weight:600;margin-bottom:3px;font-size:0.65rem">PASSPORT (TD3)</div>
-                              <code style="letter-spacing:0.4px;line-height:1.6;white-space:pre-wrap;word-break:break-all;display:block;color:rgba(192,132,243,0.6);font-size:0.55rem">{{ r.mrzPassport }}</code>
+                            <div class="pl-mrz-block pl-mrz-td3">
+                              <div class="pl-mrz-hdr" style="color:#c084f3">PASSPORT (TD3)</div>
+                              <code class="pl-mrz-code" style="color:rgba(192,132,243,0.7)">{{ r.mrzPassport }}</code>
                               <button class="cp-inline" (click)="copyPlDocs('mrzPp')" style="margin-top:3px;font-size:0.55rem">{{ plDocsCopied() === 'mrzPp' ? '✓' : '⎘' }}</button>
                             </div>
                           </div>
@@ -842,6 +854,54 @@ const FAV_KEY = 'id_lab_favorites';
       grid-column: 1 / -1;
     }
 
+    .pl-copy-all {
+      position: absolute; top: 14px; right: 16px;
+      background: rgba(0,0,0,0.5); border: 1px solid var(--tc, var(--green));
+      color: var(--tc, var(--green)); font-size: 0.5rem; font-weight: 800;
+      letter-spacing: 1px; padding: 5px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: 0.15s; font-family: inherit;
+    }
+    .pl-copy-all:hover { background: var(--tc, var(--green)); color: #000; }
+
+    .pl-results {
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem;
+    }
+    .pl-stats-row {
+      display: grid; grid-template-columns: repeat(2, minmax(90px, auto)) 1fr 1fr;
+      gap: 10px;
+    }
+    .pl-stat {
+      background: rgba(0,0,0,0.35); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 10px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .pl-stat-wide { grid-column: span 1; }
+    .pl-stat-lbl { color: var(--text-dim); font-size: 0.6rem; letter-spacing: 1px; }
+    .pl-stat-val { letter-spacing: 1px; font-size: 0.85rem; font-weight: 700; }
+    .pl-validity-row {
+      display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+      font-size: 0.7rem; margin-top: 1px;
+    }
+
+    .pl-mrz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pl-mrz-block {
+      border-radius: var(--radius-sm); padding: 8px 10px;
+    }
+    .pl-mrz-td1 { border: 1px solid rgba(0,255,65,0.22); background: rgba(0,255,65,0.045); }
+    .pl-mrz-td3 { border: 1px solid rgba(192,132,243,0.22); background: rgba(192,132,243,0.045); }
+    .pl-mrz-hdr { font-weight: 700; margin-bottom: 4px; font-size: 0.65rem; letter-spacing: 0.5px; }
+    .pl-mrz-code {
+      letter-spacing: 0.4px; line-height: 1.7; white-space: pre-wrap;
+      word-break: break-all; display: block; font-size: 0.58rem;
+    }
+
+    @media (max-width: 767px) {
+      .pl-stats-row { grid-template-columns: 1fr 1fr; }
+      .pl-mrz-grid { grid-template-columns: 1fr; }
+      .pl-copy-all { position: static; margin-top: 6px; width: 100%; }
+    }
+
     .tax-result {
       display: flex; align-items: center; gap: 8px;
       background: rgba(0,0,0,0.5); border: 1px solid rgba(255,204,0,0.3);
@@ -1017,8 +1077,8 @@ export class IdLabComponent implements OnInit {
   plDocsDob           = signal('');
   plDocsIssueDate     = signal('');
   plDocsGender        = signal<'M' | 'F'>('M');
-  plDocsResult        = signal<{ pesel: string; passportNum: string; city: string; voivodeship: string; issueDate: string; expiryDate: string; validity: number; mrzIdCard: string; mrzPassport: string } | null>(null);
-  plDocsCopied        = signal<'pesel' | 'passport' | 'mrzId' | 'mrzPp' | null>(null);
+  plDocsResult        = signal<{ pesel: string; passportNum: string; city: string; voivodeship: string; issueDate: string; expiryDate: string; issueDateISO: string; expiryDateISO: string; validity: number; mrzIdCard: string; mrzPassport: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F' } | null>(null);
+  plDocsCopied        = signal<'pesel' | 'passport' | 'mrzId' | 'mrzPp' | 'all' | null>(null);
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
@@ -1572,7 +1632,11 @@ export class IdLabComponent implements OnInit {
     const peselCheck = (10 - sum % 10) % 10;
     const pesel = base + peselCheck;
 
-    // 2. Get or generate issue date (min: 18 years after DOB, max: today)
+    // 2. Validity term (5 years for kids < 12, 10 years for adults) - needed before date range calc
+    const validity = age < 12 ? 5 : 10;
+
+    // 3. Get or generate issue date
+    //    Constraints: min 18 years after DOB, max end of 2025, AND expiry (issue+validity) must be >= end of 2027
     const issueStr = this.plDocsIssueDate();
     let issueDate: Date;
 
@@ -1582,23 +1646,25 @@ export class IdLabComponent implements OnInit {
       const [, idd, imm, iyyyy] = im;
       issueDate = new Date(parseInt(iyyyy), parseInt(imm) - 1, parseInt(idd));
     } else {
-      // Random date: 18+ years after DOB to today
-      const minAge = new Date(dobDate);
-      minAge.setFullYear(minAge.getFullYear() + 18);
+      const minIssueByAge = new Date(dobDate);
+      minIssueByAge.setFullYear(minIssueByAge.getFullYear() + 18);
 
-      if (minAge > today) {
-        // Person is not yet 18, use today (edge case)
-        issueDate = today;
-      } else {
-        // Random between 18th birthday and today
-        const minTime = minAge.getTime();
-        const maxTime = today.getTime();
-        const randomTime = minTime + Math.random() * (maxTime - minTime);
-        issueDate = new Date(randomTime);
-      }
+      // Issue date must be old enough that issue+validity reaches at least end of 2027
+      const minIssueByExpiry = new Date(2027, 11, 31);
+      minIssueByExpiry.setFullYear(minIssueByExpiry.getFullYear() - validity);
+
+      const maxIssueDate = new Date(2025, 11, 31);
+
+      let minIssueDate = minIssueByAge > minIssueByExpiry ? minIssueByAge : minIssueByExpiry;
+      if (minIssueDate > maxIssueDate) minIssueDate = maxIssueDate; // edge case: too young for both constraints
+
+      const minTime = minIssueDate.getTime();
+      const maxTime = maxIssueDate.getTime();
+      const randomTime = minTime + Math.random() * (maxTime - minTime);
+      issueDate = new Date(randomTime);
     }
 
-    // 3. Generate passport number
+    // 4. Generate passport number
     const seriesObj = this.PL_SERIES.find(s => issueDate >= s.startDate && issueDate <= s.endDate);
     if (!seriesObj) return;
 
@@ -1608,24 +1674,25 @@ export class IdLabComponent implements OnInit {
     const checkDigit = this.computePlPassportCheck(base2);
     const passportNum = series + checkDigit + serial2;
 
-    // 4. Get random city
+    // 5. Get random city
     const voivodeships = Object.keys(this.PL_CITIES);
     const voivodeship = voivodeships[Math.floor(Math.random() * voivodeships.length)];
     const cities = this.PL_CITIES[voivodeship];
     const city = cities[Math.floor(Math.random() * cities.length)];
 
-    // 5. Calculate expiry (5 years for kids < 12, 10 years for adults)
-    const validity = age < 12 ? 5 : 10;
+    // 6. Calculate expiry
     const expiryDate = new Date(issueDate);
     expiryDate.setFullYear(expiryDate.getFullYear() + validity);
     const issueDateFormatted = this.formatPlPassportDate(issueDate);
     const expiryDateFormatted = this.formatPlPassportDate(expiryDate);
 
-    // 6. Generate MRZ (TD1 and TD3)
+    // 7. Generate MRZ (TD1 and TD3)
     const firstName = this.plDocsFirstName().toUpperCase();
     const lastName = this.plDocsLastName().toUpperCase();
     const mrzIdCard = this.generateMrzIdCard(lastName, firstName, passportNum, dobDate, this.plDocsGender(), expiryDate, pesel);
     const mrzPassport = this.generateMrzPassport(lastName, firstName, passportNum, dobDate, this.plDocsGender(), expiryDate, pesel);
+
+    const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     this.plDocsResult.set({
       pesel,
@@ -1634,9 +1701,15 @@ export class IdLabComponent implements OnInit {
       voivodeship,
       issueDate: issueDateFormatted,
       expiryDate: expiryDateFormatted,
+      issueDateISO: isoDate(issueDate),
+      expiryDateISO: isoDate(expiryDate),
       validity,
       mrzIdCard,
       mrzPassport,
+      firstName,
+      lastName,
+      dob,
+      gender: this.plDocsGender(),
     });
   }
 
@@ -1742,7 +1815,7 @@ export class IdLabComponent implements OnInit {
     return `${line1}\n${line2}`;
   }
 
-  copyPlDocs(which: 'pesel' | 'passport' | 'mrzId' | 'mrzPp') {
+  copyPlDocs(which: 'pesel' | 'passport' | 'mrzId' | 'mrzPp' | 'all') {
     const r = this.plDocsResult();
     if (!r) return;
     let text = '';
@@ -1751,6 +1824,31 @@ export class IdLabComponent implements OnInit {
       case 'passport': text = r.passportNum; break;
       case 'mrzId': text = r.mrzIdCard.replace(/\n/g, ''); break;
       case 'mrzPp': text = r.mrzPassport.replace(/\n/g, ''); break;
+      case 'all': {
+        const td1Lines = r.mrzIdCard.split('\n');
+        const td3Lines = r.mrzPassport.split('\n');
+        text = [
+          `FIRST_NAME: ${r.firstName}`,
+          `LAST_NAME: ${r.lastName}`,
+          `DOB: ${r.dob}`,
+          `SEX: ${r.gender}`,
+          `PESEL: ${r.pesel}`,
+          `PASSPORT_NUM: ${r.passportNum}`,
+          `ISSUE_DATE: ${r.issueDate}`,
+          `EXPIRY_DATE: ${r.expiryDate}`,
+          `ISSUE_DATE_ISO: ${r.issueDateISO}`,
+          `EXPIRY_DATE_ISO: ${r.expiryDateISO}`,
+          `VALIDITY_YEARS: ${r.validity}`,
+          `ISSUING_CITY: ${r.city}`,
+          `ISSUING_VOIVODESHIP: ${r.voivodeship}`,
+          `MRZ_TD1_LINE1: ${td1Lines[0]}`,
+          `MRZ_TD1_LINE2: ${td1Lines[1]}`,
+          `MRZ_TD1_LINE3: ${td1Lines[2]}`,
+          `MRZ_TD3_LINE1: ${td3Lines[0]}`,
+          `MRZ_TD3_LINE2: ${td3Lines[1]}`,
+        ].join('\n');
+        break;
+      }
     }
     navigator.clipboard.writeText(text);
     this.plDocsCopied.set(which);
