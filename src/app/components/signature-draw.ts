@@ -274,41 +274,77 @@ export class SignatureDrawComponent {
 
     this.clear();
 
-    // Seed random based on surname hash (same input = same base shape, but randomized)
-    const seed = sn.split('').reduce((s, c) => s + c.charCodeAt(0), 0) + Math.random() * 1000;
-    const rng = (min: number, max: number) => min + Math.sin(seed + Math.random()) * (max - min) / 2;
+    // Seed based on surname hash
+    const seed = sn.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+    const seededRandom = (index: number) => {
+      const x = Math.sin(seed + index) * 10000;
+      return x - Math.floor(x);
+    };
 
-    // Generate cursive-ish strokes
-    const strokeCount = Math.floor(rng(3, 7));
-    const baseY = 150;
-    const baseX = 50;
-    const width = 700;
+    // Main signature stroke
+    const mainStroke: Stroke = {
+      points: [],
+      width: 3,
+      color: '#000000'
+    };
 
-    for (let s = 0; s < strokeCount; s++) {
-      const stroke: Stroke = {
+    // Generate more complex cursive signature
+    const startX = 80;
+    const startY = 150;
+    const maxX = 750;
+    const maxY = 300;
+
+    // Character-based generation - each letter influences the signature
+    let x = startX;
+    let y = startY;
+    let direction = 0;
+
+    for (let i = 0; i < sn.length * 50 + 100; i++) {
+      const charInfluence = sn.charCodeAt(Math.floor(i / 50) % sn.length) || 65;
+      const phase = (seed + i + charInfluence) / 100;
+
+      // Multi-layered sine waves for organic curves
+      const wave1 = Math.sin(phase * 0.5) * 40;
+      const wave2 = Math.cos(phase * 1.2) * 30;
+      const wave3 = Math.sin(phase * 0.3 + charInfluence / 100) * 50;
+
+      // Add some wobble for authenticity
+      const wobble = Math.sin(phase * 2 + seededRandom(i)) * 15;
+
+      x += (wave1 + wave2 + wobble) * 0.3;
+      y += wave3 * 0.2 + Math.sin(phase * 1.5) * 25;
+
+      // Keep within bounds with slight overshoot
+      if (x > maxX) x = maxX - 50 - Math.abs(wave1);
+      if (x < startX) x = startX + 50;
+      if (y > maxY - 50) y = maxY - 100 + Math.sin(phase) * 30;
+      if (y < startY - 80) y = startY - 40;
+
+      mainStroke.points.push({ x: Math.floor(x), y: Math.floor(y) });
+    }
+
+    this.strokes.update(s => [...s, mainStroke]);
+
+    // Add flourish (decorative line at end)
+    if (Math.random() > 0.4) {
+      const flourish: Stroke = {
         points: [],
-        width: Math.floor(rng(2, 5)),
-        color: Math.random() > 0.8 ? '#444444' : '#000000' // Slight variation
+        width: 2,
+        color: '#1a1a1a'
       };
 
-      const startX = baseX + (s / strokeCount) * width + rng(-30, 30);
-      const startY = baseY + rng(-40, 40);
-      const controlX = startX + rng(50, 150);
-      const controlY = startY + rng(-60, 60);
-      const endX = startX + rng(80, 200);
-      const endY = startY + rng(-30, 80);
+      const flourishStartX = x - 50;
+      const flourishStartY = y + 20;
+      const flourishLength = 100 + seededRandom(sn.length) * 50;
 
-      // Bezier curve approximation
-      const steps = Math.floor(rng(20, 40));
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const mt = 1 - t;
-        const x = mt * mt * startX + 2 * mt * t * controlX + t * t * endX;
-        const y = mt * mt * startY + 2 * mt * t * controlY + t * t * endY;
-        stroke.points.push({ x: Math.floor(x), y: Math.floor(y) });
+      for (let i = 0; i < 30; i++) {
+        const t = i / 30;
+        const fx = flourishStartX + t * flourishLength;
+        const fy = flourishStartY + Math.sin(t * Math.PI * 2) * 15;
+        flourish.points.push({ x: Math.floor(fx), y: Math.floor(fy) });
       }
 
-      this.strokes.update(s => [...s, stroke]);
+      this.strokes.update(s => [...s, flourish]);
     }
   }
 
