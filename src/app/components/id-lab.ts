@@ -83,11 +83,8 @@ const COUNTRIES: Country[] = [
   {
     code: 'POL', iso2: 'pl', mrzCode: 'POL', name: 'Poland',
     tools: [
-      { id: 'pl_pesel',     icon: '🆔', label: 'PESEL',     desc: 'Polish PESEL number. 11 digits: YYMMDD + 4-digit serial (gender-encoded) + check digit. Weights [1,3,7,9,...].', color: '#e02e2e', tag: 'PESEL' },
-      { id: 'pl_doc_dates', icon: '📅', label: 'DOC DATES', desc: 'Generates valid Polish ID card and passport issue/expiry dates. Validity: 5yr (under 12), 10yr (adult).', color: '#ff6b35', tag: 'DOCS' },
       { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
-      { id: 'pl_passport',  icon: '📕', label: 'PL-PASSPORT', desc: 'Polish passport number generator. ICAO 9303 algorithm. Input: issue date → generates series (2 letters) + 7-digit number (control digit + serial). Includes city of issue.', color: '#d81b60', tag: 'PASSPORT' },
-      { id: 'mrz_gen', ...MRZ_PP },
+      { id: 'pl_documents', icon: '📋', label: 'POLISH DOCUMENTS', desc: 'Complete Polish document suite: PESEL, passport/ID card numbers, MRZ (TD1/TD3), issue/expiry dates with names.', color: '#d946ef', tag: 'DOCS' },
     ],
   },
   {
@@ -291,77 +288,98 @@ const FAV_KEY = 'id_lab_favorites';
                       </button>
                     </div>
 
-                  } @else if (t.id === 'pl_pesel') {
-                    <!-- Inline PL PESEL card -->
-                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
+                  } @else if (t.id === 'pl_documents') {
+                    <!-- Polish Documents: Full Width -->
+                    <div class="tool-card inline-card mono pl-docs-full-width" [style.--tc]="t.color">
                       <div class="tc-top">
                         <span class="tc-icon">{{ t.icon }}</span>
                         <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
                       </div>
                       <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (peselResult()) {
-                        <div class="tax-result" [style.border-color]="'rgba(224,46,46,0.35)'">
-                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:3px">{{ peselResult() }}</code>
-                          <button class="tax-copy mono" [style.color]="t.color"
-                            [style.border-color]="'rgba(224,46,46,0.4)'"
-                            (click)="copyPesel()">{{ peselCopied() ? '✓' : 'CPY' }}</button>
-                        </div>
-                      }
+
+                      <!-- All inputs in one row -->
                       <div class="il-field-row">
                         <div class="il-field">
+                          <label class="il-lbl">FIRST NAME</label>
+                          <input class="il-inp" [ngModel]="plDocsFirstName()" (ngModelChange)="plDocsFirstName.set($event)"
+                            placeholder="John" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">LAST NAME</label>
+                          <input class="il-inp" [ngModel]="plDocsLastName()" (ngModelChange)="plDocsLastName.set($event)"
+                            placeholder="Smith" autocomplete="off">
+                        </div>
+                        <div class="il-field">
                           <label class="il-lbl">DOB (DD-MM-YYYY)</label>
-                          <input class="il-inp" [ngModel]="peselDob()" (ngModelChange)="peselDob.set($event)"
+                          <input class="il-inp" [ngModel]="plDocsDob()" (ngModelChange)="plDocsDob.set($event)"
                             placeholder="01-01-1990" maxlength="10" autocomplete="off">
                         </div>
                         <div class="il-field il-field-sm">
                           <label class="il-lbl">SEX</label>
                           <div class="il-sex">
-                            @for (g of ['M','F']; track g) {
-                              <button class="il-sex-btn" [class.active]="peselGender() === g"
-                                [style.--sc]="t.color" (click)="peselGender.set(g === 'M' ? 'M' : 'F')">{{ g }}</button>
-                            }
+                            <button class="il-sex-btn" [class.active]="plDocsGender() === 'M'"
+                              [style.--sc]="t.color" (click)="plDocsGender.set('M')">♂️ M</button>
+                            <button class="il-sex-btn" [class.active]="plDocsGender() === 'F'"
+                              [style.--sc]="t.color" (click)="plDocsGender.set('F')">♀️ F</button>
                           </div>
                         </div>
+                        <div class="il-field">
+                          <label class="il-lbl">ISSUE (OPT)</label>
+                          <input class="il-inp" [ngModel]="plDocsIssueDate()" (ngModelChange)="plDocsIssueDate.set($event)"
+                            placeholder="DD-MM-YYYY" maxlength="10" autocomplete="off">
+                        </div>
                       </div>
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genPesel()" [style.background]="t.color" style="flex:2">⚡ GEN</button>
-                        <button class="il-btn-sm mono" (click)="randomPesel()">⚄</button>
-                        <button class="il-btn-sm mono" (click)="clearPesel()" style="color:#ff3b30">✕</button>
-                      </div>
-                    </div>
 
-                  } @else if (t.id === 'pl_doc_dates') {
-                    <!-- Inline PL DOC DATES card -->
-                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
-                      <div class="tc-top">
-                        <span class="tc-icon">{{ t.icon }}</span>
-                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      <!-- Buttons -->
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genPlDocuments()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (plDocsResult()) {
+                          <button class="il-btn-sm mono" (click)="plDocsResult.set(null)" style="color:#ff3b30">✕</button>
+                        }
                       </div>
-                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (docResult(); as r) {
-                        <div class="doc-dates-block">
-                          <div class="doc-row">
-                            <span class="doc-type">🪪 ID CARD ({{ r.idYrs }}yr)</span>
-                            <span class="doc-date">{{ r.idIssue }} → <strong>{{ r.idExpiry }}</strong></span>
+
+                      <!-- RESULTS -->
+                      @if (plDocsResult(); as r) {
+                        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;font-size:0.8rem">
+                          <!-- Document Numbers + Validity -->
+                          <div style="display:flex;justify-content:space-between;gap:8px">
+                            <div style="flex:1">
+                              <span style="color:var(--text-dim);font-size:0.7rem">PESEL</span>
+                              <div style="color:var(--green);letter-spacing:1px;margin-top:2px;font-size:0.8rem">{{ r.pesel }}</div>
+                              <button class="cp-inline" (click)="copyPlDocs('pesel')" style="font-size:0.6rem;margin-top:2px">⎘</button>
+                            </div>
+                            <div style="flex:1">
+                              <span style="color:var(--text-dim);font-size:0.7rem">PASSPORT</span>
+                              <div style="color:#a855f7;letter-spacing:1px;margin-top:2px;font-size:0.8rem">{{ r.passportNum }}</div>
+                              <button class="cp-inline" (click)="copyPlDocs('passport')" style="font-size:0.6rem;margin-top:2px">⎘</button>
+                            </div>
+                            <div style="flex:2">
+                              <span style="color:var(--text-dim);font-size:0.7rem">VALIDITY</span>
+                              <div style="display:flex;gap:4px;margin-top:2px;font-size:0.7rem;align-items:center">
+                                <code style="color:var(--green);letter-spacing:0.5px">{{ r.issueDate }}</code>
+                                <span style="color:var(--text-dim)">→</span>
+                                <code style="color:#a855f7;letter-spacing:0.5px">{{ r.expiryDate }}</code>
+                                <span style="color:#a855f7">({{ r.validity }}y)</span>
+                                <button class="cp-inline" (click)="copyPlDocs('pesel')" style="font-size:0.55rem;margin-left:auto">⎘</button>
+                              </div>
+                            </div>
                           </div>
-                          <div class="doc-row">
-                            <span class="doc-type">📕 PASSPORT ({{ r.ppYrs }}yr)</span>
-                            <span class="doc-date">{{ r.ppIssue }} → <strong>{{ r.ppExpiry }}</strong></span>
+
+                          <!-- MRZ Blocks (with line breaks) -->
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+                            <div style="border:1px solid rgba(0,255,65,0.2);border-radius:var(--radius-sm);padding:6px;background:rgba(0,255,65,0.04)">
+                              <div style="color:var(--green);font-weight:600;margin-bottom:3px;font-size:0.65rem">ID CARD (TD1)</div>
+                              <code style="letter-spacing:0.4px;line-height:1.6;white-space:pre-wrap;word-break:break-all;display:block;color:rgba(0,255,65,0.6);font-size:0.55rem">{{ r.mrzIdCard }}</code>
+                              <button class="cp-inline" (click)="copyPlDocs('mrzId')" style="margin-top:3px;font-size:0.55rem">{{ plDocsCopied() === 'mrzId' ? '✓' : '⎘' }}</button>
+                            </div>
+                            <div style="border:1px solid rgba(192,132,243,0.2);border-radius:var(--radius-sm);padding:6px;background:rgba(192,132,243,0.04)">
+                              <div style="color:#c084f3;font-weight:600;margin-bottom:3px;font-size:0.65rem">PASSPORT (TD3)</div>
+                              <code style="letter-spacing:0.4px;line-height:1.6;white-space:pre-wrap;word-break:break-all;display:block;color:rgba(192,132,243,0.6);font-size:0.55rem">{{ r.mrzPassport }}</code>
+                              <button class="cp-inline" (click)="copyPlDocs('mrzPp')" style="margin-top:3px;font-size:0.55rem">{{ plDocsCopied() === 'mrzPp' ? '✓' : '⎘' }}</button>
+                            </div>
                           </div>
                         </div>
                       }
-                      <div class="il-field">
-                        <label class="il-lbl">DOB (DD-MM-YYYY)</label>
-                        <input class="il-inp" [ngModel]="docDob()" (ngModelChange)="docDob.set($event)"
-                          placeholder="01-01-1990" maxlength="10" autocomplete="off">
-                      </div>
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genDocDates()" [style.background]="t.color" style="flex:2">⚡ GEN</button>
-                        <button class="il-btn-sm mono" (click)="randomDocDob()">⚄</button>
-                        @if (docResult()) {
-                          <button class="il-btn-sm mono" (click)="copyDoc()">{{ docCopied() ? '✓' : '⎘' }}</button>
-                        }
-                      </div>
                     </div>
 
                   } @else if (t.id === 'ee_isikukood') {
@@ -572,26 +590,16 @@ const FAV_KEY = 'id_lab_favorites';
                     </div>
 
                   } @else if (t.id === 'pl_phone') {
-                    <!-- Inline PL PHONE card -->
+                    <!-- Polish Phone Generator -->
                     <div class="tool-card inline-card mono" [style.--tc]="t.color">
                       <div class="tc-top">
                         <span class="tc-icon">{{ t.icon }}</span>
                         <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
                       </div>
                       <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (plPhoneResult(); as r) {
-                        <div class="doc-dates-block">
-                          <div class="doc-row">
-                            <span class="doc-type">LOCAL</span>
-                            <span class="doc-date" style="letter-spacing:1.5px;color:var(--text-mid)">{{ r.local }}</span>
-                          </div>
-                          <div class="doc-row">
-                            <span class="doc-type">INTERNATIONAL</span>
-                            <span class="doc-date" [style.color]="t.color" style="letter-spacing:1px">{{ r.intl }}</span>
-                          </div>
-                        </div>
-                      }
-                      <div class="il-field-row" style="gap:6px">
+
+                      <!-- TYPE SELECTOR -->
+                      <div class="il-field-row">
                         <div class="il-field il-field-sm">
                           <label class="il-lbl">TYPE</label>
                           <div class="il-sex">
@@ -602,59 +610,33 @@ const FAV_KEY = 'id_lab_favorites';
                           </div>
                         </div>
                       </div>
+
+                      <!-- BUTTON -->
                       <div class="il-btn-row">
                         <button class="tax-btn mono" (click)="genPlPhone()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
                         @if (plPhoneResult()) {
-                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyPlPhone('local')">{{ plPhoneCopied() === 'local' ? '✓' : 'LOC' }}</button>
-                          <button class="il-btn-sm mono" style="font-size:0.42rem;min-width:38px" (click)="copyPlPhone('intl')">{{ plPhoneCopied() === 'intl' ? '✓' : '+48' }}</button>
+                          <button class="il-btn-sm mono" (click)="plPhoneResult.set(null)" style="color:#ff3b30">✕</button>
                         }
-                        <button class="il-btn-sm mono" (click)="plPhoneResult.set(null)" style="color:#ff3b30">✕</button>
                       </div>
-                    </div>
 
-                  } @else if (t.id === 'pl_passport') {
-                    <!-- Inline PL PASSPORT card -->
-                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
-                      <div class="tc-top">
-                        <span class="tc-icon">{{ t.icon }}</span>
-                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
-                      </div>
-                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (plPassportResult(); as r) {
-                        <div class="doc-dates-block">
-                          <div class="doc-row">
-                            <span class="doc-type">PASSPORT #</span>
-                            <span class="doc-date" style="letter-spacing:1px;color:var(--text-mid)">{{ r.passportNumber }}</span>
+                      <!-- RESULT -->
+                      @if (plPhoneResult(); as r) {
+                        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.8rem;display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;justify-content:space-between;align-items:center">
+                            <span style="color:var(--text-dim)">LOCAL</span>
+                            <code style="letter-spacing:1px;color:var(--text)">{{ r.local }}</code>
+                            <button class="cp-inline" (click)="copyPlPhone('local')" style="font-size:0.6rem">{{ plPhoneCopied() === 'local' ? '✓' : '⎘' }}</button>
                           </div>
-                          <div class="doc-row">
-                            <span class="doc-type">SERIES</span>
-                            <span class="doc-date" style="color:var(--text-mid)">{{ r.series }}</span>
-                          </div>
-                          <div class="doc-row">
-                            <span class="doc-type">ISSUED</span>
-                            <span class="doc-date" [style.color]="t.color">{{ r.issueDate }}</span>
-                          </div>
-                          <div class="doc-row">
-                            <span class="doc-type">CITY</span>
-                            <span class="doc-date" style="color:var(--text-mid)">{{ r.city }} ({{ r.voivodeship }})</span>
+                          <div style="display:flex;justify-content:space-between;align-items:center">
+                            <span style="color:var(--text-dim)">INTL</span>
+                            <code [style.color]="t.color" style="letter-spacing:1px">{{ r.intl }}</code>
+                            <button class="cp-inline" (click)="copyPlPhone('intl')" style="font-size:0.6rem">{{ plPhoneCopied() === 'intl' ? '✓' : '⎘' }}</button>
                           </div>
                         </div>
                       }
-                      <div class="il-field-row">
-                        <div class="il-field il-field-sm">
-                          <label class="il-lbl">ISSUE DATE</label>
-                          <input type="date" class="il-input" [(ngModel)]="plPassportDate" />
-                        </div>
-                      </div>
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genPlPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
-                        @if (plPassportResult()) {
-                          <button class="il-btn-sm mono" (click)="copyPlPassport()">{{ plPassportCopied() ? '✓' : 'COPY' }}</button>
-                        }
-                        <button class="il-btn-sm mono" (click)="plPassportResult.set(null)" style="color:#ff3b30">✕</button>
-                      </div>
                     </div>
 
+                  } @else if (t.id === 'pl_passport') {
                   } @else {
                     <button class="tool-card mono" [style.--tc]="t.color" (click)="open(t, country)">
                       <div class="tc-top">
@@ -807,30 +789,31 @@ const FAV_KEY = 'id_lab_favorites';
     /* Tool cards grid */
     .tool-grid {
       padding: 20px; display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 14px; overflow-y: auto;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px; overflow-y: auto;
     }
 
     .tool-card {
-      display: flex; flex-direction: column; gap: 10px;
-      padding: 18px 20px;
-      background: rgba(0,0,0,0.4);
-      border: 1px solid color-mix(in srgb, var(--tc) 20%, var(--border));
-      border-radius: var(--radius);
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 24px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
       cursor: pointer; text-align: left;
-      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       position: relative; overflow: hidden;
     }
     .tool-card::before {
       content: '';
       position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--tc), transparent);
-      opacity: 0.5;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tc) 40%), transparent);
+      opacity: 0.4;
     }
     .tool-card:hover {
-      border-color: var(--tc);
-      background: color-mix(in srgb, var(--tc) 6%, rgba(0,0,0,0.4));
-      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--tc) 30%, rgba(255,255,255,0.08));
+      background: rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--tc) 10%, transparent);
+      transform: translateY(-2px);
     }
 
     .tc-top { display: flex; align-items: center; justify-content: space-between; }
@@ -853,6 +836,11 @@ const FAV_KEY = 'id_lab_favorites';
     /* Inline tax card */
     .inline-card { cursor: default; }
     .inline-card:hover { transform: none; }
+
+    /* Polish Documents - full width */
+    .pl-docs-full-width {
+      grid-column: 1 / -1;
+    }
 
     .tax-result {
       display: flex; align-items: center; gap: 8px;
@@ -900,7 +888,7 @@ const FAV_KEY = 'id_lab_favorites';
       outline: none; transition: border-color 0.15s;
     }
     .il-inp:focus { border-color: var(--tc); }
-    .il-inp::placeholder { color: rgba(255,255,255,0.1); font-family: inherit; }
+    .il-inp::placeholder { color: rgba(255,255,255,0.5); font-family: inherit; }
     .il-sex { display: flex; gap: 4px; }
     .il-sex-btn {
       padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1023,10 +1011,14 @@ export class IdLabComponent implements OnInit {
   plPhoneResult       = signal<{ local: string; intl: string } | null>(null);
   plPhoneCopied       = signal<'local' | 'intl' | null>(null);
 
-  // PL PASSPORT
-  plPassportDate      = signal<string>('');
-  plPassportResult    = signal<{ passportNumber: string; series: string; issueDate: string; city: string; voivodeship: string } | null>(null);
-  plPassportCopied    = signal<boolean>(false);
+  // PL DOCUMENTS (unified)
+  plDocsFirstName     = signal('');
+  plDocsLastName      = signal('');
+  plDocsDob           = signal('');
+  plDocsIssueDate     = signal('');
+  plDocsGender        = signal<'M' | 'F'>('M');
+  plDocsResult        = signal<{ pesel: string; passportNum: string; city: string; voivodeship: string; issueDate: string; expiryDate: string; validity: number; mrzIdCard: string; mrzPassport: string } | null>(null);
+  plDocsCopied        = signal<'pesel' | 'passport' | 'mrzId' | 'mrzPp' | null>(null);
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
@@ -1479,7 +1471,8 @@ export class IdLabComponent implements OnInit {
   }
   private formatPlPhone(raw: string, fmt: 'local' | 'international'): string {
     if (fmt === 'local') {
-      return `${raw.slice(0,2)} ${raw.slice(2,5)} ${raw.slice(5,8)} ${raw.slice(8)}`;
+      // без лидирующего 0: 5X XXX XXX XX
+      return `${raw.slice(1,3)} ${raw.slice(3,6)} ${raw.slice(6,9)} ${raw.slice(9)}`;
     } else {
       const digits = raw.slice(1); // strip leading 0 → 48XXXXXXXXX
       return `+48 ${digits.slice(0,2)} ${digits.slice(2,5)} ${digits.slice(5,8)} ${digits.slice(8)}`;
@@ -1495,169 +1488,288 @@ export class IdLabComponent implements OnInit {
     setTimeout(() => this.plPhoneCopied.set(null), 1500);
   }
 
-  // ── PL PASSPORT ────────────────────────────────────────────────────
-  // Polish passport generator based on ICAO 9303 (Modulus 10, weights 7-3-1)
-  // Format: 2 letters (series) + 1 check digit + 6 serial digits = 9 chars total
-  // Series determined by issue date; city randomly selected from Polish database
-
-  private readonly PL_CITIES: { [voivodeship: string]: string[] } = {
-    "Mazowieckie": ["Warszawa", "Piaseczno", "Pruszków", "Piastów", "Konstancin-Jeziorna", "Mokotów", "Ursynów", "Włochy", "Radość", "Wawer", "Łosin", "Sochaczew", "Błonie", "Kozery", "Drewnia"],
-    "Lubelskie": ["Lublin", "Zamość", "Chełm", "Radzyń Podlaski", "Biłgoraj", "Szczebrzeszyn", "Janów Lubelski", "Parczew", "Łucznik", "Opole Lubelskie"],
-    "Podlaskie": ["Białystok", "Grodno", "Suwałki", "Augustów", "Mońki", "Łapy", "Dąbrowa Białostocka", "Krynki", "Kolno", "Sok"],
-    "Pomerskie": ["Gdańsk", "Gdynia", "Sopot", "Tczew", "Słupsk", "Kartuzy", "Koscierzyna", "Elbląg", "Malbork", "Kwidzyn", "Pelplin", "Grudziądz", "Sztum"],
-    "Wielkopolskie": ["Poznań", "Konin", "Kolski", "Leszno", "Ostrów Wielkopolski", "Śrem", "Kalisz", "Pleszew", "Grodziczew", "Jarocin", "Sulejeów", "Wałcz", "Słupca", "Nowy Tomyśl", "Środa Wielkopolska"],
-    "Kuyavsko-Pomorskie": ["Toruń", "Bydgoszcz", "Tuchola", "Włocławek", "Kovalevo", "Radomin", "Lipno", "Radzanów", "Mogilno"],
-    "Warmińsko-Mazurskie": ["Olsztyn", "Elbląg", "Mrągowo", "Kędzierzyn", "Lidzbark Warmiński", "Działdowo", "Bartoszyce", "Giżycko", "Dąbrówno"],
-    "Śląskie": ["Kraków", "Katowice", "Częstochowa", "Bytom", "Zawiercie", "Zabrze", "Jaworzno", "Olkusz", "Wieliczka", "Tarnowskie Góry", "Rybnik", "Racibórz", "Radzionków", "Żory"],
-    "Małopolskie": ["Kraków", "Tarnów", "Nowy Sącz", "Zakopane", "Limanowa", "Muszyna", "Proszowice", "Wieliczka", "Myślenice", "Kęty", "Szczucin", "Tymbark", "Jasło", "Krosno"],
-    "Łódzkie": ["Łódź", "Piotrków Trybunalski", "Zgierz", "Pabianice", "Koluszki", "Ozorków", "Sochaczew", "Łomża", "Andrychów", "Tuszimów"],
-    "Lubuskie": ["Zielona Góra", "Gorzów Wielkopolski", "Żary", "Żagań", "Żelechów"],
-    "Opolskie": ["Opole", "Brzeg", "Strzelce Opolskie", "Otmuchów", "Kozle", "Nysa", "Kędzierzyn-Koźle", "Prudnik", "Krapkowice"],
-    "Podkarpackie": ["Rzeszów", "Przemyśl", "Krosno", "Sanok", "Jasło", "Limanowa", "Łańcut", "Stalowa Wola"],
-    "Zachodniopomorskie": ["Szczecin", "Mikołajki", "Świnoujście", "Darłowo", "Stargard", "Kamień Pomorski", "Goleniów", "Gryfino", "Police"],
-    "Świętokrzyskie": ["Kielce", "Busko-Zdrój", "Starachowice", "Skarżysko-Kamienna", "Końskie", "Jędrzejów", "Pińczów", "Bodzentyn"],
-    "Dolnośląskie": ["Wrocław", "Wałbrzych", "Legnica", "Jelenia Góra", "Żary", "Bolesławiec", "Dzierżoniów", "Świdnica", "Żagań"],
+  // ── PL PASSPORT ──────────────────────────────────────────────────
+  // ICAO 9303 format: AA + 7 digits + check digit (MOD-10)
+  // Series timeline based on Guard's passport dumps (2001-2027)
+  private readonly PL_CITIES: { [k: string]: string[] } = {
+    'Lower Silesia': ['Wrocław', 'Wałbrzych', 'Legnica', 'Jawor', 'Świdnica'],
+    'Greater Poland': ['Poznań', 'Kalisz', 'Konin', 'Leszno', 'Piła'],
+    'Pomerania': ['Gdańsk', 'Gdynia', 'Sopot', 'Tczew', 'Elbląg'],
+    'Silesia': ['Katowice', 'Kraków', 'Sosnowiec', 'Dąbrowa Górnicza', 'Zabrze'],
+    'Subcarpathia': ['Rzeszów', 'Tarnobrzeg', 'Krosno', 'Sanok', 'Łańcut'],
+    'Lublin': ['Lublin', 'Biała Podlaska', 'Chełm', 'Tomaszów Lubelski', 'Radzyń Podlaski'],
+    'Łódź': ['Łódź', 'Piotrków Trybunalski', 'Sieradz', 'Skierniewice', 'Zduńska Wola'],
+    'Holy Cross': ['Kielce', 'Ostrowiec Świętokrzyski', 'Konskie', 'Skarżysko-Kamienna', 'Starachowice'],
+    'Masovia': ['Warsaw', 'Radom', 'Siedlce', 'Ostrołęka', 'Piaseczno'],
+    'Warmia-Masuria': ['Olsztyn', 'Elbląg', 'Grudziądz', 'Iława', 'Mława'],
+    'West Pomerania': ['Szczecin', 'Świnoujście', 'Stargard', 'Kamień Pomorski', 'Police'],
+    'Podlaskie': ['Białystok', 'Suwałki', 'Grajewo', 'Łomża', 'Sokółka'],
+    'Opole': ['Opole', 'Nysa', 'Brzeg', 'Kluczbork', 'Ozimek'],
+    'Małopolska': ['Kraków', 'Tarnów', 'Nowy Sącz', 'Proszowice', 'Niepołomice'],
   };
 
-  private readonly PL_SERIES_TIMELINE: { start: Date; end: Date; series: string }[] = [
-    { start: new Date(2001, 0, 1), end: new Date(2008, 11, 31), series: 'EA' },
-    { start: new Date(2009, 0, 1), end: new Date(2009, 11, 31), series: 'EB' },
-    { start: new Date(2010, 0, 1), end: new Date(2010, 11, 31), series: 'EC' },
-    { start: new Date(2011, 0, 1), end: new Date(2011, 11, 31), series: 'ED' },
-    { start: new Date(2012, 0, 1), end: new Date(2012, 11, 31), series: 'EE' },
-    { start: new Date(2013, 0, 1), end: new Date(2013, 11, 31), series: 'EF' },
-    { start: new Date(2014, 0, 1), end: new Date(2014, 11, 31), series: 'EG' },
-    { start: new Date(2015, 0, 1), end: new Date(2015, 11, 31), series: 'EH' },
-    { start: new Date(2016, 0, 1), end: new Date(2016, 11, 31), series: 'EI' },
-    { start: new Date(2017, 0, 1), end: new Date(2017, 11, 31), series: 'EJ' },
-    { start: new Date(2018, 0, 1), end: new Date(2018, 11, 31), series: 'EK' },
-    { start: new Date(2019, 0, 1), end: new Date(2019, 11, 31), series: 'EL' },
-    { start: new Date(2020, 0, 1), end: new Date(2020, 11, 31), series: 'EN' },
-    { start: new Date(2021, 0, 1), end: new Date(2021, 11, 31), series: 'EP' },
-    { start: new Date(2022, 0, 1), end: new Date(2022, 4, 30), series: 'ER' },
-    { start: new Date(2022, 4, 1), end: new Date(2022, 11, 31), series: 'FA' },
-    { start: new Date(2023, 0, 1), end: new Date(2023, 7, 31), series: 'FC' },
-    { start: new Date(2023, 7, 1), end: new Date(2023, 11, 31), series: 'FD' },
-    { start: new Date(2024, 0, 1), end: new Date(2024, 8, 31), series: 'FE' },
-    { start: new Date(2024, 8, 1), end: new Date(2025, 3, 30), series: 'FG' },
-    { start: new Date(2025, 3, 1), end: new Date(2026, 11, 31), series: 'FH' },
+  private readonly PL_SERIES: { startDate: Date; endDate: Date; series: string }[] = [
+    // E-эпоха (2001-2022)
+    { startDate: new Date(2001, 0, 1), endDate: new Date(2008, 11, 31), series: 'EA' },
+    { startDate: new Date(2009, 0, 1), endDate: new Date(2009, 11, 31), series: 'EB' },
+    { startDate: new Date(2010, 0, 1), endDate: new Date(2010, 11, 31), series: 'EC' },
+    { startDate: new Date(2011, 0, 1), endDate: new Date(2011, 11, 31), series: 'ED' },
+    { startDate: new Date(2012, 0, 1), endDate: new Date(2012, 11, 31), series: 'EE' },
+    { startDate: new Date(2013, 0, 1), endDate: new Date(2013, 11, 31), series: 'EF' },
+    { startDate: new Date(2014, 0, 1), endDate: new Date(2014, 11, 31), series: 'EG' },
+    { startDate: new Date(2015, 0, 1), endDate: new Date(2015, 11, 31), series: 'EH' },
+    { startDate: new Date(2016, 0, 1), endDate: new Date(2016, 11, 31), series: 'EI' },
+    { startDate: new Date(2017, 0, 1), endDate: new Date(2017, 11, 31), series: 'EJ' },
+    { startDate: new Date(2018, 0, 1), endDate: new Date(2018, 11, 31), series: 'EK' },
+    { startDate: new Date(2019, 0, 1), endDate: new Date(2019, 4, 14), series: 'EL' },
+    { startDate: new Date(2019, 4, 15), endDate: new Date(2021, 11, 31), series: 'ES' }, // guard dump
+    // NOTE: EM overlapped with ES in original data, removed to avoid collision
+    { startDate: new Date(2020, 0, 1), endDate: new Date(2020, 11, 31), series: 'EN' },
+    { startDate: new Date(2021, 0, 1), endDate: new Date(2021, 11, 31), series: 'EP' },
+    { startDate: new Date(2022, 0, 1), endDate: new Date(2022, 3, 30), series: 'ER' },
+    // F-эпоха (2022-2025+)
+    { startDate: new Date(2022, 4, 1), endDate: new Date(2022, 11, 31), series: 'FA' },
+    { startDate: new Date(2023, 0, 1), endDate: new Date(2023, 0, 15), series: 'FB' },
+    { startDate: new Date(2023, 0, 16), endDate: new Date(2023, 7, 30), series: 'FC' },
+    { startDate: new Date(2023, 7, 31), endDate: new Date(2023, 11, 31), series: 'FD' },
+    { startDate: new Date(2024, 0, 1), endDate: new Date(2024, 7, 31), series: 'FE' },
+    { startDate: new Date(2024, 8, 1), endDate: new Date(2025, 3, 30), series: 'FG' },
+    { startDate: new Date(2025, 4, 1), endDate: new Date(2025, 11, 31), series: 'FH' },
+    { startDate: new Date(2026, 0, 1), endDate: new Date(2026, 11, 31), series: 'FI' },
+    { startDate: new Date(2027, 0, 1), endDate: new Date(2027, 11, 31), series: 'FJ' },
   ];
 
-  private getSeriesForDate(date: Date): string {
-    for (const timeline of this.PL_SERIES_TIMELINE) {
-      if (date >= timeline.start && date <= timeline.end) {
-        return timeline.series;
-      }
-    }
-    // Fallback: if date is in future or before 2001, extrapolate
-    if (date.getFullYear() >= 2030) return 'GA';
-    if (date.getFullYear() < 2001) return 'EA';
-    return 'FA';
-  }
+  // ── PL DOCUMENTS (unified) ──────────────────────────────────────
+  genPlDocuments() {
+    const dob = this.plDocsDob();
+    const m = dob.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (!m) return;
 
-  private computeCheckDigit(baseStr: string): number {
-    // ICAO 9303: Modulus 10, weights [7, 3, 1] repeating
-    const weights = [7, 3, 1];
-    let sum = 0;
-    for (let i = 0; i < baseStr.length; i++) {
-      const char = baseStr[i];
-      let val: number;
-      if (char >= '0' && char <= '9') {
-        val = parseInt(char, 10);
-      } else if (char >= 'A' && char <= 'Z') {
-        val = char.charCodeAt(0) - 55; // A=10, B=11, ..., Z=35
+    const [, dd, mm, yyyy] = m;
+    const dobDate = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+    const today = new Date();
+    const age = today.getFullYear() - dobDate.getFullYear();
+
+    // 1. Generate PESEL from DOB
+    const yy = parseInt(yyyy) % 100;
+    let mp = parseInt(mm);
+    const year = parseInt(yyyy);
+    if (year >= 1800 && year <= 1899) mp += 80;
+    else if (year >= 2000 && year <= 2099) mp += 20;
+    else if (year >= 2100 && year <= 2199) mp += 40;
+    else if (year >= 2200 && year <= 2299) mp += 60;
+
+    const datePart = `${String(yy).padStart(2, '0')}${String(mp).padStart(2, '0')}${dd}`;
+    const s1 = Math.floor(Math.random() * 10);
+    const s2 = Math.floor(Math.random() * 10);
+    const s3 = Math.floor(Math.random() * 10);
+    const pool = this.plDocsGender() === 'M' ? [1, 3, 5, 7, 9] : [0, 2, 4, 6, 8];
+    const s4 = pool[Math.floor(Math.random() * 5)];
+    const serial = `${s1}${s2}${s3}${s4}`;
+    const base = datePart + serial;
+    const W = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
+    const sum = base.split('').reduce((acc, c, i) => acc + parseInt(c) * W[i], 0);
+    const peselCheck = (10 - sum % 10) % 10;
+    const pesel = base + peselCheck;
+
+    // 2. Get or generate issue date (min: 18 years after DOB, max: today)
+    const issueStr = this.plDocsIssueDate();
+    let issueDate: Date;
+
+    if (issueStr) {
+      const im = issueStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      if (!im) return;
+      const [, idd, imm, iyyyy] = im;
+      issueDate = new Date(parseInt(iyyyy), parseInt(imm) - 1, parseInt(idd));
+    } else {
+      // Random date: 18+ years after DOB to today
+      const minAge = new Date(dobDate);
+      minAge.setFullYear(minAge.getFullYear() + 18);
+
+      if (minAge > today) {
+        // Person is not yet 18, use today (edge case)
+        issueDate = today;
       } else {
-        val = 0;
+        // Random between 18th birthday and today
+        const minTime = minAge.getTime();
+        const maxTime = today.getTime();
+        const randomTime = minTime + Math.random() * (maxTime - minTime);
+        issueDate = new Date(randomTime);
       }
-      sum += val * weights[i % 3];
     }
-    return sum % 10;
-  }
 
-  private formatPolishDate(date: Date): string {
-    // Format: DD MAJ/MAY 2024
-    const months = [
-      'STY', 'LUT', 'MAR', 'KWI', 'MAJ', 'CZE',
-      'LIP', 'SIE', 'WRZ', 'PAŹ', 'LIS', 'GRU',
-    ];
-    const monthNames = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
-    ];
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = date.getMonth();
-    const year = date.getFullYear();
-    return `${day} ${months[month]}/${monthNames[month]} ${year}`;
-  }
+    // 3. Generate passport number
+    const seriesObj = this.PL_SERIES.find(s => issueDate >= s.startDate && issueDate <= s.endDate);
+    if (!seriesObj) return;
 
-  private getRandomCity(): { city: string; voivodeship: string } {
+    const series = seriesObj.series;
+    const serial2 = String(Math.floor(Math.random() * 999999)).padStart(6, '0');
+    const base2 = series + serial2;
+    const checkDigit = this.computePlPassportCheck(base2);
+    const passportNum = series + checkDigit + serial2;
+
+    // 4. Get random city
     const voivodeships = Object.keys(this.PL_CITIES);
     const voivodeship = voivodeships[Math.floor(Math.random() * voivodeships.length)];
     const cities = this.PL_CITIES[voivodeship];
     const city = cities[Math.floor(Math.random() * cities.length)];
-    return { city, voivodeship };
-  }
 
-  genPlPassport() {
-    const dateStr = this.plPassportDate();
-    if (!dateStr) {
-      alert('Please enter an issue date');
-      return;
-    }
+    // 5. Calculate expiry (5 years for kids < 12, 10 years for adults)
+    const validity = age < 12 ? 5 : 10;
+    const expiryDate = new Date(issueDate);
+    expiryDate.setFullYear(expiryDate.getFullYear() + validity);
+    const issueDateFormatted = this.formatPlPassportDate(issueDate);
+    const expiryDateFormatted = this.formatPlPassportDate(expiryDate);
 
-    let issueDate: Date;
-    try {
-      // Parse date: expects format YYYY-MM-DD (from HTML date input)
-      issueDate = new Date(dateStr + 'T00:00:00Z');
-      if (isNaN(issueDate.getTime())) throw new Error('Invalid date');
-    } catch (e) {
-      alert('Invalid date format');
-      return;
-    }
+    // 6. Generate MRZ (TD1 and TD3)
+    const firstName = this.plDocsFirstName().toUpperCase();
+    const lastName = this.plDocsLastName().toUpperCase();
+    const mrzIdCard = this.generateMrzIdCard(lastName, firstName, passportNum, dobDate, this.plDocsGender(), expiryDate, pesel);
+    const mrzPassport = this.generateMrzPassport(lastName, firstName, passportNum, dobDate, this.plDocsGender(), expiryDate, pesel);
 
-    // Validate date range
-    const minDate = new Date(1980, 0, 1);
-    const maxDate = new Date(2040, 11, 31);
-    if (issueDate < minDate || issueDate > maxDate) {
-      alert('Date must be between 1980-01-01 and 2040-12-31');
-      return;
-    }
-
-    // Get series based on date
-    const series = this.getSeriesForDate(issueDate);
-
-    // Generate 6 random digits
-    const serialDigits = Array.from({ length: 6 }, () =>
-      Math.floor(Math.random() * 10)
-    ).join('');
-
-    // Compute check digit
-    const base = series + serialDigits;
-    const checkDigit = this.computeCheckDigit(base);
-
-    // Assemble passport number: series + check digit + 6 serial digits
-    const passportNumber = `${series}${checkDigit}${serialDigits}`;
-
-    // Get random city
-    const { city, voivodeship } = this.getRandomCity();
-
-    // Format date Polish style
-    const formattedDate = this.formatPolishDate(issueDate);
-
-    this.plPassportResult.set({
-      passportNumber,
-      series,
-      issueDate: formattedDate,
+    this.plDocsResult.set({
+      pesel,
+      passportNum,
       city,
       voivodeship,
+      issueDate: issueDateFormatted,
+      expiryDate: expiryDateFormatted,
+      validity,
+      mrzIdCard,
+      mrzPassport,
     });
   }
 
-  copyPlPassport() {
-    const r = this.plPassportResult(); if (!r) return;
-    navigator.clipboard.writeText(r.passportNumber);
-    this.plPassportCopied.set(true);
-    setTimeout(() => this.plPassportCopied.set(false), 1500);
+  private icaoChecksum(str: string): string {
+    const weights = [7, 3, 1];
+    let sum = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      let val = 0;
+      if (char >= '0' && char <= '9') {
+        val = parseInt(char);
+      } else if (char >= 'A' && char <= 'Z') {
+        val = char.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else if (char === '<') {
+        val = 0;
+      }
+      sum += val * weights[i % 3];
+    }
+    return String(sum % 10);
+  }
+
+  private generateMrzIdCard(surname: string, given: string, docNum: string, dob: Date, gender: string, expiry: Date, pesel: string): string {
+    // TD1 format (3 lines x 30 chars each) - ICAO 9303
+    const docNumClean = docNum.replace(/[^A-Z0-9]/g, '').substring(0, 9).padEnd(9, '0');
+    const surnameClean = surname.replace(/[^A-Z]/g, '').substring(0, 30);
+    const givenClean = given.replace(/[^A-Z]/g, '').substring(0, 30);
+
+    const yy = String(dob.getFullYear() % 100).padStart(2, '0');
+    const mm = String(dob.getMonth() + 1).padStart(2, '0');
+    const dd = String(dob.getDate()).padStart(2, '0');
+    const dobStr = `${yy}${mm}${dd}`;
+
+    // Use actual expiry date passed as parameter
+    const expYy = String(expiry.getFullYear() % 100).padStart(2, '0');
+    const expMm = String(expiry.getMonth() + 1).padStart(2, '0');
+    const expDd = String(expiry.getDate()).padStart(2, '0');
+    const expStr = `${expYy}${expMm}${expDd}`;
+
+    const sexChar = gender === 'M' ? 'M' : 'F';
+
+    // Line 1: I<[Country][Doc number (9)][Check (1)][Padding (15)]
+    const docCheck = this.icaoChecksum(docNumClean);
+    const line1 = `I<POL${docNumClean}${docCheck}${'<'.repeat(15)}`;
+
+    // Line 2: [DOB (6)][Check (1)][Sex (1)][Expiry (6)][Check (1)][Issuing Country (3)][PESEL (11)][Check (1)] = 30
+    const dobCheck = this.icaoChecksum(dobStr);
+    const expCheck = this.icaoChecksum(expStr);
+    const line2Build = `${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}POL${pesel}`;
+    const line2Check = this.icaoChecksum(line2Build);
+    const line2 = `${line2Build}${line2Check}`;
+
+    // Line 3: [Surname][<<][Firstname][Padding to 30]
+    const nameField = `${surnameClean}<<${givenClean}`.substring(0, 29);
+    const line3 = nameField.padEnd(30, '<');
+
+    return `${line1}\n${line2}\n${line3}`;
+  }
+
+  private generateMrzPassport(surname: string, given: string, docNum: string, dob: Date, gender: string, expiry: Date, pesel: string): string {
+    // TD3 format (2 lines x 44 chars each) - ICAO 9303
+    const docNumClean = docNum.replace(/[^A-Z0-9]/g, '').substring(0, 9).padEnd(9, '0');
+    const surnameClean = surname.replace(/[^A-Z]/g, '');
+    const givenClean = given.replace(/[^A-Z]/g, '');
+
+    const yy = String(dob.getFullYear() % 100).padStart(2, '0');
+    const mm = String(dob.getMonth() + 1).padStart(2, '0');
+    const dd = String(dob.getDate()).padStart(2, '0');
+    const dobStr = `${yy}${mm}${dd}`;
+
+    const expYy = String(expiry.getFullYear() % 100).padStart(2, '0');
+    const expMm = String(expiry.getMonth() + 1).padStart(2, '0');
+    const expDd = String(expiry.getDate()).padStart(2, '0');
+    const expStr = `${expYy}${expMm}${expDd}`;
+
+    const sexChar = gender === 'M' ? 'M' : 'F';
+
+    // Line 1: P<[Country (3)][Surname<<Firstname (39 total)]
+    const nameField = `${surnameClean}<<${givenClean}`.padEnd(39, '<');
+    const line1 = `P<POL${nameField}`;
+
+    // Line 2: [Doc# (9)][Check (1)][Nationality (3)][DOB (6)][Check (1)][Sex (1)][Expiry (6)][Check (1)][Personal# (11)][Padding (4)][Check (1)] = 44
+    const docCheck = this.icaoChecksum(docNumClean);
+    const dobCheck = this.icaoChecksum(dobStr);
+    const expCheck = this.icaoChecksum(expStr);
+    const personal = pesel.substring(0, 11);
+    const line2Build = `${docNumClean}${docCheck}POL${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}${personal}<<<<`;
+    const line2Check = this.icaoChecksum(line2Build);
+    const line2 = `${line2Build}${line2Check}`;
+
+    return `${line1}\n${line2}`;
+  }
+
+  copyPlDocs(which: 'pesel' | 'passport' | 'mrzId' | 'mrzPp') {
+    const r = this.plDocsResult();
+    if (!r) return;
+    let text = '';
+    switch (which) {
+      case 'pesel': text = r.pesel; break;
+      case 'passport': text = r.passportNum; break;
+      case 'mrzId': text = r.mrzIdCard.replace(/\n/g, ''); break;
+      case 'mrzPp': text = r.mrzPassport.replace(/\n/g, ''); break;
+    }
+    navigator.clipboard.writeText(text);
+    this.plDocsCopied.set(which);
+    setTimeout(() => this.plDocsCopied.set(null), 1500);
+  }
+
+  private formatPlPassportDate(date: Date): string {
+    const monthsEn = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const monthsPl = ['STY', 'LUT', 'MAR', 'KWI', 'MAJ', 'CZE', 'LIP', 'SIE', 'WRZ', 'PAŹ', 'LIS', 'GRU'];
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.getMonth();
+    const year = date.getFullYear();
+
+    return `${day} ${monthsPl[month]}/${monthsEn[month]} ${year}`;
+  }
+
+  private computePlPassportCheck(base: string): string {
+    // ICAO 9303 MOD-10 checksum: 2 letters + 6 digits = 8 chars
+    const W = [7, 3, 1, 7, 3, 1, 7, 3];  // 8 weights for 8 symbols
+    let sum = 0;
+    for (let i = 0; i < base.length && i < W.length; i++) {
+      const ch = base[i];
+      let val = 0;
+      if (ch >= '0' && ch <= '9') {
+        val = parseInt(ch);
+      } else if (ch >= 'A' && ch <= 'Z') {
+        val = ch.charCodeAt(0) - 55; // A=10, B=11, ..., Z=35
+      }
+      sum += val * W[i];
+    }
+    return String(sum % 10);
   }
 
   private loadFavs(): Set<string> {

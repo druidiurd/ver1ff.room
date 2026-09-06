@@ -10,6 +10,6 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([httpErrorInterceptor])),
-    provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
+    provideServiceWorker('ngsw-worker.js', { enabled: false }), // TEMP DISABLED
   ],
 };

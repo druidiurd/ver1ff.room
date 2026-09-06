@@ -117,6 +117,7 @@ async def execute(
 
 # Serve Angular SPA (only when dist/ exists — not on Vercel)
 # ng build output: dist/<project-name>/browser or dist/browser
+from fastapi.responses import FileResponse
 _root = os.path.dirname(base_dir)
 _dist = next(
     (p for p in [
@@ -125,5 +126,35 @@ _dist = next(
     ] if os.path.isdir(p)),
     None
 )
+
 if _dist:
-    app.mount("/", StaticFiles(directory=_dist, html=True), name="spa")
+    index_file = os.path.join(_dist, "index.html")
+
+    # EXPLICIT ROUTES FOR STATIC ASSETS (must be before catch-all)
+    @app.get("/{filename:path}")
+    async def serve_static(filename: str):
+        """Explicit route for static files"""
+        if filename.startswith("api/"):
+            raise HTTPException(status_code=404)
+
+        full_path = os.path.join(_dist, filename)
+
+        # If file exists, serve it directly
+        if os.path.isfile(full_path):
+            response = FileResponse(full_path)
+            # Set proper cache control
+            if filename.endswith((".js", ".css", ".woff2", ".png", ".svg", ".ico", ".gif", ".jpg", ".jpeg", ".webp", ".woff", ".ttf")):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                # Force Cloudflare to not cache (temporary)
+                response.headers["CF-Cache-Tag"] = "no-cache"
+            else:
+                response.headers["Cache-Control"] = "public, max-age=3600"
+            return response
+
+        # Otherwise, serve index.html for SPA routing
+        response = FileResponse(index_file)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
