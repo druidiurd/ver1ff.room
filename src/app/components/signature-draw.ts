@@ -204,7 +204,8 @@ export class SignatureDrawComponent {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+    // Ctrl+Z (Cmd+Z on Mac) works on ANY keyboard layout
+    if ((event.ctrlKey || event.metaKey) && (event.code === 'KeyZ' || event.keyCode === 90)) {
       event.preventDefault();
       this.undo();
     }
