@@ -83,8 +83,8 @@ const COUNTRIES: Country[] = [
   {
     code: 'POL', iso2: 'pl', mrzCode: 'POL', name: 'Poland',
     tools: [
-      { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
       { id: 'pl_documents', icon: '📋', label: 'POLISH DOCUMENTS', desc: 'Complete Polish document suite: PESEL, passport/ID card numbers, MRZ (TD1/TD3), issue/expiry dates with names.', color: '#d946ef', tag: 'DOCS' },
+      { id: 'pl_phone',     icon: '📱', label: 'PL-PHONE',  desc: 'Polish mobile numbers (50-59 prefix). Local (0XX) and international (+48XX) formats. Landline support (21-25 area codes).', color: '#e74c3c', tag: 'TEL' },
       { id: 'pl_nip',       icon: '🆔', label: 'PL-NIP', desc: 'Polish Tax ID (Numer Identyfikacji Podatkowej) - 10-digit number with checksum validation.', color: '#3498db', tag: 'TAX' },
       { id: 'pl_iban',      icon: '🏦', label: 'PL-IBAN', desc: 'Polish IBAN generator - international bank account number with IBAN checksum.', color: '#2ecc71', tag: 'BANK' },
       { id: 'pl_regon',     icon: '🏢', label: 'PL-REGON', desc: 'Polish business registration number (REGON) - 9-digit company identifier with checksum.', color: '#f39c12', tag: 'BIZ' },
@@ -915,11 +915,12 @@ const FAV_KEY = 'id_lab_favorites';
     }
 
     .pl-copy-all {
-      position: absolute; top: 14px; right: 16px;
-      background: rgba(0,0,0,0.5); border: 1px solid var(--tc, var(--green));
-      color: var(--tc, var(--green)); font-size: 0.5rem; font-weight: 800;
-      letter-spacing: 1px; padding: 5px 10px; border-radius: var(--radius-sm);
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(0,0,0,0.6); border: 1px solid var(--tc, var(--green));
+      color: var(--tc, var(--green)); font-size: 0.48rem; font-weight: 800;
+      letter-spacing: 0.5px; padding: 4px 8px; border-radius: var(--radius-sm);
       cursor: pointer; transition: 0.15s; font-family: inherit;
+      z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
     .pl-copy-all:hover { background: var(--tc, var(--green)); color: #000; }
 
