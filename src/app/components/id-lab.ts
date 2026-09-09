@@ -614,9 +614,15 @@ const FAV_KEY = 'id_lab_favorites';
                             <div class="pl-stat">
                               <span class="pl-stat-lbl">VALIDITY</span>
                               <div style="display:flex;gap:3px;font-size:0.75rem;align-items:center">
-                                <code style="color:var(--green);white-space:pre">{{ r.issueDate }}</code>
+                                <div style="display:flex;align-items:center;gap:2px">
+                                  <code style="color:var(--green);white-space:pre">{{ r.issueDate }}</code>
+                                  <button class="cp-inline" (click)="copyCanPassportDate('issue')" style="font-size:0.5rem;padding:2px 4px">{{ canPassDateCopied() === 'issue' ? '✓' : '⎘' }}</button>
+                                </div>
                                 <span style="color:var(--text-dim)">→</span>
-                                <code style="color:#c084f3;white-space:pre">{{ r.expiryDate }}</code>
+                                <div style="display:flex;align-items:center;gap:2px">
+                                  <code style="color:#c084f3;white-space:pre">{{ r.expiryDate }}</code>
+                                  <button class="cp-inline" (click)="copyCanPassportDate('expiry')" style="font-size:0.5rem;padding:2px 4px">{{ canPassDateCopied() === 'expiry' ? '✓' : '⎘' }}</button>
+                                </div>
                               </div>
                             </div>
                             <div class="pl-stat">
@@ -1403,6 +1409,7 @@ export class IdLabComponent implements OnInit {
   canPassShowBarcode  = signal(false);
   canPassHistory      = signal<Array<{ passportNum: string; verticalNum: string; firstName: string; lastName: string; timestamp: number }>>([]);
   canPassShowHistory  = signal(false);
+  canPassDateCopied   = signal<'issue' | 'expiry' | null>(null);
   hoveredHistoryIndex: number | null = null;
 
   ngOnInit() {
@@ -2984,6 +2991,15 @@ export class IdLabComponent implements OnInit {
     navigator.clipboard.writeText(text);
     this.canPassCopied.set(which);
     setTimeout(() => this.canPassCopied.set(null), 1500);
+  }
+
+  copyCanPassportDate(which: 'issue' | 'expiry') {
+    const r = this.canPassResult();
+    if (!r) return;
+    const text = which === 'issue' ? r.issueDate : r.expiryDate;
+    navigator.clipboard.writeText(text);
+    this.canPassDateCopied.set(which);
+    setTimeout(() => this.canPassDateCopied.set(null), 1500);
   }
 
   private loadFavs(): Set<string> {
