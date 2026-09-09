@@ -605,7 +605,10 @@ const FAV_KEY = 'id_lab_favorites';
                             </div>
                             <div class="pl-stat">
                               <span class="pl-stat-lbl">DOB</span>
-                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.7rem;white-space:pre">{{ r.dob }}</div>
+                              <div style="display:flex;align-items:center;gap:2px">
+                                <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.7rem;white-space:pre">{{ r.dob }}</div>
+                                <button class="cp-inline" (click)="copyCanPassportDate('dob')" style="font-size:0.5rem;padding:2px 4px;margin-top:0">{{ canPassDateCopied() === 'dob' ? '✓' : '⎘' }}</button>
+                              </div>
                             </div>
                           </div>
 
@@ -1409,7 +1412,7 @@ export class IdLabComponent implements OnInit {
   canPassShowBarcode  = signal(false);
   canPassHistory      = signal<Array<{ passportNum: string; verticalNum: string; firstName: string; lastName: string; timestamp: number }>>([]);
   canPassShowHistory  = signal(false);
-  canPassDateCopied   = signal<'issue' | 'expiry' | null>(null);
+  canPassDateCopied   = signal<'issue' | 'expiry' | 'dob' | null>(null);
   hoveredHistoryIndex: number | null = null;
 
   ngOnInit() {
@@ -2993,10 +2996,13 @@ export class IdLabComponent implements OnInit {
     setTimeout(() => this.canPassCopied.set(null), 1500);
   }
 
-  copyCanPassportDate(which: 'issue' | 'expiry') {
+  copyCanPassportDate(which: 'issue' | 'expiry' | 'dob') {
     const r = this.canPassResult();
     if (!r) return;
-    const text = which === 'issue' ? r.issueDate : r.expiryDate;
+    let text = '';
+    if (which === 'issue') text = r.issueDate;
+    else if (which === 'expiry') text = r.expiryDate;
+    else if (which === 'dob') text = r.dob;
     navigator.clipboard.writeText(text);
     this.canPassDateCopied.set(which);
     setTimeout(() => this.canPassDateCopied.set(null), 1500);
