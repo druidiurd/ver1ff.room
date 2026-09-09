@@ -751,40 +751,87 @@ const FAV_KEY = 'id_lab_favorites';
 
 
                   } @else if (t.id === 'fin_passport_gen') {
-                    <!-- Inline FIN PASSPORT / ID card card -->
+                    <!-- FIN PASSPORT Generator -->
                     <div class="tool-card inline-card mono" [style.--tc]="t.color">
                       <div class="tc-top">
                         <span class="tc-icon">{{ t.icon }}</span>
                         <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
                       </div>
                       <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (finDocResult(); as r) {
-                        <div class="doc-dates-block">
-                          <div class="doc-row">
-                            <span class="doc-type">📕 PP</span>
-                            <span class="doc-date" style="letter-spacing:1.5px;flex:1">{{ r.pp }}</span>
-                            <button class="cp-inline" (click)="copyFinDoc('pp')">{{ finDocCopied() === 'pp' ? '✓' : '⎘' }}</button>
+
+                      <!-- Input fields -->
+                      <div class="il-field-row">
+                        <div class="il-field">
+                          <label class="il-lbl">FIRST NAME</label>
+                          <input class="il-inp" [ngModel]="finPassFirstName()" (ngModelChange)="finPassFirstName.set($event)"
+                            placeholder="John" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">LAST NAME</label>
+                          <input class="il-inp" [ngModel]="finPassLastName()" (ngModelChange)="finPassLastName.set($event)"
+                            placeholder="Doe" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">DOB (DD-MM-YYYY)</label>
+                          <input class="il-inp" [ngModel]="finPassDob()" (ngModelChange)="finPassDob.set($event)"
+                            placeholder="01-01-1990" maxlength="10" autocomplete="off">
+                        </div>
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">SEX</label>
+                          <div class="il-sex">
+                            <button class="il-sex-btn" [class.active]="finPassGender() === 'M'"
+                              [style.--sc]="t.color" (click)="finPassGender.set('M')">♂️ M</button>
+                            <button class="il-sex-btn" [class.active]="finPassGender() === 'F'"
+                              [style.--sc]="t.color" (click)="finPassGender.set('F')">♀️ F</button>
                           </div>
-                          <div class="doc-row">
-                            <span class="doc-type">🪪 ID</span>
-                            <span class="doc-date" style="letter-spacing:1.5px;flex:1">{{ r.id }}</span>
-                            <button class="cp-inline" (click)="copyFinDoc('id')">{{ finDocCopied() === 'id' ? '✓' : '⎘' }}</button>
+                        </div>
+                      </div>
+
+                      <!-- Buttons -->
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genFinPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (finPassResult()) {
+                          <button class="il-btn-sm mono" (click)="finPassResult.set(null)" style="color:#ff3b30">✕</button>
+                        }
+                      </div>
+
+                      <!-- RESULTS -->
+                      @if (finPassResult(); as r) {
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(41,121,255,0.2)">
+                          <!-- Row 1: HETU & PASSPORT -->
+                          <div style="display:flex;gap:12px;margin-bottom:12px">
+                            <div style="flex:1">
+                              <div style="font-size:0.65rem;color:var(--green);font-weight:600;margin-bottom:4px">HETU</div>
+                              <div style="display:flex;align-items:center;gap:2px">
+                                <code style="color:var(--green);font-size:0.75rem;letter-spacing:2px">{{ r.hetu }}</code>
+                                <button class="cp-inline" (click)="copyFinPassport('hetu')" style="font-size:0.5rem;padding:2px 4px">{{ finPassCopied() === 'hetu' ? '✓' : '⎘' }}</button>
+                              </div>
+                            </div>
+                            <div style="flex:1">
+                              <div style="font-size:0.65rem;color:#c084f3;font-weight:600;margin-bottom:4px">PASSPORT</div>
+                              <div style="display:flex;align-items:center;gap:2px">
+                                <code style="color:#c084f3;font-size:0.75rem;letter-spacing:2px">{{ r.passportNum }}</code>
+                                <button class="cp-inline" (click)="copyFinPassport('passport')" style="font-size:0.5rem;padding:2px 4px">{{ finPassCopied() === 'passport' ? '✓' : '⎘' }}</button>
+                              </div>
+                            </div>
+                            <div style="flex:1">
+                              <div style="font-size:0.65rem;color:var(--text-mid);font-weight:600;margin-bottom:4px">ID CARD</div>
+                              <div style="display:flex;align-items:center;gap:2px">
+                                <code style="color:var(--text-mid);font-size:0.75rem;letter-spacing:2px">{{ r.idCardNum }}</code>
+                                <button class="cp-inline" (click)="copyFinPassport('idcard')" style="font-size:0.5rem;padding:2px 4px">{{ finPassCopied() === 'idcard' ? '✓' : '⎘' }}</button>
+                              </div>
+                            </div>
                           </div>
-                          <div class="doc-row">
-                            <span class="doc-type">📅 ISS</span>
-                            <span class="doc-date" style="flex:1">{{ r.issued }} → <strong>{{ r.expiry }}</strong></span>
-                            <button class="cp-inline" (click)="copyFinDoc('issued')">{{ finDocCopied() === 'issued' ? '✓' : '⎘' }}</button>
-                          </div>
-                          <div class="doc-row">
-                            <span class="doc-type">📍 CITY</span>
-                            <span class="doc-date" style="flex:1">{{ r.city }}</span>
-                            <button class="cp-inline" (click)="copyFinDoc('city')">{{ finDocCopied() === 'city' ? '✓' : '⎘' }}</button>
+
+                          <!-- Row 2: Validity -->
+                          <div style="font-size:0.65rem;color:var(--text-mid);font-weight:600;margin-bottom:4px">VALIDITY</div>
+                          <div style="display:flex;gap:3px;font-size:0.7rem;align-items:center">
+                            <code style="color:var(--green)">{{ r.issueDate }}</code>
+                            <span style="color:var(--text-dim)">→</span>
+                            <code style="color:#c084f3">{{ r.expiryDate }}</code>
                           </div>
                         </div>
                       }
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genFinDoc()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
-                      </div>
                     </div>
 
                   } @else if (t.id === 'fin_iban') {
@@ -2973,6 +3020,85 @@ export class IdLabComponent implements OnInit {
     navigator.clipboard.writeText(text);
     this.canPassDateCopied.set(which);
     setTimeout(() => this.canPassDateCopied.set(null), 1500);
+  }
+
+  genFinPassport() {
+    const firstName = this.finPassFirstName().trim().toUpperCase();
+    const lastName = this.finPassLastName().trim().toUpperCase();
+    const dobStr = this.finPassDob().trim();
+    const gender = this.finPassGender();
+
+    if (!firstName || !lastName || !dobStr) {
+      alert('Please fill: First Name, Last Name, DOB (DD-MM-YYYY)');
+      return;
+    }
+
+    // Parse DOB
+    const m = dobStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (!m) {
+      alert('DOB must be in format DD-MM-YYYY');
+      return;
+    }
+
+    const [, dd, mm, yyyy] = m;
+    const year = parseInt(yyyy);
+
+    // Generate HETU
+    let century: string;
+    if (year >= 1800 && year <= 1899) century = '+';
+    else if (year >= 1900 && year <= 1999) century = '-';
+    else century = 'A';
+    const yy = String(year % 100).padStart(2, '0');
+    const ddmmyy = `${dd}${mm}${yy}`;
+    const base = Math.floor(Math.random() * 100);
+    const parity = gender === 'M'
+      ? (Math.floor(Math.random() * 5) * 2 + 1)  // odd: 1,3,5,7,9
+      : (Math.floor(Math.random() * 5) * 2);     // even: 0,2,4,6,8
+    const serial = String(base).padStart(2, '0') + parity;
+    const cd = this.hetuCd(ddmmyy, serial);
+    const hetu = `${ddmmyy}${century}${serial}${cd}`;
+
+    // Generate Passport & ID Card numbers (FP + 7 digits, 9 digits)
+    const passportNum = 'FP' + String(Math.floor(Math.random() * 10000000)).padStart(7, '0');
+    const idCardNum = String(Math.floor(Math.random() * 1000000000)).padStart(9, '0');
+
+    // Issue & Expiry dates (5 year validity)
+    const today = new Date();
+    const issueDate = new Date(today);
+    issueDate.setDate(issueDate.getDate() - Math.floor(Math.random() * 365 * 5));
+    const expiryDate = new Date(issueDate);
+    expiryDate.setFullYear(expiryDate.getFullYear() + 5);
+
+    const formatDate = (d: Date) => {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}.${month}.${year}`;
+    };
+
+    this.finPassResult.set({
+      hetu,
+      passportNum,
+      idCardNum,
+      issueDate: formatDate(issueDate),
+      expiryDate: formatDate(expiryDate),
+      firstName,
+      lastName,
+      dob: dobStr,
+      gender
+    });
+  }
+
+  copyFinPassport(which: 'hetu' | 'passport' | 'idcard') {
+    const r = this.finPassResult();
+    if (!r) return;
+    let text = '';
+    if (which === 'hetu') text = r.hetu;
+    else if (which === 'passport') text = r.passportNum;
+    else if (which === 'idcard') text = r.idCardNum;
+    navigator.clipboard.writeText(text);
+    this.finPassCopied.set(which);
+    setTimeout(() => this.finPassCopied.set(null), 1500);
   }
 
   private loadFavs(): Set<string> {
