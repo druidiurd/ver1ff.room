@@ -575,6 +575,9 @@ const FAV_KEY = 'id_lab_favorites';
                       <!-- Buttons -->
                       <div class="il-btn-row">
                         <button class="tax-btn mono" (click)="genCanPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (canPassHistory().length > 0) {
+                          <button class="tax-btn mono" (click)="canPassShowHistory.set(!canPassShowHistory())" [style.background]="canPassShowHistory() ? t.color : 'rgba(0,255,65,0.2)'" style="flex:1;color:#fff">📋 {{ canPassShowHistory() ? '−' : '+' }}</button>
+                        }
                         @if (canPassResult()) {
                           <button class="il-btn-sm mono" (click)="canPassResult.set(null)" style="color:#ff3b30">✕</button>
                         }
@@ -651,8 +654,8 @@ const FAV_KEY = 'id_lab_favorites';
                         </div>
 
                         <!-- HISTORY -->
-                        @if (canPassHistory().length > 0) {
-                          <div style="margin-top:16px;border-top:1px solid rgba(0,255,65,0.2);padding-top:12px">
+                        @if (canPassHistory().length > 0 && canPassShowHistory()) {
+                          <div style="margin-top:16px;border-top:1px solid rgba(0,255,65,0.2);padding-top:12px;animation:slideDown 0.2s ease">
                             <div style="font-size:0.7rem;color:var(--green);font-weight:600;margin-bottom:8px">GENERATION HISTORY</div>
                             <div style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto">
                               @for (item of canPassHistory(); track item.timestamp) {
@@ -1399,6 +1402,7 @@ export class IdLabComponent implements OnInit {
   canPassBarcodeSvg   = signal<string | null>(null);
   canPassShowBarcode  = signal(false);
   canPassHistory      = signal<Array<{ passportNum: string; verticalNum: string; firstName: string; lastName: string; timestamp: number }>>([]);
+  canPassShowHistory  = signal(false);
   hoveredHistoryIndex: number | null = null;
 
   ngOnInit() {
