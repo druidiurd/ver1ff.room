@@ -576,7 +576,7 @@ const FAV_KEY = 'id_lab_favorites';
                       <div class="il-btn-row">
                         <button class="tax-btn mono" (click)="genCanPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
                         @if (canPassHistory().length > 0) {
-                          <button class="tax-btn mono" (click)="canPassShowHistory.set(!canPassShowHistory())" [style.background]="canPassShowHistory() ? t.color : 'rgba(0,255,65,0.2)'" style="flex:1;color:#fff">📋 {{ canPassShowHistory() ? '−' : '+' }}</button>
+                          <button class="tax-btn mono" (click)="canPassShowHistory.set(!canPassShowHistory())" [style.background]="canPassShowHistory() ? t.color : 'rgba(0,255,65,0.2)'" style="width:32px;padding:0;color:#fff;font-size:0.8rem">{{ canPassShowHistory() ? '−' : '+' }}</button>
                         }
                         @if (canPassResult()) {
                           <button class="il-btn-sm mono" (click)="canPassResult.set(null)" style="color:#ff3b30">✕</button>
