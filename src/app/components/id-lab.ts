@@ -602,7 +602,7 @@ const FAV_KEY = 'id_lab_favorites';
                             </div>
                             <div class="pl-stat">
                               <span class="pl-stat-lbl">DOB</span>
-                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.7rem">{{ r.dob }}</div>
+                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.7rem;white-space:pre">{{ r.dob }}</div>
                             </div>
                           </div>
 
