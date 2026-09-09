@@ -611,9 +611,9 @@ const FAV_KEY = 'id_lab_favorites';
                             <div class="pl-stat">
                               <span class="pl-stat-lbl">VALIDITY</span>
                               <div style="display:flex;gap:3px;font-size:0.75rem;align-items:center">
-                                <code style="color:var(--green)">{{ r.issueDate }}</code>
+                                <code style="color:var(--green);white-space:pre">{{ r.issueDate }}</code>
                                 <span style="color:var(--text-dim)">→</span>
-                                <code style="color:#c084f3">{{ r.expiryDate }}</code>
+                                <code style="color:#c084f3;white-space:pre">{{ r.expiryDate }}</code>
                               </div>
                             </div>
                             <div class="pl-stat">
