@@ -275,78 +275,74 @@ export class SignatureDrawComponent {
 
     this.clear();
 
-    // Seed based on surname hash
+    // Seed based on surname for reproducible but unique signatures
     const seed = sn.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
-    const seededRandom = (index: number) => {
-      const x = Math.sin(seed + index) * 10000;
-      return x - Math.floor(x);
+    const rand = (offset: number) => {
+      const val = Math.sin(seed * 12.9898 + offset * 78.233) * 43758.5453;
+      return val - Math.floor(val);
     };
 
-    // Main signature stroke
-    const mainStroke: Stroke = {
+    // ONE continuous stroke - the whole signature
+    const signature: Stroke = {
       points: [],
       width: 3,
       color: '#000000'
     };
 
-    // Generate more complex cursive signature
+    // Total path length
+    const totalLength = 600;
     const startX = 80;
-    const startY = 150;
-    const maxX = 750;
-    const maxY = 300;
+    const startY = 160;
 
-    // Character-based generation - each letter influences the signature
-    let x = startX;
-    let y = startY;
-    let direction = 0;
+    // Generate continuous cursive path
+    for (let i = 0; i <= 200; i++) {
+      const t = i / 200; // 0..1
 
-    for (let i = 0; i < sn.length * 50 + 100; i++) {
-      const charInfluence = sn.charCodeAt(Math.floor(i / 50) % sn.length) || 65;
-      const phase = (seed + i + charInfluence) / 100;
+      // Character influence - each letter adds variation
+      const charIdx = Math.floor(t * sn.length);
+      const charCode = sn.charCodeAt(charIdx) || 65;
 
-      // Multi-layered sine waves for organic curves
-      const wave1 = Math.sin(phase * 0.5) * 40;
-      const wave2 = Math.cos(phase * 1.2) * 30;
-      const wave3 = Math.sin(phase * 0.3 + charInfluence / 100) * 50;
+      // Base X progression (left to right)
+      const baseX = startX + t * totalLength;
 
-      // Add some wobble for authenticity
-      const wobble = Math.sin(phase * 2 + seededRandom(i)) * 15;
+      // Multiple sine waves layered for organic cursive
+      const wave1 = Math.sin(t * Math.PI * 3 + seed / 100) * 25;         // Main wave
+      const wave2 = Math.sin(t * Math.PI * 7 + charCode / 50) * 12;      // Secondary wave
+      const wave3 = Math.cos(t * Math.PI * 2 + seed / 200) * 8;          // Tertiary wave
+      const wobble = Math.sin(t * 15 + rand(i) * 10) * 3;               // Micro-wobble
 
-      x += (wave1 + wave2 + wobble) * 0.3;
-      y += wave3 * 0.2 + Math.sin(phase * 1.5) * 25;
+      // Y position (up/down oscillation)
+      const baseY = startY + wave1 + wave2 + wave3 + wobble;
 
-      // Keep within bounds with slight overshoot
-      if (x > maxX) x = maxX - 50 - Math.abs(wave1);
-      if (x < startX) x = startX + 50;
-      if (y > maxY - 50) y = maxY - 100 + Math.sin(phase) * 30;
-      if (y < startY - 80) y = startY - 40;
-
-      mainStroke.points.push({ x: Math.floor(x), y: Math.floor(y) });
-    }
-
-    this.strokes.update(s => [...s, mainStroke]);
-
-    // Add flourish (decorative line at end)
-    if (Math.random() > 0.4) {
-      const flourish: Stroke = {
-        points: [],
-        width: 2,
-        color: '#1a1a1a'
-      };
-
-      const flourishStartX = x - 50;
-      const flourishStartY = y + 20;
-      const flourishLength = 100 + seededRandom(sn.length) * 50;
-
-      for (let i = 0; i < 30; i++) {
-        const t = i / 30;
-        const fx = flourishStartX + t * flourishLength;
-        const fy = flourishStartY + Math.sin(t * Math.PI * 2) * 15;
-        flourish.points.push({ x: Math.floor(fx), y: Math.floor(fy) });
+      // Add pressure variation (line width effect through point density)
+      if (i % 2 === 0 || Math.random() > 0.3) {
+        signature.points.push({
+          x: Math.floor(baseX),
+          y: Math.floor(baseY)
+        });
       }
-
-      this.strokes.update(s => [...s, flourish]);
     }
+
+    // Final flourish - sweeping tail without lifting pen
+    const flourishStart = 200;
+    const flourishLength = 40;
+    const flourishControl = Math.floor(rand(500) * 80 + 30);
+    const flourishDir = rand(600) > 0.5 ? 1 : -1;
+
+    for (let i = 0; i <= flourishLength; i++) {
+      const t = i / flourishLength;
+      const baseX = startX + totalLength + t * 80;
+      const baseY = startY + 20 * flourishDir +
+                    Math.sin(t * Math.PI * 3) * 35 * flourishDir +
+                    Math.cos(t * Math.PI) * 10;
+
+      signature.points.push({
+        x: Math.floor(baseX),
+        y: Math.floor(baseY)
+      });
+    }
+
+    this.strokes.set([signature]);
   }
 
   undo() {

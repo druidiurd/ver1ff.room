@@ -15,18 +15,19 @@ const NAV: NavItem[] = [
   { id: 'face_cut',     group: 'TOOLS'  },
   { id: 'ai_bypass',    group: 'TOOLS'  },
   { id: 'signature_draw', group: 'TOOLS' },
+  { id: 'pdf417_scanner', group: 'TOOLS' },
 ];
 
 const ICONS: Record<string, string> = {
   id_lab: '🧪', mrz_gen: '🔏', revolut: '💳',
   exif_cleaner: '📸', face_cut: '👤', ai_bypass: '🥷',
-  signature_draw: '✍️',
+  signature_draw: '✍️', pdf417_scanner: '📊',
 };
 
 const COLORS: Record<string, string> = {
   id_lab: '#00ff41', mrz_gen: '#00ff41', revolut: '#7c3aed',
   exif_cleaner: '#ff9500', face_cut: '#ff3b30', ai_bypass: '#a855f7',
-  signature_draw: '#06b6d4',
+  signature_draw: '#06b6d4', pdf417_scanner: '#ff1493',
 };
 
 @Component({

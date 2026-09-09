@@ -119,6 +119,12 @@ export class AppStore {
 
   openApp(name: string) {
     this.selectedApp.set(name);
+    // Don't load schema for special forge/component tools
+    const specialTools = ['mrz_gen', 'uk_dl_gen', 'fra_cin', 'pt_id_mrz', 'signature_draw', 'pdf417_scanner'];
+    if (specialTools.includes(name)) {
+      this.schemaLoading.set(false);
+      return;
+    }
     this.schemaLoading.set(true);
     this.http.get<SchemaField[]>(`/api/schema/${name}`).subscribe({
       next: s => {

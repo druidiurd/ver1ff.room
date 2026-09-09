@@ -48,6 +48,7 @@ export const T = {
     pl_doc_dates:   { label: 'PL-DOC-DATES',  nav: 'PL Doc Dates',  desc: 'Polish ID card and passport validity dates based on date of birth.' },
     ee_isikukood:   { label: 'EE-ISIKUKOOD',  nav: 'EE Isikukood',  desc: 'Estonian personal ID code. 11 digits: G·YY·MM·DD·SSS·C. Two-round Mod-11 control digit.' },
     lv_kods:        { label: 'LV-PERSONAS-KODS', nav: 'LV Kods',    desc: 'Latvian personas kods. Format DDMMYY-NNNC. Weights [1,6,3,7,9,10,5,8,4,2], Mod-11 control.' },
+    pdf417_scanner: { label: 'PDF417-SCANNER', nav: 'PDF417 Scanner', desc: 'Barcode decoder. Drag & drop images or capture with live camera. Multi-format support: PDF417, QR, CODE_128, CODE_39. Export results.' },
   } as Record<string, { label: string; nav: string; desc: string }>,
 };
 

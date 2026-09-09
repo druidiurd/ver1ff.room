@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { id: 'face_cut',     group: '⚙ TOOLS'        },
   { id: 'ai_bypass',    group: '⚙ TOOLS'        },
   { id: 'signature_draw', group: '⚙ TOOLS'      },
+  { id: 'pdf417_scanner', group: '⚙ TOOLS'      },
 ];
 
 @Component({
@@ -374,6 +375,7 @@ export class App implements AfterViewInit, OnInit {
     const icons: Record<string, string> = {
       revolut: '💳', exif_cleaner: '📸', face_cut: '👤',
       ai_bypass: '🥷', mrz_gen: '🔏', id_lab: '🧪', signature_draw: '✍️',
+      pdf417_scanner: '📊',
     };
     return icons[id] ?? '⬡';
   }

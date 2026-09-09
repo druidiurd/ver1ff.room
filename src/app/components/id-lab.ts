@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
 import { MrzForgeComponent } from './mrz-forge';
 
 interface Tool {
@@ -91,6 +92,13 @@ const COUNTRIES: Country[] = [
     ],
   },
   {
+    code: 'CAN', iso2: 'ca', mrzCode: 'CAN', name: 'Canada',
+    tools: [
+      { id: 'can_passport', icon: '📕', label: 'PASSPORT', desc: 'Canadian passport number generator. Basic number (XX######) + vertical number (LLL#####). Bilingual dates (EN/FR), city of birth, 10-year validity, MRZ TD3 format.', color: '#e74c3c', tag: 'PP' },
+      { id: 'can_ontario_dl', icon: '🚗', label: 'ONTARIO DL', desc: 'Ontario Driver\'s License number generator. Soundex encoding: LXXXX-FFFMY-YMMDD. Encodes surname, first name, middle initial, DOB, and gender.', color: '#ff1744', tag: 'DL' },
+    ],
+  },
+  {
     code: 'LVA', iso2: 'lv', mrzCode: 'LVA', name: 'Latvia',
     tools: [
       { id: 'lv_kods', icon: '🆔', label: 'PERSONAS KODS', desc: 'Latvian personal ID code. Format: DDMMYY-NNNC. Weights [1,6,3,7,9,10,5,8,4,2], Mod-11 control digit.', color: '#8b1a1a', tag: 'PK' },
@@ -132,7 +140,7 @@ const FAV_KEY = 'id_lab_favorites';
 @Component({
   selector: 'app-id-lab',
   standalone: true,
-  imports: [FormsModule, MrzForgeComponent],
+  imports: [FormsModule, DatePipe, MrzForgeComponent],
   template: `
     <div class="lab fade-in">
 
@@ -374,8 +382,13 @@ const FAV_KEY = 'id_lab_favorites';
                             <div class="pl-stat pl-stat-wide">
                               <span class="pl-stat-lbl">ISSUED BY</span>
                               <div class="pl-validity-row">
-                                <code style="color:var(--text-mid)">{{ r.city }}</code>
-                                <span style="color:var(--text-dim);font-size:0.65rem">· {{ r.voivodeship }}</span>
+                                <code style="color:var(--text-mid)">{{ r.wojewoda }}</code>
+                              </div>
+                            </div>
+                            <div class="pl-stat pl-stat-wide">
+                              <span class="pl-stat-lbl">CITY OF BIRTH</span>
+                              <div class="pl-validity-row">
+                                <code style="color:var(--text-mid)">{{ r.cityOfBirth }}</code>
                               </div>
                             </div>
                           </div>
@@ -452,6 +465,211 @@ const FAV_KEY = 'id_lab_favorites';
                         </div>
                       }
                       <button class="tax-btn mono" (click)="genPlRegon()" [style.background]="t.color" style="color:#fff">⚡ GEN</button>
+                    </div>
+
+                  } @else if (t.id === 'can_ontario_dl') {
+                    <!-- Canada Ontario DL -->
+                    <div class="tool-card inline-card mono" [style.--tc]="t.color" style="position:relative">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+
+                      <!-- Input fields -->
+                      <div class="il-field-row">
+                        <div class="il-field">
+                          <label class="il-lbl">LAST NAME</label>
+                          <input class="il-inp" [ngModel]="canLastName()" (ngModelChange)="canLastName.set($event)"
+                            placeholder="Smith" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">FIRST NAME</label>
+                          <input class="il-inp" [ngModel]="canFirstName()" (ngModelChange)="canFirstName.set($event)"
+                            placeholder="John" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">MID.INIT (OPT)</label>
+                          <input class="il-inp" [ngModel]="canMiddleInitial()" (ngModelChange)="canMiddleInitial.set($event)"
+                            placeholder="A" maxlength="1" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">DOB (YYYY-MM-DD)</label>
+                          <input class="il-inp" [ngModel]="canDob()" (ngModelChange)="canDob.set($event)"
+                            placeholder="1990-01-15" maxlength="10" autocomplete="off">
+                        </div>
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">SEX</label>
+                          <div class="il-sex">
+                            <button class="il-sex-btn" [class.active]="canGender() === 'M'"
+                              [style.--sc]="t.color" (click)="canGender.set('M')">♂️ M</button>
+                            <button class="il-sex-btn" [class.active]="canGender() === 'F'"
+                              [style.--sc]="t.color" (click)="canGender.set('F')">♀️ F</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Buttons -->
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genCanOntarioDl()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (canOntarioDlResult()) {
+                          <button class="il-btn-sm mono" (click)="canOntarioDlResult.set(null)" style="color:#ff3b30">✕</button>
+                        }
+                      </div>
+
+                      <!-- Result -->
+                      @if (canOntarioDlResult(); as r) {
+                        <div class="can-dl-result" [style.border-color]="'rgba(255,23,68,0.35)'">
+                          <div style="margin-bottom:8px">
+                            <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px">DL NUMBER</div>
+                            <code class="mono" [style.color]="t.color" style="letter-spacing:2px;font-size:1.1rem">{{ r.dlNumber }}</code>
+                          </div>
+                          <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px">DD/REF</div>
+                            <code class="mono" [style.color]="t.color" style="letter-spacing:2px;font-size:0.95rem">{{ r.ddRef }}</code>
+                          </div>
+                          <button class="tax-copy mono" [style.color]="t.color"
+                            [style.border-color]="'rgba(255,23,68,0.4)'"
+                            (click)="copyCanOntarioDl()" style="position:absolute;top:8px;right:8px">{{ canOntarioDlCopied() ? '✓' : 'CPY' }}</button>
+                        </div>
+                      }
+                    </div>
+
+                  } @else if (t.id === 'can_passport') {
+                    <!-- Canada Passport: Full Width -->
+                    <div class="tool-card inline-card mono pl-docs-full-width" [style.--tc]="t.color" style="position:relative">
+                      <div class="tc-top">
+                        <span class="tc-icon">{{ t.icon }}</span>
+                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
+                      </div>
+                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
+
+                      <!-- Input fields -->
+                      <div class="il-field-row">
+                        <div class="il-field">
+                          <label class="il-lbl">FIRST NAME</label>
+                          <input class="il-inp" [ngModel]="canPassFirstName()" (ngModelChange)="canPassFirstName.set($event)"
+                            placeholder="John" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">LAST NAME</label>
+                          <input class="il-inp" [ngModel]="canPassLastName()" (ngModelChange)="canPassLastName.set($event)"
+                            placeholder="Smith" autocomplete="off">
+                        </div>
+                        <div class="il-field">
+                          <label class="il-lbl">DOB (DD-MM-YYYY or DD.MM.YYYY)</label>
+                          <input class="il-inp" [ngModel]="canPassDob()" (ngModelChange)="canPassDob.set($event)"
+                            placeholder="15-01-1990 или 15.01.1990" maxlength="10" autocomplete="off">
+                        </div>
+                        <div class="il-field il-field-sm">
+                          <label class="il-lbl">SEX</label>
+                          <div class="il-sex">
+                            <button class="il-sex-btn" [class.active]="canPassGender() === 'M'"
+                              [style.--sc]="t.color" (click)="canPassGender.set('M')">♂️ M</button>
+                            <button class="il-sex-btn" [class.active]="canPassGender() === 'F'"
+                              [style.--sc]="t.color" (click)="canPassGender.set('F')">♀️ F</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Buttons -->
+                      <div class="il-btn-row">
+                        <button class="tax-btn mono" (click)="genCanPassport()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
+                        @if (canPassResult()) {
+                          <button class="il-btn-sm mono" (click)="canPassResult.set(null)" style="color:#ff3b30">✕</button>
+                        }
+                      </div>
+
+                      <!-- RESULTS -->
+                      @if (canPassResult(); as r) {
+                        <div class="pl-results">
+                          <!-- Stats row -->
+                          <!-- Row 1 -->
+                          <div class="pl-stats-row">
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">PASSPORT #</span>
+                              <div class="pl-stat-val" style="color:var(--green);font-size:0.8rem">{{ r.passportNum }}</div>
+                              <button class="cp-inline" (click)="copyCanPassport('passport')" style="font-size:0.6rem;margin-top:2px">⎘</button>
+                            </div>
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">VERTICAL #</span>
+                              <div class="pl-stat-val" style="color:#c084f3;font-size:0.8rem">{{ r.verticalNum }}</div>
+                              <div style="display:flex;gap:3px;align-items:center;margin-top:2px">
+                                <button class="cp-inline" (click)="copyCanPassport('vertical')" style="font-size:0.55rem">⎘</button>
+                                <div style="font-size:0.45rem;color:#999">GEN</div>
+                                <button class="cp-inline" (click)="genCanPassportBarcode(r.verticalNum)" style="font-size:0.55rem">🎫</button>
+                              </div>
+                            </div>
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">DOB</span>
+                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.7rem">{{ r.dob }}</div>
+                            </div>
+                          </div>
+
+                          <!-- Row 2 -->
+                          <div class="pl-stats-row">
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">VALIDITY</span>
+                              <div style="display:flex;gap:3px;font-size:0.75rem;align-items:center">
+                                <code style="color:var(--green)">{{ r.issueDate }}</code>
+                                <span style="color:var(--text-dim)">→</span>
+                                <code style="color:#c084f3">{{ r.expiryDate }}</code>
+                              </div>
+                            </div>
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">CITY</span>
+                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.8rem">{{ r.cityOfBirth }}</div>
+                            </div>
+                            <div class="pl-stat">
+                              <span class="pl-stat-lbl">AUTHORITY</span>
+                              <div class="pl-stat-val" style="color:var(--text-mid);font-size:0.75rem">{{ r.issuingAuthority }}</div>
+                            </div>
+                          </div>
+
+                          <!-- MRZ Block -->
+                          <div class="pl-mrz-grid">
+                            <div class="pl-mrz-block pl-mrz-td1">
+                              <div class="pl-mrz-hdr" style="color:var(--green)">PASSPORT MRZ</div>
+                              <code class="pl-mrz-code" style="color:rgba(0,255,65,0.7)">{{ r.mrzPassport }}</code>
+                              <button class="cp-inline" (click)="copyCanPassport('mrz')" style="margin-top:3px;font-size:0.55rem">{{ canPassCopied() === 'mrz' ? '✓' : '⎘' }}</button>
+                            </div>
+                          </div>
+
+                          <!-- Barcode Modal -->
+                          @if (canPassShowBarcode() && canPassBarcodeSvg()) {
+                            <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer" (click)="canPassShowBarcode.set(false)">
+                              <div style="background:white;padding:20px;border-radius:8px;max-width:400px;cursor:default" (click)="$event.stopPropagation()">
+                                <div style="font-size:0.85rem;font-weight:700;margin-bottom:12px;color:#000">CODE39: VERTICAL NUMBER</div>
+                                <div style="background:#f5f5f5;padding:12px;border-radius:4px;text-align:center;overflow:auto">
+                                  <img [src]="canPassBarcodeSvg()" style="max-width:100%;max-height:600px;image-rendering:pixelated" alt="CODE39 Barcode">
+                                </div>
+                                <div style="font-size:0.7rem;color:#666;margin-top:8px;text-align:center">{{ canPassResult()?.verticalNum }}</div>
+                                <button style="width:100%;margin-top:12px;padding:8px;background:#007aff;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.75rem" (click)="downloadCanPassportBarcode()">📥 DOWNLOAD</button>
+                              </div>
+                            </div>
+                          }
+                        </div>
+
+                        <!-- HISTORY -->
+                        @if (canPassHistory().length > 0) {
+                          <div style="margin-top:16px;border-top:1px solid rgba(0,255,65,0.2);padding-top:12px">
+                            <div style="font-size:0.7rem;color:var(--green);font-weight:600;margin-bottom:8px">GENERATION HISTORY</div>
+                            <div style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto">
+                              @for (item of canPassHistory(); track item.timestamp) {
+                                <button
+                                  style="text-align:left;background:rgba(0,255,65,0.05);border:1px solid rgba(0,255,65,0.15);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:0.65rem;font-family:monospace;transition:all 0.2s;display:block;width:100%"
+                                  [style.background]="hoveredHistoryIndex === item.timestamp ? 'rgba(0,255,65,0.1)' : 'rgba(0,255,65,0.05)'"
+                                  (click)="loadCanPassportFromHistory(item)"
+                                  (mouseenter)="hoveredHistoryIndex = item.timestamp"
+                                  (mouseleave)="hoveredHistoryIndex = null">
+                                  <div style="color:var(--green);font-weight:600">{{ item.passportNum }} / {{ item.verticalNum }}</div>
+                                  <div style="color:#999;font-size:0.6rem">{{ item.firstName }} {{ item.lastName }} • {{ (item.timestamp | date:'HH:mm:ss') }}</div>
+                                </button>
+                              }
+                            </div>
+                          </div>
+                        }
+                      }
                     </div>
 
                   } @else if (t.id === 'ee_isikukood') {
@@ -929,15 +1147,15 @@ const FAV_KEY = 'id_lab_favorites';
       display: flex; flex-direction: column; gap: 10px; font-size: 0.8rem;
     }
     .pl-stats-row {
-      display: grid; grid-template-columns: repeat(2, minmax(90px, auto)) 1fr 1fr;
-      gap: 10px;
+      display: flex; gap: 10px; flex-wrap: nowrap; overflow-x: auto;
     }
     .pl-stat {
       background: rgba(0,0,0,0.35); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: 8px 10px;
       display: flex; flex-direction: column; gap: 3px;
+      min-width: 180px; flex-shrink: 0;
     }
-    .pl-stat-wide { grid-column: span 1; }
+    .pl-stat-wide { min-width: 240px; }
     .pl-stat-lbl { color: var(--text-dim); font-size: 0.6rem; letter-spacing: 1px; }
     .pl-stat-val { letter-spacing: 1px; font-size: 0.85rem; font-weight: 700; }
     .pl-validity-row {
@@ -958,7 +1176,9 @@ const FAV_KEY = 'id_lab_favorites';
     }
 
     @media (max-width: 767px) {
-      .pl-stats-row { grid-template-columns: 1fr 1fr; }
+      .pl-stats-row { flex-wrap: wrap; }
+      .pl-stat { min-width: 150px; }
+      .pl-stat-wide { min-width: 150px; }
       .pl-mrz-grid { grid-template-columns: 1fr; }
       .pl-copy-all { position: static; margin-top: 6px; width: 100%; }
     }
@@ -979,6 +1199,13 @@ const FAV_KEY = 'id_lab_favorites';
       letter-spacing: 1px; transition: 0.15s; flex-shrink: 0;
     }
     .tax-copy:hover { background: rgba(255,204,0,0.2); }
+
+    .can-dl-result {
+      position: relative;
+      background: rgba(0,0,0,0.5); border: 1px solid rgba(255,23,68,0.3);
+      border-radius: var(--radius-sm); padding: 12px 12px 12px 12px;
+      margin-top: 8px;
+    }
 
     .tax-btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -1138,7 +1365,7 @@ export class IdLabComponent implements OnInit {
   plDocsDob           = signal('');
   plDocsIssueDate     = signal('');
   plDocsGender        = signal<'M' | 'F'>('M');
-  plDocsResult        = signal<{ pesel: string; passportNum: string; city: string; voivodeship: string; issueDate: string; expiryDate: string; issueDateISO: string; expiryDateISO: string; validity: number; mrzIdCard: string; mrzPassport: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F' } | null>(null);
+  plDocsResult        = signal<{ pesel: string; passportNum: string; wojewoda: string; cityOfBirth: string; issueDate: string; expiryDate: string; issueDateISO: string; expiryDateISO: string; validity: number; mrzIdCard: string; mrzPassport: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F' } | null>(null);
   plDocsCopied        = signal<'pesel' | 'passport' | 'mrzId' | 'mrzPp' | 'all' | null>(null);
 
   // PL NIP (Tax ID)
@@ -1153,11 +1380,45 @@ export class IdLabComponent implements OnInit {
   plRegonResult       = signal<string | null>(null);
   plRegonCopied       = signal(false);
 
+  // CAN ONTARIO DL
+  canLastName         = signal('');
+  canFirstName        = signal('');
+  canMiddleInitial    = signal('');
+  canDob              = signal('');  // YYYY-MM-DD
+  canGender           = signal<'M' | 'F'>('M');
+  canOntarioDlResult  = signal<{ dlNumber: string; ddRef: string } | null>(null);
+  canOntarioDlCopied  = signal(false);
+
+  // CAN PASSPORT
+  canPassFirstName    = signal('');
+  canPassLastName     = signal('');
+  canPassDob          = signal('');  // DD-MM-YYYY
+  canPassGender       = signal<'M' | 'F'>('M');
+  canPassResult       = signal<{ passportNum: string; verticalNum: string; issueDate: string; expiryDate: string; issueDateISO: string; expiryDateISO: string; cityOfBirth: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F'; mrzPassport: string; issuingAuthority: string } | null>(null);
+  canPassCopied       = signal<'passport' | 'vertical' | 'mrz' | 'all' | null>(null);
+  canPassBarcodeSvg   = signal<string | null>(null);
+  canPassShowBarcode  = signal(false);
+  canPassHistory      = signal<Array<{ passportNum: string; verticalNum: string; firstName: string; lastName: string; timestamp: number }>>([]);
+  hoveredHistoryIndex: number | null = null;
+
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
     if (code) {
       const c = COUNTRIES.find(x => x.code === code);
       if (c) this.selected.set(c);
+    }
+
+    // Load CAN passport history from localStorage
+    try {
+      const stored = localStorage.getItem('can_passport_history');
+      if (stored) {
+        const history = JSON.parse(stored);
+        if (Array.isArray(history)) {
+          this.canPassHistory.set(history.slice(-10)); // Keep last 10
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
     }
   }
 
@@ -1624,6 +1885,72 @@ export class IdLabComponent implements OnInit {
   // ── PL PASSPORT ──────────────────────────────────────────────────
   // ICAO 9303 format: AA + 7 digits + check digit (MOD-10)
   // Series timeline based on Guard's passport dumps (2001-2027)
+
+  // Canadian issuing authorities
+  private readonly CAN_ISSUING_AUTHORITIES: string[] = [
+    'GATINEAU', 'MISSISSAUGA', 'SYDNEY', 'OTTAWA', 'EDMONTON', 'TORONTO', 'SCARBOROUGH',
+    'NORTH YORK', 'HAMILTON', 'LONDON', 'KITCHENER', 'WINDSOR', 'BRAMPTON', 'MONTREAL',
+    'POINTE-CLAIRE', 'VANCOUVER', 'SURREY', 'VICTORIA', 'KELOWNA', 'CALGARY', 'WINNIPEG',
+    'SASKATOON', 'CHARLOTTETOWN', 'HALIFAX', 'ST. JOHN\'S',
+    'PASSPORT CANADA', 'IRCC',
+  ];
+
+  // 16 Polish voivodes (wojewodowie)
+  private readonly PL_WOJEWODOWIE: string[] = [
+    'WOJEWODA DOLNOŚLĄSKI',
+    'WOJEWODA KUJAWSKO-POMORSKI',
+    'WOJEWODA LUBELSKI',
+    'WOJEWODA LUBUSKI',
+    'WOJEWODA ŁÓDZKI',
+    'WOJEWODA MAŁOPOLSKI',
+    'WOJEWODA MAZOWIECKI',
+    'WOJEWODA OPOLSKI',
+    'WOJEWODA PODKARPACKI',
+    'WOJEWODA PODLASKI',
+    'WOJEWODA POMORSKI',
+    'WOJEWODA ŚLĄSKI',
+    'WOJEWODA ŚWIĘTOKRZYSKI',
+    'WOJEWODA WARMIŃSKO-MAZURSKI',
+    'WOJEWODA WIELKOPOLSKI',
+    'WOJEWODA ZACHODNIOPOMORSKI',
+  ];
+
+  // ~120 real Polish cities (sorted by voivodeship)
+  private readonly PL_ALL_CITIES: string[] = [
+    // Lower Silesia
+    'Wrocław', 'Wałbrzych', 'Legnica', 'Jawor', 'Świdnica', 'Dzierżoniów', 'Lubin', 'Polkowice', 'Złotoryja', 'Chojnów',
+    'Jelenia Góra', 'Bolesławiec', 'Żary', 'Zgorzelec', 'Kamienna Góra', 'Pieńsk', 'Nowogrodziec', 'Lubań',
+    // Greater Poland
+    'Poznań', 'Kalisz', 'Konin', 'Leszno', 'Piła', 'Gniezno', 'Września', 'Żnin', 'Ostrów Wielkopolski', 'Jarocin',
+    'Chodzież', 'Chwalisz', 'Slupca', 'Środa Wielkopolska', 'Wrzesnia', 'Nowy Tomyśl',
+    // Pomerania
+    'Gdańsk', 'Gdynia', 'Sopot', 'Tczew', 'Elbląg', 'Słupsk', 'Rummelsburg', 'Wejherowo', 'Starogard Gdański', 'Kwidzyn',
+    'Kartuzy', 'Pucki', 'Tczew', 'Preußisch Stargard',
+    // Silesia / Małopolska region
+    'Katowice', 'Kraków', 'Sosnowiec', 'Dąbrowa Górnicza', 'Zabrze', 'Bytom', 'Gliwice', 'Chorzów', 'Ruda Śląska',
+    'Tychy', 'Myślenice', 'Jaworzno', 'Pszów', 'Tarnowskie Góry', 'Mikołów', 'Knurów', 'Wodzisław Śląski', 'Cieszyn',
+    'Bielsko-Biała', 'Żywiec', 'Sucha Beskidzka', 'Nowy Sącz', 'Tarnów', 'Mielec',
+    // Subcarpathia
+    'Rzeszów', 'Tarnobrzeg', 'Krosno', 'Sanok', 'Łańcut', 'Jasło', 'Kolbuszowa', 'Strzyżów', 'Stalowa Wola', 'Przeworsk',
+    // Lublin
+    'Lublin', 'Biała Podlaska', 'Chełm', 'Tomaszów Lubelski', 'Radzyń Podlaski', 'Zamość', 'Parczew', 'Hrubieszów',
+    // Łódź region
+    'Łódź', 'Piotrków Trybunalski', 'Sieradz', 'Skierniewice', 'Zduńska Wola', 'Aleksandrów Łódzki', 'Brzeziny',
+    'Wieliczka', 'Koniecpol', 'Żarnowiec', 'Radomsko', 'Pabianice', 'Tuszyn', 'Zgierz',
+    // Holy Cross / Świętokrzyskie
+    'Kielce', 'Ostrowiec Świętokrzyski', 'Konskie', 'Skarżysko-Kamienna', 'Starachowice', 'Łagów', 'Staszów',
+    'Wiśniewski', 'Jędrzejów', 'Opatów', 'Ćmielów',
+    // Masovia (Mazovian)
+    'Warszawa', 'Radom', 'Siedlce', 'Ostrołęka', 'Piaseczno', 'Żoliborz', 'Mokotów', 'Praga', 'Piastów', 'Pruszków',
+    'Marki', 'Milanówek', 'Żyrardów', 'Skierniewice', 'Ostrów Mazowiecka', 'Przysucha', 'Szydłowiec', 'Grójec', 'Kozienice',
+    // Warmia-Masuria
+    'Olsztyn', 'Grudziądz', 'Iława', 'Mława', 'Elbląg', 'Kętrzyn', 'Mrągowo', 'Nidzica', 'Suwałki', 'Giżycko',
+    // West Pomerania
+    'Szczecin', 'Świnoujście', 'Stargard', 'Kamień Pomorski', 'Police', 'Gryfino', 'Myślibórz', 'Gorzów Wielkopolski',
+    // Podlaskie (Northeast)
+    'Białystok', 'Suwałki', 'Grajewo', 'Łomża', 'Sokółka', 'Dąbrowa Białostocka', 'Siemiatycze', 'Krynki',
+  ];
+
   private readonly PL_CITIES: { [k: string]: string[] } = {
     'Lower Silesia': ['Wrocław', 'Wałbrzych', 'Legnica', 'Jawor', 'Świdnica'],
     'Greater Poland': ['Poznań', 'Kalisz', 'Konin', 'Leszno', 'Piła'],
@@ -1633,7 +1960,7 @@ export class IdLabComponent implements OnInit {
     'Lublin': ['Lublin', 'Biała Podlaska', 'Chełm', 'Tomaszów Lubelski', 'Radzyń Podlaski'],
     'Łódź': ['Łódź', 'Piotrków Trybunalski', 'Sieradz', 'Skierniewice', 'Zduńska Wola'],
     'Holy Cross': ['Kielce', 'Ostrowiec Świętokrzyski', 'Konskie', 'Skarżysko-Kamienna', 'Starachowice'],
-    'Masovia': ['Warsaw', 'Radom', 'Siedlce', 'Ostrołęka', 'Piaseczno'],
+    'Masovia': ['Warszawa', 'Radom', 'Siedlce', 'Ostrołęka', 'Piaseczno'],
     'Warmia-Masuria': ['Olsztyn', 'Elbląg', 'Grudziądz', 'Iława', 'Mława'],
     'West Pomerania': ['Szczecin', 'Świnoujście', 'Stargard', 'Kamień Pomorski', 'Police'],
     'Podlaskie': ['Białystok', 'Suwałki', 'Grajewo', 'Łomża', 'Sokółka'],
@@ -1747,11 +2074,11 @@ export class IdLabComponent implements OnInit {
     const checkDigit = this.computePlPassportCheck(base2);
     const passportNum = series + checkDigit + serial2;
 
-    // 5. Get random city
-    const voivodeships = Object.keys(this.PL_CITIES);
-    const voivodeship = voivodeships[Math.floor(Math.random() * voivodeships.length)];
-    const cities = this.PL_CITIES[voivodeship];
-    const city = cities[Math.floor(Math.random() * cities.length)];
+    // 5. Get random wojewoda (issuing authority) and city of birth
+    const wojewoda = this.PL_WOJEWODOWIE[Math.floor(Math.random() * this.PL_WOJEWODOWIE.length)];
+
+    // Random city of birth from all Polish cities
+    const cityOfBirth = this.PL_ALL_CITIES[Math.floor(Math.random() * this.PL_ALL_CITIES.length)];
 
     // 6. Calculate expiry
     const expiryDate = new Date(issueDate);
@@ -1770,8 +2097,8 @@ export class IdLabComponent implements OnInit {
     this.plDocsResult.set({
       pesel,
       passportNum,
-      city,
-      voivodeship,
+      wojewoda,
+      cityOfBirth,
       issueDate: issueDateFormatted,
       expiryDate: expiryDateFormatted,
       issueDateISO: isoDate(issueDate),
@@ -1849,6 +2176,262 @@ export class IdLabComponent implements OnInit {
     navigator.clipboard.writeText(v);
     this.plRegonCopied.set(true);
     setTimeout(() => this.plRegonCopied.set(false), 1500);
+  }
+
+  // ── CAN ONTARIO DL ────────────────────────────────────────────────────────
+  private readonly CHART_1_MAPPING: Record<string, string> = {
+    'A': '0',
+    'B': '1', 'C': '1', 'D': '1',
+    'E': '2',
+    'F': '3', 'G': '3', 'H': '3',
+    'I': '4', 'J': '4', 'K': '4',
+    'L': '5', 'M': '5', 'N': '5',
+    'O': '6',
+    'P': '7', 'Q': '7', 'R': '7',
+    'S': '8', 'T': '8',
+    'U': '9', 'V': '9', 'W': '9', 'X': '9', 'Y': '9', 'Z': '9'
+  };
+
+  private readonly CHART_2_MAPPING: Record<string, string> = {
+    'A': '1', 'B': '1',
+    'C': '2', 'D': '2',
+    'E': '3', 'F': '3',
+    'G': '4', 'H': '4', 'I': '4',
+    'J': '5', 'K': '5',
+    'L': '6', 'M': '6', 'N': '6',
+    'O': '7',
+    'P': '7', 'Q': '7', 'R': '7',
+    'S': '8', 'T': '8', 'U': '8', 'V': '8',
+    'X': '9',
+    'Y': '9', 'Z': '9'
+  };
+
+  private readonly LAST_NAME_CODES: Record<string, string> = {
+    'avis': '921', 'eals': '2024', 'olff': '6247', 'orello': '6581', 'smith': '778',
+    'chen': '3344', 'zhen': '3344', 'chan': '3175', 'wang': '0418', 'yang': '0418',
+    'tang': '0418', 'zhang': '3187', 'ou': '9001', 'ma': '0001', 'ha': '0001',
+    'li': '4001', 'yu': '9001', 'moss': '6726', 'sabourin': '0019', 'maltais': '0320',
+    'johnson': '6173', 'knuff': '5994', 'mcgannety': '2217', 'shaikh': '3145', 'woodley': '6472',
+    'cleland': '5250', 'didow': '4139', 'moore': '6509', 'sad': '0089', 'sunderalingam': '9266',
+    'raisig': '0200', 'mellett': '2396', 'paterson': '0803', 'rutherford': '9480', 'sherborn': '3365',
+    'malowany': '0315', 'elnaggar': '5495', 'andrews': '5886', 'bhagrattie': '3142', 'beausoleil': '2062',
+    'almeida': '5486', 'feddema': '2125', 'moed': '6102', 'devine': '2931', 'clelland': '5365'
+  };
+
+  private readonly FIRST_NAME_CODES: Record<string, string> = {
+    'alexander': '019', 'andrew': '042', 'gabriel': '270', 'lena': '456', 'lovepreet': '000',
+    'jian': '401', 'meng': '539', 'yuan': '490', 'ming': '556', 'kingsley': '435',
+    'kimberly': '435', 'xuan': '789', 'zhenfei': '796', 'jiasheng': '401', 'jiwei': '204',
+    'shuyu': '709', 'min': '555', 'wen': '780', 'somang': '718', 'brandon': '096',
+    'christopher': '124', 'melissa': '537', 'ian': '353', 'lyn': '500', 'neal': '583',
+    'shakeel': '703', 'kevin': '433', 'tara': '732', 'steven': '723', 'samih': '687',
+    'navid': '583', 'colin': '134', 'judy': '418', 'robert': '658', 'geremiah': '280',
+    'katie': '428', 'kelly': '430', 'nicholas': '590', 'marlene': '522', 'krista': '437',
+    'caedmon': '106', 'benjamin': '082', 'ellis': '605', 'romain': '421'
+  };
+
+  // Canadian passport - ~100 cities
+  private readonly CAN_CITIES: string[] = [
+    'TORONTO', 'VANCOUVER', 'CALGARY', 'EDMONTON', 'WINNIPEG', 'QUEBEC CITY', 'MONTREAL',
+    'OTTAWA', 'MISSISSAUGA', 'BRAMPTON', 'HAMILTON', 'LONDON', 'KITCHENER', 'WATERLOO',
+    'CAMBRIDGE', 'GUELPH', 'OSHAWA', 'DURHAM', 'AJAX', 'WHITBY', 'BOWMANVILLE',
+    'PETERBOROUGH', 'BELLEVILLE', 'KINGSTON', 'CORNWALL', 'OTTAWA', 'BARRIE', 'ORILLIA',
+    'SUDBURY', 'THUNDER BAY', 'FORT WILLIAM', 'KENORA', 'DRYDEN', 'TIMMINS', 'NORTH BAY',
+    'SAULT STE. MARIE', 'WINDSOR', 'LONDON', 'SARNIA', 'CHATHAM', 'STRATFORD',
+    'QUEBEC', 'SHERBROOKE', 'TROIS-RIVIÈRES', 'GATINEAU', 'HULL', 'LAVAL', 'LONGUEUIL',
+    'SAINT-JEAN', 'SAINT-HYACINTHE', 'DRUMMONDVILLE', 'GRANBY', 'JOLIETTE', 'SAINT-JÉRÔME',
+    'SAGUENAY', 'BAIE-COMEAU', 'SEPT-ÎLES', 'RIMOUSKI', 'MATANE', 'GASPÉ', 'NEW BRUNSWICK',
+    'FREDERICTON', 'SAINT JOHN', 'MONCTON', 'BATHURST', 'CAMPBELLTON', 'EDMUNDSTON',
+    'NOVA SCOTIA', 'HALIFAX', 'DARTMOUTH', 'SYDNEY', 'GLACE BAY', 'CAPE BRETON',
+    'PRINCE EDWARD ISLAND', 'CHARLOTTETOWN', 'SUMMERSIDE', 'NEWFOUNDLAND', "ST. JOHN'S",
+    'CORNER BROOK', 'GANDER', 'GRAND FALLS-WINDSOR', 'MANITOBA', 'BRANDON', 'WINNIPEG BEACH',
+    'PORTAGE LA PRAIRIE', 'SELKIRK', 'SASKATCHEWAN', 'REGINA', 'SASKATOON', 'SWIFT CURRENT',
+    'PRINCE ALBERT', 'MOOSE JAW', 'YORKTON', 'LLOYDMINSTER', 'ALBERTA', 'LETHBRIDGE',
+    'RED DEER', 'MEDICINE HAT', 'GRANDE PRAIRIE', 'FORT MCMURRAY', 'COLD LAKE',
+    'BRITISH COLUMBIA', 'VICTORIA', 'KELOWNA', 'ABBOTSFORD', 'VERNON', 'KAMLOOPS',
+    'NANAIMO', 'PRINCE GEORGE', 'DAWSON CREEK', 'FORT ST. JOHN', 'CRESTON', 'PENTICTON'
+  ];
+
+  // Canadian passport months (English/French)
+  private readonly CAN_MONTHS: Array<{en: string; fr: string}> = [
+    { en: 'JAN', fr: 'JAN' },
+    { en: 'FEB', fr: 'FÉV' },
+    { en: 'MAR', fr: 'MARS' },
+    { en: 'APR', fr: 'AVR' },
+    { en: 'MAY', fr: 'MAI' },
+    { en: 'JUNE', fr: 'JUIN' },
+    { en: 'JULY', fr: 'JUIL' },
+    { en: 'AUG', fr: 'AOÛT' },
+    { en: 'SEPT', fr: 'SEPT' },
+    { en: 'OCT', fr: 'OCT' },
+    { en: 'NOV', fr: 'NOV' },
+    { en: 'DEC', fr: 'DEC' }
+  ];
+
+  // Canadian passport - main number prefixes by year
+  private readonly CAN_MAIN_PREFIXES: Record<number, string[]> = {
+    2015: ['HC', 'HG'],
+    2016: ['HB', 'HD', 'HH', 'HK', 'HL', 'HN'],
+    2017: ['AA', 'AB', 'AC', 'AD', 'AE', 'HM', 'HN', 'HP'],
+    2018: ['AE', 'AH'],
+    2019: ['AE', 'AJ', 'AK', 'AM'],
+    2020: ['AL', 'AM', 'AN'],
+    2021: ['AL', 'AN', 'AR'],
+    2022: ['AM', 'AR', 'AS', 'AW'],
+    2023: ['AS', 'PA'],
+    2024: ['PG'],
+  };
+
+  // Canadian passport - vertical number pools by month
+  private readonly CAN_VERTICAL_POOLS: Record<number, string[]> = {
+    1: ['FH', 'GO', 'HF', 'HH', 'LS'],
+    2: ['FN', 'FO', 'HI', 'HL', 'NT', 'PH'],
+    3: ['HO', 'JG'],
+    4: [],
+    5: ['LC'],
+    6: ['IE', 'LY'],
+    7: ['EK', 'EL', 'GG', 'GH', 'IH', 'ON'],
+    8: ['EQ', 'GH'],
+    9: ['EU', 'IK', 'KI', 'NA'],
+    10: ['GI', 'LG', 'LJ'],
+    11: ['LN', 'NJ'],
+    12: ['GO', 'JC', 'JD', 'KO', 'LP', 'NO'],
+  };
+
+  // Canadian passport - vertical number pools by year/month
+  private readonly CAN_YEAR_MONTH_POOLS: Record<number, Record<number, string[]>> = {
+    2015: { 7: ['EK', 'EL'], 8: ['EQ'], 9: ['EU'] },
+    2016: { 1: ['FH'], 2: ['FN', 'FO'], 7: ['GG', 'GH'], 8: ['GH'], 12: ['GO'] },
+    2017: { 1: ['GO', 'HF', 'HH'], 2: ['HI', 'HL'], 3: ['HO'], 6: ['IE'], 7: ['IH'], 12: ['JC', 'JD'] },
+    2018: { 3: ['JG'], 9: ['KI'], 12: ['KO'] },
+    2019: { 5: ['LC'], 10: ['LG', 'LJ'], 11: ['LN'], 12: ['LP'] },
+    2020: { 1: ['LS'], 6: ['LY'] },
+    2021: { },
+    2022: { 9: ['NA'], 11: ['NJ'], 12: ['NO'] },
+    2023: { 2: ['NT'], 7: ['ON'] },
+    2024: { 2: ['PH'] },
+  };
+
+  private getLastNameSoundex(lastName: string): string {
+    lastName = lastName.toUpperCase().trim();
+    if (!lastName) return '0000';
+
+    const firstDigit = this.CHART_1_MAPPING[lastName[0]] || '0';
+    let remaining = this.LAST_NAME_CODES[lastName.toLowerCase()];
+
+    if (!remaining) {
+      remaining = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    } else {
+      remaining = remaining.substring(0, 3);
+    }
+
+    return firstDigit + remaining;
+  }
+
+  private getFirstNameSoundex(firstName: string): string {
+    firstName = firstName.toUpperCase().trim();
+    if (!firstName) return '000';
+
+    const code = this.FIRST_NAME_CODES[firstName.toLowerCase()];
+    return code || String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+  }
+
+  private getMiddleEncoding(middleInitial: string = ''): string {
+    if (!middleInitial) return '0';
+    middleInitial = middleInitial.toUpperCase().trim();
+    return this.CHART_2_MAPPING[middleInitial[0]] || '0';
+  }
+
+  private generateDdRef(issueYear: number = 2024): string {
+    // Первая буква зависит от года выдачи
+    let firstLetter: string;
+    if (issueYear <= 2015) {
+      firstLetter = 'C';
+    } else if (issueYear <= 2018) {
+      firstLetter = 'D';
+    } else if (issueYear <= 2020) {
+      firstLetter = 'G';
+    } else if (issueYear === 2021) {
+      firstLetter = Math.random() > 0.5 ? 'G' : 'H';
+    } else if (issueYear >= 2022) {
+      firstLetter = 'D';
+    } else {
+      firstLetter = 'G';
+    }
+
+    // Вторая буква случайная
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const secondLetter = letters[Math.floor(Math.random() * letters.length)];
+
+    // 7 цифр - серийный номер
+    const digits = String(Math.floor(Math.random() * 10000000)).padStart(7, '0');
+
+    return firstLetter + secondLetter + digits;
+  }
+
+  genCanOntarioDl() {
+    const lastName = this.canLastName().trim();
+    const firstName = this.canFirstName().trim();
+    const middleInit = this.canMiddleInitial().trim();
+    const dobStr = this.canDob().trim();
+    const gender = this.canGender();
+
+    if (!lastName || !firstName || !dobStr) {
+      alert('Please fill: Last Name, First Name, DOB (YYYY-MM-DD)');
+      return;
+    }
+
+    // Parse DOB
+    const dobParts = dobStr.split('-');
+    if (dobParts.length !== 3) {
+      alert('DOB must be in format YYYY-MM-DD');
+      return;
+    }
+
+    const year = parseInt(dobParts[0]);
+    let month = parseInt(dobParts[1]);
+    const day = parseInt(dobParts[2]);
+
+    if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+      alert('Invalid date');
+      return;
+    }
+
+    // First letter of last name
+    const firstLetter = lastName.substring(0, 1).toUpperCase();
+
+    // Soundex encodings
+    const lastNameSoundex = this.getLastNameSoundex(lastName);
+    const firstNameSoundex = this.getFirstNameSoundex(firstName);
+    const middleCode = this.getMiddleEncoding(middleInit);
+
+    // Gender encoding: +50 to month if female
+    if (gender === 'F') {
+      month = month + 50;
+    }
+
+    // Format: LXXXX-FFFMY-YMMDD
+    const yy = String(year).slice(-2).padStart(2, '0');
+    const mmStr = String(month).padStart(2, '0');
+    const ddStr = String(day).padStart(2, '0');
+
+    const part1 = firstLetter + lastNameSoundex;           // L + XXXX = 5 chars
+    const part2 = firstNameSoundex + middleCode + yy[0];  // FFF + M + Y = 5 chars
+    const part3 = yy[1] + mmStr + ddStr;                   // Y + MM + DD = 5 chars
+
+    const dlNumber = `${part1}-${part2}-${part3}`;
+    const ddRef = this.generateDdRef(year);
+
+    this.canOntarioDlResult.set({ dlNumber, ddRef });
+  }
+
+  copyCanOntarioDl() {
+    const v = this.canOntarioDlResult();
+    if (!v) return;
+    const text = `${v.dlNumber}\n${v.ddRef}`;
+    navigator.clipboard.writeText(text);
+    this.canOntarioDlCopied.set(true);
+    setTimeout(() => this.canOntarioDlCopied.set(false), 1500);
   }
 
   private icaoChecksum(str: string): string {
@@ -1970,6 +2553,7 @@ export class IdLabComponent implements OnInit {
           `LAST_NAME: ${r.lastName}`,
           `DOB: ${r.dob}`,
           `SEX: ${r.gender}`,
+          `CITY_OF_BIRTH: ${r.cityOfBirth}`,
           `PESEL: ${r.pesel}`,
           `PASSPORT_NUM: ${r.passportNum}`,
           `ISSUE_DATE: ${r.issueDate}`,
@@ -1977,8 +2561,7 @@ export class IdLabComponent implements OnInit {
           `ISSUE_DATE_ISO: ${r.issueDateISO}`,
           `EXPIRY_DATE_ISO: ${r.expiryDateISO}`,
           `VALIDITY_YEARS: ${r.validity}`,
-          `ISSUING_CITY: ${r.city}`,
-          `ISSUING_VOIVODESHIP: ${r.voivodeship}`,
+          `ISSUED_BY: ${r.wojewoda}`,
           `MRZ_TD1_LINE1: ${td1Lines[0]}`,
           `MRZ_TD1_LINE2: ${td1Lines[1]}`,
           `MRZ_TD1_LINE3: ${td1Lines[2]}`,
@@ -2019,6 +2602,384 @@ export class IdLabComponent implements OnInit {
       sum += val * W[i];
     }
     return String(sum % 10);
+  }
+
+  // ── CAN PASSPORT ──────────────────────────────────────────────────
+  genCanPassport() {
+    const firstName = this.canPassFirstName().trim().toUpperCase();
+    const lastName = this.canPassLastName().trim().toUpperCase();
+    const dobStr = this.canPassDob().trim();
+    const gender = this.canPassGender();
+
+    if (!firstName || !lastName || !dobStr) {
+      alert('Please fill: First Name, Last Name, DOB (DD-MM-YYYY)');
+      return;
+    }
+
+    // Parse DOB - support both DD-MM-YYYY and DD.MM.YYYY formats
+    let dobParts = dobStr.includes('.') ? dobStr.split('.') : dobStr.split('-');
+    if (dobParts.length !== 3) {
+      alert('DOB must be in format DD-MM-YYYY or DD.MM.YYYY');
+      return;
+    }
+
+    const day = parseInt(dobParts[0]);
+    const month = parseInt(dobParts[1]);
+    const year = parseInt(dobParts[2]);
+
+    if (isNaN(day) || isNaN(month) || isNaN(year) || month < 1 || month > 12 || day < 1 || day > 31) {
+      alert('Invalid date');
+      return;
+    }
+
+    const dobDate = new Date(year, month - 1, day);
+    const today = new Date();
+    const age = today.getFullYear() - dobDate.getFullYear();
+
+    if (age < 18) {
+      alert('Must be at least 18 years old');
+      return;
+    }
+
+    // Generate issue date: min 2017, min 18 years after DOB, exactly 10 years validity
+    const minIssueByAge = new Date(dobDate);
+    minIssueByAge.setFullYear(minIssueByAge.getFullYear() + 18);
+    const minIssueDate = new Date(2017, 0, 1); // Min 2017
+    const startDate = minIssueByAge > minIssueDate ? minIssueByAge : minIssueDate;
+
+    // Max issue date: today (so we can generate any valid passport up to now)
+    const maxIssueDate = new Date(today);
+
+    // Ensure startDate is not after maxIssueDate
+    if (startDate > maxIssueDate) {
+      alert('Person is too young to have a valid passport');
+      return;
+    }
+
+    const randomTime = startDate.getTime() + Math.random() * (maxIssueDate.getTime() - startDate.getTime());
+    const issueDate = new Date(randomTime);
+
+    // Expiry date = EXACTLY issue date + 10 years
+    const expiryDate = new Date(issueDate);
+    expiryDate.setFullYear(expiryDate.getFullYear() + 10);
+
+    // Passport number: XX###### (2 letters + 6 digits) based on issue year
+    const issueYear = issueDate.getFullYear();
+    let validPrefixes = this.CAN_MAIN_PREFIXES[issueYear];
+    if (!validPrefixes) {
+      // Fallback for unknown years
+      if (issueYear < 2017) {
+        validPrefixes = ['H' + String.fromCharCode(65 + Math.floor(Math.random() * 26))];
+      } else if (issueYear < 2024) {
+        validPrefixes = ['A' + String.fromCharCode(65 + Math.floor(Math.random() * 26))];
+      } else {
+        validPrefixes = ['P' + String.fromCharCode(65 + Math.floor(Math.random() * 26))];
+      }
+    }
+    const prefix = validPrefixes[Math.floor(Math.random() * validPrefixes.length)];
+    const sequence = Math.floor(Math.random() * 1000000);
+    const passportNum = prefix + String(sequence).padStart(6, '0');
+
+    // Vertical number: ELLL##### (E + 2 letters + 5 digits) based on issue month/year
+    const issueMonth = issueDate.getMonth() + 1;
+    let validPools = this.CAN_YEAR_MONTH_POOLS[issueYear]?.[issueMonth];
+    if (!validPools || validPools.length === 0) {
+      validPools = this.CAN_VERTICAL_POOLS[issueMonth];
+    }
+    if (!validPools || validPools.length === 0) {
+      // Fallback: generate random letters
+      validPools = ['EK'];
+    }
+    const letters = validPools[Math.floor(Math.random() * validPools.length)];
+    const vertSeq = Math.floor(Math.random() * 100000);
+    const verticalNum = 'E' + letters + String(vertSeq).padStart(5, '0');
+
+    // Format dates with bilingual months
+    const issueDateFormatted = this.formatCanPassportDate(issueDate);
+    const expiryDateFormatted = this.formatCanPassportDate(expiryDate);
+    const dobFormatted = this.formatCanPassportDate(dobDate);
+
+    // Random city of birth
+    const cityOfBirth = this.CAN_CITIES[Math.floor(Math.random() * this.CAN_CITIES.length)];
+
+    // Random issuing authority
+    const issuingAuthority = this.CAN_ISSUING_AUTHORITIES[Math.floor(Math.random() * this.CAN_ISSUING_AUTHORITIES.length)];
+
+    // Generate MRZ
+    const mrzPassport = this.generateCanMrzPassport(lastName, firstName, passportNum, dobDate, gender, expiryDate);
+
+    const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    this.canPassResult.set({
+      passportNum,
+      verticalNum,
+      issueDate: issueDateFormatted,
+      expiryDate: expiryDateFormatted,
+      issueDateISO: isoDate(issueDate),
+      expiryDateISO: isoDate(expiryDate),
+      cityOfBirth,
+      issuingAuthority,
+      firstName,
+      lastName,
+      dob: dobFormatted,
+      gender,
+      mrzPassport,
+    });
+
+    // Save to history (last 10)
+    const historyItem = { passportNum, verticalNum, firstName, lastName, timestamp: Date.now() };
+    const history = [historyItem, ...this.canPassHistory().slice(0, 9)];
+    this.canPassHistory.set(history);
+
+    try {
+      localStorage.setItem('can_passport_history', JSON.stringify(history));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }
+
+  loadCanPassportFromHistory(item: { passportNum: string; verticalNum: string; firstName: string; lastName: string; timestamp: number }) {
+    // Load historical passport data back into form
+    this.canPassFirstName.set(item.firstName);
+    this.canPassLastName.set(item.lastName);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private formatCanPassportDate(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.getMonth();
+    const yearFull = date.getFullYear();
+    const year = String(yearFull % 100).padStart(2, '0');
+    const monthEn = this.CAN_MONTHS[month].en;
+    const monthFr = this.CAN_MONTHS[month].fr;
+    // Format: DD MMM[space]/MMM[space] YY (each month part pads to 4 chars total)
+    const enPart = monthEn.length === 3 ? monthEn + ' ' : monthEn;
+    const frPart = monthFr.length === 3 ? monthFr + ' ' : monthFr;
+    return `${day} ${enPart}/${frPart} ${year}`;
+  }
+
+  private generateCanMrzPassport(lastName: string, firstName: string, passportNum: string, dob: Date, gender: 'M' | 'F', expiry: Date): string {
+    // TD3 format (2 lines x 44 chars each) - ICAO 9303 for Passport
+    // Verified against ICAO 9303 standard
+    const docNumClean = passportNum.replace(/[^A-Z0-9]/g, '').substring(0, 9).padEnd(9, '<');
+    const surnameClean = lastName.replace(/[^A-Z]/g, '');
+    const givenClean = firstName.replace(/[^A-Z]/g, '');
+
+    const yy = String(dob.getFullYear() % 100).padStart(2, '0');
+    const mm = String(dob.getMonth() + 1).padStart(2, '0');
+    const dd = String(dob.getDate()).padStart(2, '0');
+    const dobStr = `${yy}${mm}${dd}`;
+
+    const expYy = String(expiry.getFullYear() % 100).padStart(2, '0');
+    const expMm = String(expiry.getMonth() + 1).padStart(2, '0');
+    const expDd = String(expiry.getDate()).padStart(2, '0');
+    const expStr = `${expYy}${expMm}${expDd}`;
+
+    const sexChar = gender === 'M' ? 'M' : 'F';
+
+    // Line 1: P<[Country(3)][Surname<<Firstname, clamped to 39]
+    const nameField = `${surnameClean}<<${givenClean}`.substring(0, 39).padEnd(39, '<');
+    const line1 = `P<CAN${nameField}`;
+
+    const docCheck = this.icaoChecksum(docNumClean);
+    const dobCheck = this.icaoChecksum(dobStr);
+    const expCheck = this.icaoChecksum(expStr);
+
+    // Personal number field (filler) - must be exactly 14 chars
+    const persField = ''.padEnd(14, '<');
+    const persCheck = '0';
+
+    // Composite final check covers: doc+docCheck+birth+birthCheck+expiry+expiryCheck+persField+persCheck
+    const mrpFinal = `${docNumClean}${docCheck}${dobStr}${dobCheck}${expStr}${expCheck}${persField}${persCheck}`;
+    const finalCheck = this.icaoChecksum(mrpFinal);
+
+    // Line 2: [Doc#(9)][Check(1)][Nationality(3)][DOB(6)][Check(1)][Sex(1)][Expiry(6)][Check(1)][Personal#(14)][PersCheck(1)][Composite check(1)] = 44
+    const line2 = `${docNumClean}${docCheck}CAN${dobStr}${dobCheck}${sexChar}${expStr}${expCheck}${persField}${persCheck}${finalCheck}`;
+
+    return `${line1}\n${line2}`;
+  }
+
+  genCanPassportBarcode(verticalNum: string) {
+    // Generate CODE39 barcode as PNG with transparent background (256x1441 vertical)
+    const canvas = this.generateCode39Canvas(verticalNum, 256, 1441);
+    const dataUrl = canvas.toDataURL('image/png');
+    this.canPassBarcodeSvg.set(dataUrl); // Reuse signal for data URL
+    this.canPassShowBarcode.set(true);
+  }
+
+  private generateCode39Canvas(text: string, targetWidth: number = 256, targetHeight: number = 1441): HTMLCanvasElement {
+    // CODE39 - генерирање барко́да с пиксельного растра (детерминированный)
+    const patterns: Record<string, string> = {
+      '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+      '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+      '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+      'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+      'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+      'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+      'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+      'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+      'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+      '-': '010000011', '.': '110000010', ' ': '011000010', '*': '010010100'
+    };
+
+    const encoded = `*${text.toUpperCase()}*`;
+    let bits = '';
+    for (let i = 0; i < encoded.length; i++) {
+      const ch = encoded[i];
+      if (patterns[ch]) {
+        bits += patterns[ch];
+        // Додаємо separator (0) після кожного символу, КРІМ останнього (STOP *)
+        if (i < encoded.length - 1) {
+          bits += '0';
+        }
+      }
+    }
+
+    const MW = 3, MH = 300; // module width/height (narrow=1, wide=3)
+
+    // Расчитаем реальную ширину - каждый бит 0=1пиксель, 1=3пикселя
+    let hW = 0;
+    for (const bit of bits) {
+      hW += bit === '1' ? MW : 1;
+    }
+
+    // Генерируем прямо в пиксели - горизонтальный барко́д
+    const hPixels = new Uint8ClampedArray(hW * MH * 4);
+    hPixels.fill(255); // белый фон
+
+    let pixelX = 0;
+    for (let i = 0; i < bits.length; i++) {
+      const bit = bits[i];
+      const width = bit === '1' ? MW : 1;
+      const isBlack = (i % 2) === 0; // чередуем чёрный/белый
+
+      if (isBlack) {
+        for (let y = 0; y < MH; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * hW + pixelX + x) * 4;
+            hPixels[idx] = 0;       // R
+            hPixels[idx + 1] = 0;   // G
+            hPixels[idx + 2] = 0;   // B
+            hPixels[idx + 3] = 255; // A
+          }
+        }
+      }
+      pixelX += width;
+    }
+
+    // Ротирование 90° вручную на пикселях
+    const vW = MH, vH = hW;
+    const vPixels = new Uint8ClampedArray(vW * vH * 4);
+    vPixels.fill(255); // белый
+
+    for (let y = 0; y < vH; y++) {
+      for (let x = 0; x < vW; x++) {
+        // Ротация 90° clockwise: (hX, hY) -> (hY, hW-1-hX)
+        // Обратная: (vX=x, vY=y) -> (hX=hW-1-y, hY=x)
+        const hX = hW - 1 - y;
+        const hY = x;
+        const srcIdx = (hY * hW + hX) * 4;
+        const dstIdx = (y * vW + x) * 4;
+
+        vPixels[dstIdx] = hPixels[srcIdx];
+        vPixels[dstIdx + 1] = hPixels[srcIdx + 1];
+        vPixels[dstIdx + 2] = hPixels[srcIdx + 2];
+        vPixels[dstIdx + 3] = hPixels[srcIdx + 3];
+      }
+    }
+
+    // Масштабирование в целевые размеры (256x1441) с ближайшей соседней
+    const fPixels = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    fPixels.fill(255);
+
+    const scaleX = vW / targetWidth;
+    const scaleY = vH / targetHeight;
+
+    for (let y = 0; y < targetHeight; y++) {
+      for (let x = 0; x < targetWidth; x++) {
+        const srcX = Math.floor(x * scaleX);
+        const srcY = Math.floor(y * scaleY);
+        const srcIdx = (srcY * vW + srcX) * 4;
+        const dstIdx = (y * targetWidth + x) * 4;
+
+        fPixels[dstIdx] = vPixels[srcIdx];
+        fPixels[dstIdx + 1] = vPixels[srcIdx + 1];
+        fPixels[dstIdx + 2] = vPixels[srcIdx + 2];
+        fPixels[dstIdx + 3] = vPixels[srcIdx + 3];
+      }
+    }
+
+    // Белый фон прозрачный
+    for (let i = 0; i < fPixels.length; i += 4) {
+      if (fPixels[i] > 240 && fPixels[i + 1] > 240 && fPixels[i + 2] > 240) {
+        fPixels[i + 3] = 0;
+      }
+    }
+
+    // Создаём canvas и вставляем пиксели
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(targetWidth, targetHeight);
+    imageData.data.set(fPixels);
+    ctx.putImageData(imageData, 0, 0);
+
+    return canvas;
+  }
+
+  downloadCanPassportBarcode() {
+    const dataUrl = this.canPassBarcodeSvg();
+    const verticalNum = this.canPassResult()?.verticalNum;
+    if (!dataUrl || !verticalNum) return;
+
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${verticalNum}_code39.png`;
+    a.click();
+  }
+
+  copyCanPassport(which: 'passport' | 'vertical' | 'mrz' | 'all') {
+    const r = this.canPassResult();
+    if (!r) return;
+
+    let text = '';
+    switch (which) {
+      case 'passport':
+        text = r.passportNum;
+        break;
+      case 'vertical':
+        text = r.verticalNum;
+        break;
+      case 'mrz':
+        text = r.mrzPassport.replace(/\n/g, '');
+        break;
+      case 'all': {
+        const mrzLines = r.mrzPassport.split('\n');
+        text = [
+          `FIRST_NAME: ${r.firstName}`,
+          `LAST_NAME: ${r.lastName}`,
+          `DOB: ${r.dob}`,
+          `SEX: ${r.gender}`,
+          `CITY_OF_BIRTH: ${r.cityOfBirth}`,
+          `PASSPORT_NUM: ${r.passportNum}`,
+          `VERTICAL_NUM: ${r.verticalNum}`,
+          `ISSUE_DATE: ${r.issueDate}`,
+          `EXPIRY_DATE: ${r.expiryDate}`,
+          `ISSUE_DATE_ISO: ${r.issueDateISO}`,
+          `EXPIRY_DATE_ISO: ${r.expiryDateISO}`,
+          `MRZ_LINE1: ${mrzLines[0]}`,
+          `MRZ_LINE2: ${mrzLines[1]}`,
+        ].join('\n');
+        break;
+      }
+    }
+
+    navigator.clipboard.writeText(text);
+    this.canPassCopied.set(which);
+    setTimeout(() => this.canPassCopied.set(null), 1500);
   }
 
   private loadFavs(): Set<string> {
