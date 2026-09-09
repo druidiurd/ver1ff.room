@@ -125,12 +125,10 @@ const COUNTRIES: Country[] = [
   {
     code: 'FIN', iso2: 'fi', mrzCode: 'FIN', name: 'Finland',
     tools: [
-      { id: 'fin_hetu',     icon: '🆔', label: 'HETU',         desc: 'Finnish personal ID (Henkilötunnus). DDMMYY+SSSQ format. Century marker +/-/A. Control char via mod-31 → 31-char alphabet. Gender encoded in serial parity.', color: '#2979ff', tag: 'HETU' },
-      { id: 'fin_passport', icon: '📕', label: 'FI-DOC-GEN',   desc: 'Finnish passport (FP+7 digits) and ID card (9 digits) numbers with calibrated sequential counters. Issue + expiry dates (5yr validity).', color: '#29b6f6', tag: 'DOCS' },
+      { id: 'fin_passport_gen', icon: '📕', label: 'PASSPORT', desc: 'Finnish passport generator. Full document generator with HETU, passport/ID numbers, issue+expiry dates (5yr validity), auto-generated from name, DOB, gender.', color: '#2979ff', tag: 'PP' },
       { id: 'fin_iban',     icon: '🏦', label: 'FI-IBAN',      desc: 'Finnish IBAN. FI + 2 check digits (mod-97) + 6-digit bank code + 8–10 digit account number. 18 chars total.', color: '#00bcd4', tag: 'IBAN' },
       { id: 'fin_phone',    icon: '📱', label: 'FI-PHONE',     desc: 'Finnish mobile (04XX prefix, 12 digits) and landline (01X/029, 10 digits) generator. Outputs local and +358 international format.', color: '#43a047', tag: 'TEL' },
       { id: 'mrz_gen', ...MRZ_ID },
-      { id: 'mrz_gen', ...MRZ_PP },
     ],
   },
 ];
@@ -752,46 +750,7 @@ const FAV_KEY = 'id_lab_favorites';
                     </div>
 
 
-                  } @else if (t.id === 'fin_hetu') {
-                    <!-- Inline FIN HETU card -->
-                    <div class="tool-card inline-card mono" [style.--tc]="t.color">
-                      <div class="tc-top">
-                        <span class="tc-icon">{{ t.icon }}</span>
-                        <span class="tc-tag" [style.color]="t.color">{{ t.tag }}</span>
-                      </div>
-                      <div class="tc-label" [style.color]="t.color">{{ t.label }}</div>
-                      @if (hetuResult()) {
-                        <div class="tax-result" [style.border-color]="'rgba(41,121,255,0.35)'">
-                          <code class="mono tax-id" [style.color]="t.color" style="letter-spacing:3px">{{ hetuResult() }}</code>
-                          <button class="tax-copy mono" [style.color]="t.color"
-                            [style.border-color]="'rgba(41,121,255,0.4)'"
-                            (click)="copyHetu()">{{ hetuCopied() ? '✓' : 'CPY' }}</button>
-                        </div>
-                      }
-                      <div class="il-field-row">
-                        <div class="il-field">
-                          <label class="il-lbl">DOB (DD-MM-YYYY)</label>
-                          <input class="il-inp" [ngModel]="hetuDob()" (ngModelChange)="hetuDob.set($event)"
-                            placeholder="01-01-1990" maxlength="10" autocomplete="off">
-                        </div>
-                        <div class="il-field il-field-sm">
-                          <label class="il-lbl">SEX</label>
-                          <div class="il-sex">
-                            @for (g of ['M','F']; track g) {
-                              <button class="il-sex-btn" [class.active]="hetuGender() === g"
-                                [style.--sc]="t.color" (click)="hetuGender.set(g === 'M' ? 'M' : 'F')">{{ g }}</button>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                      <div class="il-btn-row">
-                        <button class="tax-btn mono" (click)="genHetu()" [style.background]="t.color" style="flex:2;color:#fff">⚡ GEN</button>
-                        <button class="il-btn-sm mono" (click)="randomHetu()">⚄</button>
-                        <button class="il-btn-sm mono" (click)="clearHetu()" style="color:#ff3b30">✕</button>
-                      </div>
-                    </div>
-
-                  } @else if (t.id === 'fin_passport') {
+                  } @else if (t.id === 'fin_passport_gen') {
                     <!-- Inline FIN PASSPORT / ID card card -->
                     <div class="tool-card inline-card mono" [style.--tc]="t.color">
                       <div class="tc-top">
@@ -1414,6 +1373,14 @@ export class IdLabComponent implements OnInit {
   canPassShowHistory  = signal(false);
   canPassDateCopied   = signal<'issue' | 'expiry' | 'dob' | null>(null);
   hoveredHistoryIndex: number | null = null;
+
+  // FIN PASSPORT
+  finPassFirstName    = signal('');
+  finPassLastName     = signal('');
+  finPassDob          = signal('');  // DD-MM-YYYY
+  finPassGender       = signal<'M' | 'F'>('M');
+  finPassResult       = signal<{ hetu: string; passportNum: string; idCardNum: string; issueDate: string; expiryDate: string; firstName: string; lastName: string; dob: string; gender: 'M' | 'F' } | null>(null);
+  finPassCopied       = signal<'hetu' | 'passport' | 'idcard' | null>(null);
 
   ngOnInit() {
     const code = this.route.snapshot.queryParamMap.get('country');
